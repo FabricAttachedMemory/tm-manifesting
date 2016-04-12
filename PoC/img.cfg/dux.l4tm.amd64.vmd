@@ -1,0 +1,62 @@
+# Trying for minimum bootable to boot diskless into RAM
+# "debootstrapopts" or "variant" depending on version of vmdebootstrap
+
+# sudo vmdebootstrap --no-default-configs --config=dux.l4tm.vmd --owner=$LOGNAME --hostname=xyzzy
+
+[config]
+log = artifacts/l4tm.log
+image = artifacts/l4tm.img
+tarball = artifacts/l4tm.tar
+mirror = http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm
+
+arch = amd64
+distribution = catapult
+variant = minbase
+foreign = 
+
+verbose = True
+output =
+log-level = debug
+log-max = 0
+log-keep = 10
+log-mode = 0666
+dump-memory-profile = none
+memory-dump-interval = 300
+
+sparse = False
+size = 768M
+bootsize = 0
+boottype = ext2
+owner = rocky
+
+# minbase only does "Required", keyrings are only "Important".
+# debian-archive-keyring is handled manually by debootstrap.
+package = l4tm-archive-keyring,linux-image-4.3-amd64-l4tm,avahi-utils,ifupdown,iputils-ping,isc-dhcp-client,libnss-mdns,locales,pciutils,psmisc,psutils,ssh,tm-librarian-client,vim
+custom-package =
+
+# L4TM doesn't follow simple name generation, must do this manually (above)
+no-kernel = True	
+sudo = True
+
+enable-dhcp = True
+root-password = aresquare
+lock-root-password = False
+
+customize = 
+hostname = fabricXX
+user = fabric/rocks
+serial-console = True
+serial-console-command = /sbin/getty -L ttyS0 115200 vt100
+
+# /etc/apt/sources.list is always set up with ftp.us.debian.org and the
+# selected suite; sometimes that even makes sense.  "True" below creates 
+# /etc/apt/sources.list.d/base.list with the real info but it 
+# may collide with or duplicate sources.list.  YMMV but elimination of
+# sources.list is probably a good idea.
+configure-apt = True
+
+extlinux = False
+mbr = False
+
+# http://performance.linaro.org/setup/
+grub = False

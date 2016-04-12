@@ -1,0 +1,11 @@
+Templates are registered globally in a search path as a form of subclassing
+and overrides.  Thus each blueprint must specify a different path.  To
+avoid "blueprint/templates/blueprint/xxxx.html" I stuck all templates here.
+
+http://stackoverflow.com/questions/22190881/flask-multiple-blueprints-interfere-with-each-other
+
+which links to
+
+http://stackoverflow.com/questions/7974771/flask-blueprint-template-folder/8198325#8198325
+
+Just shoot me.

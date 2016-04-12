@@ -1,0 +1,72 @@
+Task: L4TM_LSGI
+Section: xfce
+Description: LSGI
+  just do it
+Relevance: 10
+Key:
+  task-xfce-desktop
+
+Task: L4TM_Spark
+Section: xfce
+Description: Spark4TM
+  just do it
+Relevance: 10
+Key:
+  task-xfce-desktop
+
+Task: L4TM_XFCE
+Section: xfce
+Description: Desktop: XFCE
+  just do it
+Relevance: 10
+Key:
+  task-xfce-desktop
+
+Task: L4TM_C_CPP
+Section: Development
+Description: C/C++ development
+  gcc, make, and other tools for kernel (module) compilation
+Relevance: 10 
+Key:
+  bash-completion
+  bc
+  build-essential
+  dpkg-dev
+  gcc
+  gcc-doc
+  gcc-doc-base
+  git
+  htop
+  lsof
+  make
+  perl
+  perl-doc
+  psmisc
+  ssh
+  sudo
+  vim
+
+Task: L4TM_KernelDev
+Section: Development
+Description: Kernel development
+  gcc, make, linux-headers, and other tools for kernel (module) compilation
+Relevance: 10 
+Key:
+  bash-completion
+  bc
+  build-essential
+  dpkg-dev
+  gcc
+  gcc-doc
+  gcc-doc-base
+  git
+  htop
+  linux-headers-arm64
+  lsof
+  make
+  perl
+  perl-doc
+  psmisc
+  ssh
+  sudo
+  vim

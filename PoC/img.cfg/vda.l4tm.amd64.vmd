@@ -1,0 +1,61 @@
+# Fairly generic instance for L4TM development
+# 1. sudo vmdebootstrap --no-default-configs --config=l4tm.amd64.vmd \
+#                       --owner=$LOGNAME --hostname=something
+# 2. qemu-system-x86_64 -enable-kvm -hda /tmp/l4tm.img
+#                       Puts VM on a 10-net with NAT to outside world.
+# 3. After boot,
+#    a. rm /etc/apt/sources.list		# YES REALLY
+#    b. mv /etc/apt/sources.list.d/base.list /etc/apt/sources.list
+
+[config]
+log = /tmp/vda.l4tm.amd64.log
+image = /tmp/vda.l4tm.amd64.img
+tarball =
+mirror = http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm
+
+arch = amd64
+distribution = catapult
+variant = minbase
+foreign = 
+
+verbose = True
+output =
+log-level = debug
+log-max = 0
+log-keep = 10
+log-mode = 0666
+dump-memory-profile = none
+memory-dump-interval = 300
+
+sparse = False
+size = 8192M
+bootsize = 0
+boottype = ext2
+
+# minbase only does "Required", keyrings are only "Important".
+# debian-archive-keyring is handled manually by debootstrap.
+package = l4tm-archive-keyring,linux-image-4.3-amd64-l4tm,build-essential,git,ifupdown,iputils-ping,isc-dhcp-client,locales,make,pciutils,psmisc,psutils,ssh,vim
+custom-package =
+
+# L4TM doesn't follow simple name generation, must do this manually (above)
+no-kernel = True	
+sudo = True
+
+enable-dhcp = True
+root-password = iforgot
+lock-root-password = False
+
+customize = 
+hostname = l4tmXX
+user = l4tm/iforgot
+serial-console = True
+serial-console-command = /sbin/getty -L ttyS0 115200 vt100
+
+# "True" creates sources.list.d/base.list along with a sources.list that
+# might be a dupe or wrong (ie, "catapult" against ftp.us.debian.org).
+# You should probably keep a correct sources.list and remove base.list.
+configure-apt = True
+
+extlinux = False
+mbr = False
+grub = True

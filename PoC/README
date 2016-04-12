@@ -1,0 +1,105 @@
+After cloning this repo:
+
+1. mkdir /opt/torms
+2. move this repo to /opt/torms/manifesting
+
+Set up your PXE boot server per PXE/README.  As a result you should have
+/opt/torms/tftp containing directories whose "tree(1)" output is
+
+.
+├── amd64
+├── arm64
+├── ldlinux.c32 -> /usr/lib/syslinux/modules/bios/ldlinux.c32
+├── libutil.c32 -> /usr/lib/syslinux/modules/bios/libutil.c32
+├── memdisk -> /usr/lib/syslinux/memdisk
+├── menu.c32 -> /usr/lib/syslinux/modules/bios/menu.c32
+├── pxelinux.0 -> /usr/lib/PXELINUX/pxelinux.0
+├── pxelinux.cfg
+│   ├── background.png
+│   └── default
+└── vesamenu.c32 -> /usr/lib/syslinux/modules/bios/vesamenu.c32
+
+===========================================================================
+Preparing your Debian host system to install L4TM images
+
+A slightly modifed copy of the stock Debian vmdebootstrap is included
+with this repo, use it.  It differs by:
+
+1. Keeping certain temporary artifacts in the final image
+2. Using the "packages" directive in a foreign architecture build
+3. A few extra "print" statements for tracing
+
+Your system needs to have the L4TM signing keyring installed AND use it.
+
+wget http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm/pool/main/l/l4tm-archive-keyring/l4tm-archive-keyring_2.0.4_all.deb
+
+sudo dpkg -i l4tm-archive-keyring_2.0.4_all.deb
+
+Someday, when vmdebootstrap supports the "--keyring" option, this won't be
+necessary.  Just for today:
+
+$ pushd /usr/share/debootstrap/scripts
+$ sed -e 's/debian-archive-keyring/l4tm-archive-keyring/' sid | sudo tee catapult
+$ popd
+
+===========================================================================
+Generating the VM file system image
+
+$ cd /opt/torms/manifesting
+$ mkdir artifacts
+$ sudo vmdebootstrap \
+  --owner=$LOGNAME --no-default-configs --config=XXXXX.vmd --hostname=pxe02
+
+XXX is currently either "dux.jessie.vmd" or "dux.l4tm.vmd"
+
+creates files in "artifacts": XXX.log, XXXX.img, XXXX.tar (jessie or l4tm)
+
+===========================================================================
+Examining the diskless image
+
+Loopback mount the image file offset at the start of the primary ext4
+partition.  Usually this command works:
+
+$ sudo mount -oloop,ro,offset=1048576 artifacts/XXXX.img /mnt/somewhere
+
+The magic number can be seen by
+
+$ parted artifacts/XXXX.img unit B print
+
+Don't forget to unmount before the next step.
+
+===========================================================================
+Prepping the diskless image
+
+Several files were created in the artifacts subdirectory.  XXXX.img is the
+raw file system image with a boot MBR and file system partition.  XXXX.tar
+is all the files and is of more use; unpack it with the command
+
+$ untar.sh XXXX.tar
+
+to create a new directory artificats/XXXX.untar
+
+ramdisk images are cpio archives.  To create one for diskless booting,
+along with some extra magic,
+
+$ cpio.sh XXXX
+
+which takes the XXXX.untar files and packages them into the proper
+CPIO archive under ../tftp/$MANIFEST_ARCH.  These files correspond to
+the menu presented by ../tftp/pxelinux.cfg/default
+
+===========================================================================
+Booting
+
+Run the script diskless.sh, supplying a node number from 1-8 and a boot.cfg file:
+
+./diskless.sh boot.cfg/arm-bios-direct.sh
+
+A QEMU session will be started with the final octet of the MAC address
+equal to the node numbber.  This will match one of the preconfigured
+addresses in the PXE/fabric_emulation.net.xml file.
+
+An SDL display window will start displaying the menu.  After choosing
+an image to boot, the terminal window will become the system console.
+That gives full scrollback of the boot messages along with a more
+flexible login screen.

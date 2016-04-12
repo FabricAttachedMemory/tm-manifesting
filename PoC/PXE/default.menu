@@ -1,0 +1,36 @@
+# PXELINUX config for booting diskless nodes in The Machine.
+# This file should appear as ..../tftp/pxelinug.cfg/default
+
+DEFAULT vesamenu.c32
+PROMPT 0
+TIMEOUT 0
+MENU RESOLUTION 640 480
+MENU COLOR title	1;36;44	#AAFF0000 #00000000 std
+MENU COLOR unsel   	1	#5500FFFF #00000000 std
+MENU COLOR sel 		1;36	#FF00FF00 #00000000 std
+MENU BACKGROUND pxelinux.cfg/background.png
+
+MENU TITLE ToRMS PXE Network Boot
+
+LABEL Jessie
+	menu label Jessie from vmdebootstrap
+	kernel amd64/jessie.vmlinuz
+	initrd amd64/jessie.cpio
+	append edd=off rootfstype=ramfs console=ttyS0
+
+LABEL L4TM
+	menu label L4TM from vmdebootstrap
+	kernel amd64/l4tm.vmlinuz
+	initrd amd64/l4tm.cpio
+	append edd=off rootfstype=ramfs console=ttyS0
+
+LABEL ARM_L4TM
+	menu label ARM L4TM from vmdebootstrap
+	kernel arm64/l4tm.vmlinuz
+	initrd arm64/l4tm.cpio
+	append edd=off rootfstype=ramfs console=ttyAM0
+
+LABEL RawImage
+	menu label Jessie and memdisk
+	kernel memdisk
+	initrd amd64/jessie.img size=768

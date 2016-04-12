@@ -1,0 +1,18 @@
+{
+    "Architecture": "all",
+    "Description": "Real-time strategy game of ancient warfare (data files)\n 0 A.D. (pronounced \"zero ey-dee\") is a free, open-source, cross-platform\n real-time strategy (RTS) game of ancient warfare. In short, it is a\n historically-based war/economy game that allows players to relive or rewrite\n the history of Western civilizations, focusing on the years between 500 B.C.\n and 500 A.D. The project is highly ambitious, involving state-of-the-art 3D\n graphics, detailed artwork, sound, and a flexible and powerful custom-built\n game engine.\n .\n This package contains the main data files required by 0 A.D.",
+    "Filename": "pool/main/0/0ad-data/0ad-data_0.0.17-1_all.deb",
+    "Homepage": "http://play0ad.com/",
+    "Installed-Size": "1422289",
+    "MD5sum": "b82e30c2927ed595cabbe8000ebb93b0",
+    "Maintainer": "Debian Games Team <pkg-games-devel@lists.alioth.debian.org>",
+    "Package": "0ad-data",
+    "Pre-Depends": "dpkg (>= 1.15.6~)",
+    "Priority": "optional",
+    "SHA1": "08e4a649d2f2f7d9ae5ec4835fcd44ff58b0d3c2",
+    "SHA256": "84ee024e2f19f0ffd732b419da2e594e57f615f45341926a3fb427746b7dc82b",
+    "Section": "games",
+    "Size": "566073422",
+    "Suggests": "0ad",
+    "Version": "0.0.17-1"
+}
