@@ -6,13 +6,28 @@ import sys
 from tmcmd import cmdlookup
 
 
+def _cleanup_sysarg(sysargv, parsearg):
+    """
+        Remove "argparse" defined arguments from sys.argv list.
+    Mixing those two together causing confusion in the "cmdlookup"
+    function calls.
+    :param 'sysargv': [list] of arguments in "sys.argv"
+    :param 'parsearg': [dict] of arguments set by "argparse" module.
+    """
+    for arg in parsearg.keys():
+        overlap = '--%s' % (arg)
+        if overlap in sysargv:
+            sysargv.remove(overlap)
+
+
 def main(args):
     if len(sys.argv) < 2:
         cmdlookup['help']()
         return
+    _cleanup_sysarg(sys.argv, args)
     try:
         print(cmdlookup[sys.argv[1]](sys.argv[2:], **args))
-    except Exception as e:
+    except (AssertionError, KeyError) as e:
         print(str(e))
         if args['debug']:
             set_trace()
