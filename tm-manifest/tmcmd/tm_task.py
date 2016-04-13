@@ -29,10 +29,8 @@ class TmTask(tm_base.TmCmd):
         assert len(args) == 0, '"listtasks" does not take non-optional arguments!'
         url = "%s%s" % (self.url, 'task/')
 
-        if options['verbose']:
+        if 'verbose' in options and options['verbose']:
             print(' - "listtasks" sending request to "%s"...' % url)
-        if options['debug']:
-            set_trace()
 
         data = self.http_request(url)
         return self.to_json(data)
@@ -47,13 +45,11 @@ class TmTask(tm_base.TmCmd):
         List all the packages defined by a task in json string format.
         """
         assert len(args) >= 1, 'Missing argument: showtask <name>!'
-        name = args[0]
+        name = args[0] if type(args) is list else args
         url = "%s%s%s" % (self.url, 'task/', name)
 
-        if options['verbose']:
+        if 'verbose' in options and options['verbose']:
             print(' - "showtask" sending request to "%s"...' % url)
-        if options['debug']:
-            set_trace()
 
         data = self.http_request(url)
         return self.to_json(data)

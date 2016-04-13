@@ -6,13 +6,21 @@ import sys
 from tmcmd import cmdlookup
 
 
+def _cleanup_sysarg(sysargv, parsearg):
+    for arg in parsearg.keys():
+        overlap = '--%s' % (arg)
+        if overlap in sysargv:
+            sysargv.remove(overlap)
+
+
 def main(args):
     if len(sys.argv) < 2:
         cmdlookup['help']()
         return
+    _cleanup_sysarg(sys.argv, args)
     try:
         print(cmdlookup[sys.argv[1]](sys.argv[2:], **args))
-    except Exception as e:
+    except (AssertionError, KeyError) as e:
         print(str(e))
         if args['debug']:
             set_trace()

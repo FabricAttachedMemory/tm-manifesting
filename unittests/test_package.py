@@ -37,7 +37,7 @@ class PackageTest(unittest.TestCase):
         """ Test if showpkg can return correct data for the package. """
         output = self.tm_cmd.showpkg(self.pkg_name)
         expected = None
-        with open('./mock-data/0ad-data.json', 'r+') as file_obj:
+        with open('./mock-data/0ad-data.package.json', 'r+') as file_obj:
             expected = file_obj.read()
         self.assertEqual(output, expected,
                 msg='Expected data in mock-data/0ad-data.json does not match\
