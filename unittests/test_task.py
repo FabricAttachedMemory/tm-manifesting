@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3 -tt
 """
     Set of tests for for tmcmd/tm_task.py part of API.
 """
@@ -40,6 +40,9 @@ class TaskTest(unittest.TestCase):
         expected = None
         with open('./mock-data/L4TM_C_CPP.task.json', 'r+') as file_obj:
             expected = file_obj.read()
+        # Less reliable test in oppose to "output == expected", but less annoying,
+        #due to unexpected '\n' characters that can appear in the end of the file
+        #or output which breaks the test, even though the output logically correct.
         status = output in expected
         self.assertTrue(status,
                 msg='Expected data in "mock-data/L4TM_C_CPP.task.json" does not match\

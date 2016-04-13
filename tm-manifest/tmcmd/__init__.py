@@ -24,7 +24,7 @@ def set_help(func_dict):
     return result
 
 
-def show_help(args, **options):
+def show_help(args=[], **options):
     """
     SYNOPSIS
         help

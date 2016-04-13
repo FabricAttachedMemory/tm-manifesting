@@ -18,7 +18,7 @@ class TmTask(tm_base.TmCmd):
         }
 
 
-    def listtasks(self, args, **options):
+    def listtasks(self, args=[], **options):
         """
     SYNOPSIS
         listtasks [verbose | debug]
@@ -45,6 +45,8 @@ class TmTask(tm_base.TmCmd):
         List all the packages defined by a task in json string format.
         """
         assert len(args) >= 1, 'Missing argument: showtask <name>!'
+        # Let user pass both types to avoid confusion passing args as "list" for a single argument.
+        #Passing list is helpfull for a generic function call, like it used in tm_manifest.py
         name = args[0] if type(args) is list else args
         url = "%s%s%s" % (self.url, 'task/', name)
 
