@@ -1,0 +1,11 @@
+*.img
+*.*.img
+*.log
+*.*.log
+*.swp
+*.tar
+*.*.tar
+artifacts
+uploads
+__pycache__
+*.pyc
