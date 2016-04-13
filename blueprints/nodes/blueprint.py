@@ -48,7 +48,9 @@ def webpage(name=None):
 @BP.route('/api/%s/' % _ERS_element)
 @BP.route('/api/%s/<name>' % _ERS_element)
 def api(name=None):
-    return jsonify({ 'error': 'Not implemented' })
+    response = jsonify({ 'error': 'API GET not implemented' })
+    response.status_code = 501
+    return response
 
 ###########################################################################
 
