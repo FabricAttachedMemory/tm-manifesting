@@ -95,7 +95,9 @@ def webpage_upload():
 @BP.route('/api/%s/' % _ERS_element)
 @BP.route('/api/%s/<path:name>/' % _ERS_element)
 def api(name=None):
-    return jsonify({ 'error': 'API GET not implemented' })
+    response = jsonify({ 'error': 'API GET not implemented' })
+    response.status_code = 501
+    return response
 
 
 @BP.route('/api/%s/<path:namespace>/' % _ERS_element, methods=(('POST', )))

@@ -4,12 +4,12 @@ import os
 import sys
 from pdb import set_trace
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
 mainapp = Flask('tm_manifesting', static_url_path='/static')
 mainapp.config.from_object('manifest_config')
-mainapp.config['API_VERSION'] = 0.6
+mainapp.config['API_VERSION'] = 1.0
 
 ###########################################################################
 # Must come after mainapp config loading because it's Mobius circular
@@ -30,9 +30,38 @@ mainapp.register_blueprint(BMB.BP, url_prefix='/manifesting')
 ###########################################################################
 # Global header handling
 
+
+def _response_bad(errmsg, status_code=418):
+    response = jsonify({'error': errmsg})
+    response.status_code = status_code
+    return response
+
+
+@mainapp.before_request
+def check_version(*args, **kwargs):
+    if 'api' not in request.path:   # Ignore versioning for HTML
+        return None
+    hdr_accept = request.headers['Accept']
+    if 'application/json' not in hdr_accept:
+        return _response_bad('I see no JSON here', 406)
+    version = -1.0
+    for elem in hdr_accept.split(';'):
+        if 'version' in elem:
+            try:
+                version = float(elem.split('=')[-1])
+                break
+            except Exception as e:
+                pass
+    if version < 0:
+        return _response_bad('I see no version here')
+    want = mainapp.config['API_VERSION']
+    if version != want:
+        return _response_bad('Bad version: %s != %s' % (version, want))
+
+
 @mainapp.after_request
 def version(response):
-    response.headers["Version"] = mainapp.config['API_VERSION']
+    response.headers['Content-Type'] += ';version=%s' % mainapp.config['API_VERSION']
     return response
 
 ###########################################################################
@@ -50,7 +79,7 @@ def root():
 
 ###########################################################################
 # Must come after all route declarations, including blueprint registrations
-mainapp.config['rules'] = sorted(str(rule) for
+mainapp.config['rules'] = sorted('%s %s' % (rule.rule, rule.methods) for
     rule in mainapp.url_map.iter_rules())
 
 if __name__ == '__main__':
