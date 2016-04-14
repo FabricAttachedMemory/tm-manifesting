@@ -60,8 +60,9 @@ def api_nodenum(nodenum=None):
     try:
         contentstr = request.get_data().decode()
         manifest = request.get_json(contentstr)
-        nosuch = mainapp.blueprints['manifest'].filter(manifest['manifest'])
-        assert not nosuch, 'no such manifest(s) ' + ', '.join(nosuch)
+        manname = manifest['manifest']
+        manifest = mainapp.blueprints['manifest'].lookup(manname)
+        assert manifest is not None, 'no such manifest ' + manname
         node = int(nodenum)
         assert 1 <= node <= 80, 'Value out of range'
         return jsonify({'status': 'you got lucky'})

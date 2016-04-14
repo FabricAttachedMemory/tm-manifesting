@@ -206,14 +206,14 @@ def load_data():
     except Exception as e:
         pass
 
-    BP.filter = filter
+    BP.lookup = lookup
 
 
-def filter(manifest):    # Maybe it's time for a class
-    for key in _data:
+def lookup(manifest):    # Maybe it's time for a class
+    for key, value in _data.items():
         if key.endswith(manifest):
-            return ''
-    return manifest
+            return value.thedict
+    return None
 
 
 # A singleton without a class
