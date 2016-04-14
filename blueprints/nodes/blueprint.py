@@ -5,6 +5,7 @@ import sys
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify
+from werkzeug.exceptions import BadRequest
 
 _ERS_element = 'node'
 
@@ -49,6 +50,27 @@ def webpage(name=None):
 @BP.route('/api/%s/<name>' % _ERS_element)
 def api(name=None):
     return jsonify({ 'error': 'Not implemented' })
+
+
+@BP.route('/api/%s/<nodenum>' % _ERS_element, methods=('PUT', ))
+def api_nodenum(nodenum=None):
+    assert int(request.headers['Content-Length']) < 200, 'Too big'
+    try:
+        contentstr = request.get_data().decode()
+        manifest = request.get_json(contentstr)
+        nosuch = mainapp.blueprints['manifest'].filter(manifest['manifest'])
+        assert not nosuch, 'no such manifest(s) ' + ', '.join(nosuch)
+        node = int(nodenum)
+        assert 1 <= node <= 80, 'Value out of range'
+        return jsonify({'status': 'you got lucky'})
+    except BadRequest as e:
+        return e.get_response()
+        return response
+    except (AssertionError, ValueError) as e:
+        response = jsonify({ 'error': str(e) })
+        response.status_code = 406
+        return response
+
 
 ###########################################################################
 

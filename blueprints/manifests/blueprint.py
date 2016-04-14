@@ -204,6 +204,15 @@ def load_data():
     except Exception as e:
         pass
 
+    BP.filter = filter
+
+
+def filter(manifest):    # Maybe it's time for a class
+    for key in _data:
+        if key.endswith(manifest):
+            return ''
+    return manifest
+
 
 # A singleton without a class
 if '_data' not in locals():
