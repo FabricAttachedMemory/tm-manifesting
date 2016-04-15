@@ -27,6 +27,9 @@ mainapp.register_blueprint(BTB.BP, url_prefix='/manifesting')
 import blueprints.manifests.blueprint as BMB
 mainapp.register_blueprint(BMB.BP, url_prefix='/manifesting')
 
+import blueprints.images.blueprint as BIB
+mainapp.register_blueprint(BIB.BP, url_prefix='/manifesting')
+
 ###########################################################################
 # Global header handling
 
