@@ -1,7 +1,5 @@
 #!/usr/bin/python3 -tt
-
 from pdb import set_trace
-
 from . import tm_base
 
 class TmPackage(tm_base.TmCmd):
