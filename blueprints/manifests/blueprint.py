@@ -102,17 +102,18 @@ def api(name=None):
 
 @BP.route('/api/%s/<path:namespace>/' % _ERS_element, methods=(('POST', )))
 def api_upload(namespace=None):
-    assert int(request.headers['Content-Length']) < 20000, 'Too big'
-    contentstr = request.get_data().decode()
     try:
+        assert int(request.headers['Content-Length']) < 20000, 'Too big'
+        contentstr = request.get_data().decode()
         m = ManifestDestiny(namespace, '', contentstr)
     except Exception as e:
         response = jsonify({ 'error': str(e) })
         response.status_code = 422
         return response
 
-
-    return jsonify({ 'status': 'life is good' })
+    response = jsonify({ 'status': 'life is good' })
+    response.status_code = 201  # but not always
+    return response
 
 ###########################################################################
 
@@ -209,11 +210,8 @@ def load_data():
     BP.lookup = lookup
 
 
-def lookup(manifest):    # Maybe it's time for a class
-    for key, value in _data.items():
-        if key.endswith(manifest):
-            return value.thedict
-    return None
+def lookup(manifest_name):    # Can be sub/path/name
+    return _data.get(manifest_name, None)
 
 
 # A singleton without a class
