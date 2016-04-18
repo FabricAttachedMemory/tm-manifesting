@@ -53,6 +53,11 @@ class Blueprint():
         # set_trace()
         return self.data.get(search_key, return_val)
 
+
+    def jasonify(self):
+        raise NotImplementedError("Beem! Bam! Bosh!")
+
+
     @property
     def keys(self):
         """ Return keys of self.data """

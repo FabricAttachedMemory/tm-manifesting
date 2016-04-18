@@ -21,6 +21,7 @@ def _cleanup_sysarg(sysargv, parsearg):
 
 
 def main(args):
+    # set_trace()
     if len(sys.argv) < 2:
         cmdlookup['help']()
         return

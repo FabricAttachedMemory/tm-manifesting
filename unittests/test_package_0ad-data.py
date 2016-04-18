@@ -9,13 +9,20 @@ import tmcmd
 
 class PackageTest(unittest.TestCase):
 
-    URL = 'http://rocky42.americas.hpqcorp.net:31178/manifesting/api/'
+    URL = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
     tm_cmd = None
     pkg_name = '0ad-data'
 
     @classmethod
     def setUpClass(cls):
         cls.tm_cmd = tmcmd.tmpkg
+
+
+    def test_0ad_data_exists(self):
+        """ Test if showpkg can return non-error data for the package. """
+        output = self.tm_cmd.showpkg(self.pkg_name)
+        status = 'error' in output
+        self.assertFalse(status, msg='"0ad-data" package should be in the list')
 
 
     def test_0ad_data_exists(self):

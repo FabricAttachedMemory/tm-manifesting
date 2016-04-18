@@ -9,7 +9,7 @@ import tmcmd
 
 class TaskTest(unittest.TestCase):
 
-    URL = 'http://rocky42.americas.hpqcorp.net:31178/manifesting/api/'
+    URL = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
     tm_cmd = None
     task_name = 'L4TM_C_CPP'
 
@@ -20,23 +20,23 @@ class TaskTest(unittest.TestCase):
 
 
     def test_L4TM_C_CPP_exists(self):
-        """ Test if showtask can return non-error data for the task. """
-        output = self.tm_cmd.showtask(self.task_name)
+        """ Test if show can return non-error data for the task. """
+        output = self.tm_cmd.show(self.task_name)
         status = 'error' in output
         self.assertFalse(status, msg='"L4TM_C_CPP" task should be in the list')
 
 
     def test_task_not_exists(self):
-        """ Test if showtask will return error message for non-existed task. """
-        output = self.tm_cmd.showtask('soup-no-soup')
+        """ Test if show will return error message for non-existed task. """
+        output = self.tm_cmd.show('soup-no-soup')
         status = 'error' in output
         self.assertTrue(status,
                 msg='"soup-no-soup" task should not be in the list')
 
 
     def test_L4TM_C_CPP_content(self):
-        """ Test if showtask can return correct data for the package. """
-        output = self.tm_cmd.showtask(self.task_name, verbose=True)
+        """ Test if show can return correct data for the package. """
+        output = self.tm_cmd.show(self.task_name, verbose=True)
         expected = None
         with open('./mock-data/L4TM_C_CPP.task.json', 'r+') as file_obj:
             expected = file_obj.read()

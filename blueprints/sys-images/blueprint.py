@@ -36,10 +36,10 @@ class SysImagesBlueprint(blueprints_base.Blueprint):
     """
         This class manages "manifesting/image/" and "manifesting/api/image/ " interaction.
     """
+
     def __init__(self, cfg={}):
         super().__init__(cfg=cfg)
         self.load_data()
-
 
     def load_data(self):
         """
@@ -50,7 +50,6 @@ class SysImagesBlueprint(blueprints_base.Blueprint):
             for filename in fnmatch.filter(filename, '*.tar'):
                 self.data[filename] = os.path.join(abs_path, filename)
         return self.data
-
 
     def jsonify(self):
         result = defaultdict(list)
@@ -82,8 +81,6 @@ def webpage_show_all_tar(name=None):
 @BP.route('/%s/<name>' % _ERS_element)
 def webpage_download_tar(name):
     file_location = SysImagesBp.lookup(name)
-    if file_location is None:
-        return jsonify({ 'error': 'No such system image "%s"' % name })
     file_name = os.path.basename(file_location)
     return send_file(file_location,
                     as_attachment=True,

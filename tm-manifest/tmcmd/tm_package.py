@@ -10,12 +10,11 @@ class TmPackage(tm_base.TmCmd):
         """
         super().__init__()
         self.args = {
-            'listpkgs' : self.listpkgs,
-            'showpkg' : self.showpkg
+            'listpkgs' : self.listall,
+            'showpkg' : self.show
         }
 
-
-    def listpkgs(self, *args, **options):
+    def listall(self, *args, **options):
         """
     SYNOPSIS
         listpkgs
@@ -24,12 +23,13 @@ class TmPackage(tm_base.TmCmd):
         List all the packages available in the repo with its metadata in json
     string format.
         """
+        super().listall(args=args, option=options)
         url = "%s%s" % (self.url, 'package/')
         data = self.http_request(url)
         return self.to_json(data)
 
 
-    def showpkg(self, args, **options):
+    def show(self, args, **options):
         """
     SYNOPSIS
         showpkg <name>
@@ -37,10 +37,46 @@ class TmPackage(tm_base.TmCmd):
     DESCRIPTION
         List metadata of the package in json string format.
         """
-        try:
-            name = args[0]
-        except IndexError:
-            return { "error" : "missing package name in function call!" }
-        url = "%s%s%s" % (self.url, 'package/', name)
+        super().show(args=args, option=options)
+        url = "%s%s%s" % (self.url, 'package/', self.show_name)
         data = self.http_request(url)
         return self.to_json(data)
+
+
+    # def listpkgs(self, *args, **options):
+    #     """
+    # SYNOPSIS
+    #     listpkgs
+    #
+    # DESCRIPTION
+    #     List all the packages available in the repo with its metadata in json
+    # string format.
+    #     """
+    #     assert len(args) == 0, '"listpkgs" does not take non-optional arguments!'
+    #     if 'verbose' in options and options['verbose']:
+    #         print(' - "listpkgs" sending request to "%s"...' % url)
+    #
+    #     url = "%s%s" % (self.url, 'package/')
+    #     data = self.http_request(url)
+    #     return self.to_json(data)
+
+
+
+    # def showpkg(self, args, **options):
+    #     """
+    # SYNOPSIS
+    #     showpkg <name>
+    #
+    # DESCRIPTION
+    #     List metadata of the package in json string format.
+    #     """
+    #     assert len(args) >= 1, 'Missing argument: args <name>!'
+    #     # Let user pass both types to avoid confusion passing args as "list" for a single argument.
+    #     #Passing list is helpfull for a generic function call, (as in tm_manifest.py)
+    #     name = args[0] if type(args) is list else args
+    #     if 'verbose' in options and options['verbose']:
+    #         print(' - "showpkg" sending request to "%s"...' % url)
+    #
+    #     url = "%s%s%s" % (self.url, 'package/', name)
+    #     data = self.http_request(url)
+    #     return self.to_json(data)
