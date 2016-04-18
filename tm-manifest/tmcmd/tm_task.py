@@ -20,7 +20,7 @@ class TmTask(tm_base.TmCmd):
         }
 
 
-    def listall(self, *args, **options):
+    def listall(self, arg_list=None, **options):
         """
     SYNOPSIS
         listtasks [verbose | debug]
@@ -28,13 +28,13 @@ class TmTask(tm_base.TmCmd):
     DESCRIPTION
         List all tasks present in the service in json string format.
         """
-        super().listall(args=args, option=options)
+        super().listall(arg_list, **options)
         url = "%s%s" % (self.url, 'task/')
         data = self.http_request(url)
         return self.to_json(data)
 
 
-    def show(self, args, **options):
+    def show(self, target, **options):
         """
     SYNOPSIS
         showtask <name> [verbose | debug]
@@ -42,7 +42,7 @@ class TmTask(tm_base.TmCmd):
     DESCRIPTION
         List all the packages defined by a task in json string format.
         """
-        super().show(args=args, option=options)
+        super().show(target, **options)
         url = "%s%s%s" % (self.url, 'task/', self.show_name)
         data = self.http_request(url)
         return self.to_json(data)

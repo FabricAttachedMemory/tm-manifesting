@@ -20,36 +20,55 @@ class TmCmd():
         self.show_name = None
 
 
-    def listall(self, *args, **options):
+    def listall(self, arg_list=None, **options):
         """
             Intended to be overridden by inherited class.
         """
-        assert len(args) == 0, 'This function does not take non-optional arguments!'
+        if arg_list is None:
+            arg_list = []
+        assert len(arg_list) == 0, 'This function does not take non-optional arguments!'
         if 'verbose' in options and options['verbose']:
             print(' - Sending request to "%s"...' % url)
 
 
-    def show(self, args, **options):
+    def show(self, target, **options):
         """
             Intended to be overridden by inherited class.
         """
-        assert len(args) >= 1, 'Missing argument: thisfunction <name>!'
+        assert len(target) >= 1, 'Missing argument: thisfunction <name>!'
         # Let user pass both types to avoid confusion passing args as "list" for a single argument.
         #Passing list is helpfull for a generic function call, (as in tm_manifest.py)
-        self.show_name = args[0] if type(args) is list else args
+        self.show_name = target[0] if type(target) is list else target
         if 'verbose' in options and options['verbose']:
             print(' - Sending request to "%s"...' % url)
 
-    def http_request(self, url):
+
+    def http_request(self, url, **options):
         """
             Do a http request on the provided url and return a response
         in jsong format (if abailable).
         :param 'url': [str] url request.
         :return: [json]
         """
-        http_resp = HTTP_REQUESTS.get(url, headers=self.header)
+        headers = options.get('headers', self.header)
+        http_resp = HTTP_REQUESTS.get(url, headers=headers)
         jsondata = http_resp.json()
         return jsondata
+
+
+    def http_download(self, url, destination, **options):
+        """
+            Do a download http request on the provided url that is pointing to a file.
+        Save the file to the requested destination.
+        :param 'url': [str] url lint to a file to download.
+        :param 'destination': [str] destination on the local disk to save downloaded file to.
+        :return: None
+        """
+        headers = options.get('headers', self.header)
+        downloaded = HTTP_REQUESTS.get(url, stream=True, headers=headers)
+        with open(destination, "wb") as dest_file:
+            # need to feedback a download bar to the screen here.
+            dest_file.write(downloaded.content)
 
 
     def to_json(self, content):
