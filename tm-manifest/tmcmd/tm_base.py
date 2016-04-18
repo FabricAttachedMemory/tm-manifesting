@@ -10,12 +10,14 @@ class TmCmd():
     url='http://localhost:31178/manifesting/api/'
     args = {}
 
-    def __init__(self, sort=True, headers={}, indent=4):
+    def __init__(self, sort=True, headers=None, indent=4):
+        if headers is None:
+            self.header = {'Accept' : 'application/json; version=1.0'}
+        else:
+            self.header = headers
         self.json_indent = indent
         self.json_sort = sort
         self.show_name = None
-        if not headers:
-            self.header = {'Accept' : 'application/json; version=1.0'}
 
 
     def listall(self, *args, **options):
