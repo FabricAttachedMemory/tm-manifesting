@@ -186,7 +186,7 @@ class VmDebootstrap(cliapp.Application):
 
             if self.settings['owner']:
                 self.chown(rootdir)
-        except BaseException as e:
+        except BaseException, e:
             self.message('EEEK! Something bad happened...')
             if rootdir:
                 db_log = os.path.join(rootdir, 'debootstrap', 'debootstrap.log')
@@ -201,7 +201,7 @@ class VmDebootstrap(cliapp.Application):
     def message(self, msg):
         logging.info(msg)
         if self.settings['verbose']:
-            print(msg)
+            print msg
 
     def runcmd(self, argv, stdin='', ignore_fail=False, env=None, **kwargs):
         logging.debug('runcmd: %s %s %s' % (argv, env, kwargs))
@@ -365,7 +365,7 @@ class VmDebootstrap(cliapp.Application):
                     if line.startswith('127.0.0.1'):
                         line += ' %s' % hostname
                     f.write('%s\n' % line)
-        except IOError as e:
+        except IOError, e:
             pass
 
     def create_fstab(self, rootdir, rootdev, roottype, bootdev, boottype):
@@ -590,7 +590,7 @@ append initrd=%(initrd)s root=UUID=%(uuid)s ro %(kserial)s
 
         # Umount in the reverse mount order
         if self.settings['image']:
-            for i in range(len(self.mount_points) - 1, -1, -1):
+            for i in xrange(len(self.mount_points) - 1, -1, -1):
                 mount_point = self.mount_points[i]
                 try:
                     self.runcmd(['umount', mount_point], ignore_fail=False)
