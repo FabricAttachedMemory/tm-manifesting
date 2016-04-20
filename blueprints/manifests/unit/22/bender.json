@@ -1,0 +1,8 @@
+{
+"_comment": "I am Bender, please insert girder.",
+"name": "Bender Bending",
+"description": "An industrial metalworking robot, built in 2996 at Fábrica Robótica De La Madre",
+"release": "unstable",
+"tasks" : [ ],
+"packages": [ "alien-arena" ]
+}
