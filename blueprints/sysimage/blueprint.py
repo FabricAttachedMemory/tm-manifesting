@@ -17,7 +17,7 @@ from flask import Blueprint, render_template, request, jsonify, send_file
 
 # import blueprints_base  # still have not figured out how relative imports work.
 
-_ERS_element = 'images'
+_ERS_element = 'sys-image'
 
 # Mobius circular worked for a while.  I like this better.
 mainapp = sys.modules['__main__'].mainapp

@@ -4,8 +4,10 @@
 
 import argparse
 from glob import glob
+import json
 import os
 import shlex
+import sys
 import time
 from shutil import copyfile
 from subprocess import Popen
@@ -15,12 +17,13 @@ from pdb import set_trace
 def remove_target(target, **options):
     """
         Remove "target" file. Provide meaningful feadback on the screen with verbose option.
+
     :param 'target': [str] path to the file to remove.
     :param 'verbose': [bool] Make it talk.
     :param 'debug': [bool] set_trace if exception was caught.
     :return: 0 - success. 1 - error.
     """
-    filename = slice_path(target)
+    filename = slice_path(target)   # used only for prints.
     try:
         os.remove(target)
         if options.get('verbose', False):
@@ -38,6 +41,7 @@ def symlink_target(source, target, **options):
     """
         Create symlink for target from the source. Provide meaningful feadback on the screen
     verbose option.
+
     :param 'source': [str] path to a file to create a symbolic link from.
     :param 'target': [str] path to the file to create a symbolic link to.
     :param 'verbose': [bool] Make it talk.
@@ -63,7 +67,9 @@ def slice_path(target, slice_ratio=2):
     """
         Slice long path string on half (or by slice_ratio amount). Sometimes there is no need to print
     and absolute path to a string where the first N directories are irrelavent to the user.
+
         Example: /one/two/three/four/five/ will be sliced into three/four/five/.
+
     :param 'target': [str] path to slice.
     :param 'slice_ratio': [int or float](default=2) ratio by which to slice target.
                         e.g. len(target) / slice_ratio
@@ -79,6 +85,7 @@ def cleanout_kernel(sys_img, **options):
     """
         Cleanout boot/vmlinuz* and boot/initrd.img/ files from the system image directory.
     These files are not needed for diskless boot and are just taking up extra space.
+
     :param 'sys_img': [str] path to the file system location to chroot to.
     :param 'verbose': [bool] Make it talk.
     :param 'debug': [bool] set_trace if exception was caught.
@@ -96,6 +103,7 @@ def cleanout_kernel(sys_img, **options):
 
 def configure_init(sys_img, **options):
     """
+        Set correct symbolic link to an /init/ file from /sbin/init
 
     :param 'verbose': [bool] Make it talk.
     :param 'debug': [bool] set_trace if exception was caught.
@@ -113,9 +121,98 @@ def configure_init(sys_img, **options):
     return status
 
 
+def cleanup_sources_list(sys_img, **options):
+    """
+        Check if /etc/apt/source.list.d/base.list file exists. If so, move it into
+    /etc/apt/sources.list, cause base.list causing troubles.
+
+    :param 'sys_img': [str] path to the file system location to chroot to.
+    :param 'verbose': [bool] Make it talk.
+    :param 'debug': [bool] set_trace if exception was caught.
+    :return: 0 - success. 1 - error.
+    """
+    sources_list = '%s/etc/apt/sources.list' % sys_img
+    sources_base = '%s/etc/apt/sources.list.d/base.list' % sys_img
+
+    if not os.path.exists(sources_base):
+        if options.get('verbose', False):
+            print ('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
+        return 0
+    if options.get('verbose', False):
+        print (' - Copying "%s" file to "%s"' %
+                (slice_path(sources_base), slice_path(sources_list)))
+    copyfile(sources_base, sources_list)
+
+    return remove_target(sources_base, **dict(options))
+
+
+def set_hostname(sys_img, hostname, **options):
+    """
+        Set new hostname on the file system image. Get rid of the old hostname if it already exists
+    and write a new one.
+
+    :param 'sys_img': [str] path to the file system location to mess with.
+    :param 'hostname': [str] hostname to be used for given system image.
+    :param 'verbose': [bool] Make it talk.
+    :return: 0 - success. 1 - error.
+    """
+    hostname_file = '%s/etc/hostname' % (sys_img)
+    if os.path.exists(hostname_file):
+        if remove_target(hostname_file, **dict(options)) == 1: # no need to continue if couldnt remove hostname file.
+            return 1
+    overwrite_file_content(hostname_file, hostname, **dict(options))
+    return 0
+
+
+def set_hosts(sys_img, content, **options):
+    """
+        Set new hostname on the file system image. Get rid of the old hostname if it already exists
+    and write a new one.
+
+    :param 'sys_img': [str] path to the file system location to mess with.
+    :param 'hostname': [str] hostname to be used for given system image.
+    :param 'verbose': [bool] Make it talk.
+    :return: 0 - success. 1 - error.
+    """
+    hosts_file = '%s/etc/hosts' % (sys_img)
+    if os.path.exists(hosts_file):
+        if remove_target(hosts_file, **dict(options)) == 1: # no need to continue if couldnt remove hosts file.
+            return 1
+    overwrite_file_content(hosts_file, content, **dict(options))
+    return 0
+
+
+def overwrite_file_content(target, content, **options):
+    """
+        Overwrite file in the targeted location with a new content.
+
+    :param 'target': [str] path to a file to create or overwrite with a new content
+    :param 'content': [str] content to use in the new\overwritten file.
+    :param 'verbose': [bool] Make it talk.
+    """
+    with open(target, 'w+') as file_obj:
+        if options.get('verbose', False):
+            print ('Writing into "%s": \n[\n%s\n]\n' % (target, content))
+        file_content = '%s\n' % str(content)
+        file_obj.write(file_content)
+
+
 def main(args):
-    status = cleanout_kernel(args['sys_img'], verbose=args['verbose'], debug=args['debug'])
-    status = configure_init(args['sys_img'], verbose=args['verbose'], debug=args['debug'])
+    with open(args['manifest']) as data_file:
+        manifest = json.load(data_file)
+
+    status = 0
+
+    # if manifest.get('hostname', False):
+    #     status = set_hostname(args['sys_img'], manifest['hostname'], verbose=args['verbose'], debug=args['debug'])
+    #
+    # if manifest.get('hosts', False):
+    #     status = set_hosts(args['sys_img'], manifest['hosts'], verbose=args['verbose'], debug=args['debug'])
+
+    status = cleanup_sources_list(args['sys_img'], verbose=args['verbose'], debug=args['debug'])
+
+    # status = cleanout_kernel(args['sys_img'], verbose=args['verbose'], debug=args['debug'])
+    # status = configure_init(args['sys_img'], verbose=args['verbose'], debug=args['debug'])
     return status
 
 
@@ -128,9 +225,8 @@ if __name__ == '__main__':
     PARSER.add_argument('-i', '--sys-img',
                         help='Path to a file system image.',
                         default='/opt/hpetm/manifesting/sys-images/untar/')
-    PARSER.add_argument('-M', '--manifest',
-                        help='Path to a manifest.json file, which follows the manifesting API specs.',
-                        default='')
+    PARSER.add_argument('-M', '--manifest', required=True,
+                        help='Path to a manifest.json file, which follows the manifesting API specs.')
     PARSER.add_argument('--verbose',
                         help='Make it talk.',
                         action='store_true')
