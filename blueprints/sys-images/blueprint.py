@@ -17,7 +17,7 @@ from flask import Blueprint, render_template, request, jsonify, send_file
 
 # import blueprints_base  # still have not figured out how relative imports work.
 
-_ERS_element = 'sys-image'
+_ERS_element = 'images'
 
 # Mobius circular worked for a while.  I like this better.
 mainapp = sys.modules['__main__'].mainapp
@@ -77,8 +77,8 @@ def load_data():
     _data = {}
     sys_img_dir = mainapp.config['SYSTEM_IMAGES_DIR']
 
-    for abs_path, dirname, filename in os.walk(sys_img_dir):
-        for filename in fnmatch.filter(filename, '*.tar'):
+    for abs_path, dirname, files in os.walk(sys_img_dir):
+        for filename in fnmatch.filter(files, '*.tar'):
             _data[filename] = os.path.join(abs_path, filename)
 
     BP.filter = filter     # So manifest can see it

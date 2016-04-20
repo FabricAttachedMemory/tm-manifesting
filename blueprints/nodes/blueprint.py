@@ -1,5 +1,6 @@
 '''TM Nodes'''
 
+from glob import glob
 import os
 import sys
 from pdb import set_trace
@@ -82,6 +83,12 @@ def api_nodenum(nodenum=None):
 
 def load_data():
     global _data
+
+    nodes_dir = "%s/nodes/" % (mainapp.config['SYSTEM_IMAGES_DIR'])
+
+    for root, dirs, files in os.walk(nodes_dir):
+        for dirname in dirs:
+            _data[dirname] = glob('%s/%s/*.json' % (root, dirname, dirname))
 
     _data = { }
 
