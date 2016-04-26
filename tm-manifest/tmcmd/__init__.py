@@ -25,7 +25,6 @@ def set_help(func_dict):
     """
     result = {}
     for func_name, func in func_dict.items():
-        # set_trace()
         if func.__doc__:
             result[func_name] = func.__doc__
     return result

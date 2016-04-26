@@ -1,9 +1,12 @@
+import os
+
 DEBUG = True
 PORT = 31178
 HOST = '0.0.0.0'
 MANIFESTING_SERVER_DIR = '/opt/hpetm/manifesting/'
-SYSTEM_IMAGES_DIR = '/opt/hpetm/manifesting/sys-images/'
+SYS_IMGS = '/opt/hpetm/manifesting/sys-images/'
 MANIFESTS_DIR = '/opt/hpetm/manifesting/manifests/'
+GOLDEN_IMG = os.path.normpath('%s/golden/golden.l4tm.amd64.tar' % (SYS_IMGS))
 
 L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
 L4TM_RELEASE = 'catapult'
