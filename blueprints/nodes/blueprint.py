@@ -109,7 +109,7 @@ def api_nodenum(nodenum=None):
         manifest_path = os.path.join(manifest.dirpath, manifest.basename)
         response = customize_image(manifest_path, nodenum, cfg=cfg)
 
-        return jsonify({'success': 'manifest "%s" is set to node "%s".' % (manifest.basename, nodenum)})
+        return jsonify({"success": "manifest '%s' is set to node '%s'" % (manifest.basename, nodenum)})
     except BadRequest as e:
         response = e.get_response()
     except (AssertionError, ValueError) as e:
