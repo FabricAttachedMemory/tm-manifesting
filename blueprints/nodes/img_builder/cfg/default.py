@@ -330,6 +330,9 @@ def execute(manifest, sys_img_tar, **args):
     # Remove untar'ed, modified fileimage folder
     remove_target(sys_img, verbose=args['verbose'], debug=args['debug'])
 
+    if status == 1:
+        remove_target()
+
     return status
 
 

@@ -106,7 +106,8 @@ def api_nodenum(nodenum=None):
         copy_to = '%s/%s/%s' % (_UPLOADS, nodenum, manifest.basename)
         copyfile(copy_from, copy_to)
 
-        customize_image(manifest, nodenum, request, cfg=cfg)
+        manifest_path = os.path.join(manifest.dirpath, manifest.basename)
+        response = customize_image(manifest_path, nodenum, cfg=cfg)
 
         return jsonify({'success': 'manifest "%s" is set to node "%s".' % (manifest.basename, nodenum)})
     except BadRequest as e:
@@ -118,25 +119,39 @@ def api_nodenum(nodenum=None):
 
 ###########################################################################
 
-def customize_image(manifest, node, request, cfg=None):
+def customize_image(manifest, node, cfg=None):
     """
-        TODO: docstr
+        Generate a custom filesystem image based of the provided manifset.
+
+    :param 'manifest': [str] absolute path to manifest.json file.
+    :param 'node': [int\str] node number or name to generate filesystem image for.
+    :return: [json str] success or error status.
     """
     sys_imgs = mainapp.config['SYS_IMGS']
     golden = mainapp.config['GOLDEN_IMG']
 
-    img_name = manifest.basename.split('.json')[0]
-    img_location = os.path.normpath('%s/%s/' % (sys_imgs, img_name))
+    if not os.path.exists(golden):
+        return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' }
 
+    img_name = os.path.basename(manifest).split('.json')[0]
+    node_dir = os.path.join(sys_imgs, node)
+
+    if not os.path.isdir(node_dir):
+        os.mkdir(node_dir)
+
+    img_location = os.path.normpath('%s/%s/' % (node_dir, img_name))
     if not os.path.isdir(img_location):
         os.mkdir(img_location)
 
     # absolute path (with a file name) to where Golden image will be coppied to
     tar_file = os.path.normpath('%s/%s.tar' % (img_location, img_name))
     copyfile(golden, tar_file)
-    manifest_path = os.path.join(manifest.dirpath, manifest.basename)
-    set_trace()
-    img_builder.default_cfg(manifest_path, tar_file)
+
+    status = img_builder.default_cfg(manifest, tar_file)
+    if status == 0:
+        return { 'success' : 'Filesystem image for node "%s" was generated.' % (node) }
+    else:
+        return { 'error' : 'Something went wrong in the process of generating filesystem image for node "%s" ' % (node) }
 
 
 def load_data():
