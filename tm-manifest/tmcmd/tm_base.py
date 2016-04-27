@@ -7,10 +7,11 @@ from pdb import set_trace
 class TmCmd():
 
     # url ='http://rocky42.americas.hpqcorp.net:31178/manifesting/api/'
-    url='http://localhost:31178/manifesting/api/'
+    #url='http://localhost:31178/manifesting/api/'
+    url = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
     args = {}
 
-    def __init__(self, sort=True, headers=None, indent=4):
+    def __init__(self, sort=True, headers=None, indent=4, **options):
         if headers is None:
             self.header = {'Accept' : 'application/json; version=1.0'}
         else:
@@ -18,6 +19,7 @@ class TmCmd():
         self.json_indent = indent
         self.json_sort = sort
         self.show_name = None
+        self.verbose = options.get('verbose', False)
 
 
     def listall(self, arg_list=None, **options):
@@ -48,11 +50,19 @@ class TmCmd():
             Do a http request on the provided url and return a response
         in jsong format (if abailable).
         :param 'url': [str] url request.
+        :param 'options[payload]': [dict]
         :return: [json]
         """
         headers = options.get('headers', self.header)
-        http_resp = HTTP_REQUESTS.get(url, headers=headers)
-        jsondata = http_resp.json()
+        if options.get('payload', False):
+            http_resp = HTTP_REQUESTS.put(url, options['payload'], headers=headers)
+            set_trace()
+        else:
+            http_resp = HTTP_REQUESTS.get(url, headers=headers)
+        #jsondata = http_resp.json()
+        #set_trace()
+        #return self.to_json(http_resp.content)
+        jsondata = self.to_json(http_resp)
         return jsondata
 
 
@@ -75,7 +85,16 @@ class TmCmd():
         """
             Convert concent to json string with class parameters.
         """
-        return json.dumps(content, indent=self.json_indent, sort_keys=self.json_sort)
+        try:
+            if isinstance(content, HTTP_REQUESTS.models.Response):
+                return content.json()
+            else:
+                return json.dumps(content, indent=self.json_indent, sort_keys=self.json_sort)
+        except (ValueError, TypeError) as err:
+            if self.verbose:
+                return '{ "error" : %s }' % (err)
+            else:
+                return '{ "error" : "couldn \'t parse server\'s response"}'
 
 
     def update_cmd(self, arg_dict):

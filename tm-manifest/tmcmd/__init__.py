@@ -5,6 +5,7 @@ from shutil import get_terminal_size as terminal_size
 from . import tm_package
 from . import tm_task
 from . import tm_sysimg
+from . import tm_node
 
 
 cmdlookup = {}
@@ -12,11 +13,12 @@ cmdlookup = {}
 tmpkg = tm_package.TmPackage()
 tmtask = tm_task.TmTask()
 tmsysimg = tm_sysimg.TmSysImg()
+tmnode = tm_node.TmNode()
 
 tmpkg.update_cmd(cmdlookup)
 tmtask.update_cmd(cmdlookup)
 tmsysimg.update_cmd(cmdlookup)
-
+tmnode.update_cmd(cmdlookup)
 
 def set_help(func_dict):
     """
@@ -25,7 +27,6 @@ def set_help(func_dict):
     """
     result = {}
     for func_name, func in func_dict.items():
-        # set_trace()
         if func.__doc__:
             result[func_name] = func.__doc__
     return result

@@ -128,7 +128,7 @@ class ManifestDestiny(object):
         except Exception as e:
             raise RuntimeError('not JSON')
         legal = frozenset(
-            ('name', 'description', 'release', 'tasks', 'packages')
+            ('name', 'description', 'release', 'tasks', 'packages', 'hosts', 'hostname')
         )
         keys = frozenset(m.keys())
         missing = list(legal - keys)
@@ -174,6 +174,7 @@ class ManifestDestiny(object):
         self.dirpath = dirpath
         self.basename = basename
 
+
     @property
     def fullpath(self):
         return '%s/%s' % (self.dirpath, self.basename)
@@ -193,7 +194,6 @@ class ManifestDestiny(object):
 
 def load_data():
     global _data
-
     _data = { }
     try:    # don't die in a daemon
         manfiles = [    # List comprehension

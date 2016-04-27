@@ -26,7 +26,7 @@ def main(args):
         return
     _cleanup_sysarg(sys.argv, args)
     try:
-        print(cmdlookup[sys.argv[1]](sys.argv[2:], **args))
+        print(cmdlookup[sys.argv[1]](*tuple(sys.argv[2:]), **args))
     except (AssertionError, KeyError) as e:
         print(str(e))
         if args['debug']:

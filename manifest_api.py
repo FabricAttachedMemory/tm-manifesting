@@ -27,7 +27,7 @@ mainapp.register_blueprint(BTB.BP, url_prefix='/manifesting')
 import blueprints.manifests.blueprint as BMB
 mainapp.register_blueprint(BMB.BP, url_prefix='/manifesting')
 
-import blueprints.images.blueprint as BIB
+import blueprints.sysimage.blueprint as BIB
 mainapp.register_blueprint(BIB.BP, url_prefix='/manifesting')
 
 ###########################################################################
@@ -46,7 +46,7 @@ def check_version(*args, **kwargs):
         return None
     hdr_accept = request.headers['Accept']
     if 'application/json' not in hdr_accept:
-        return _response_bad('I see no JSON here', 406)
+        return _response_bad('I see no JSON here. Did you forget "application/json" in request header?', 406)
     version = -1.0
     for elem in hdr_accept.split(';'):
         if 'version' in elem:
@@ -56,7 +56,7 @@ def check_version(*args, **kwargs):
             except Exception as e:
                 pass
     if version < 0:
-        return _response_bad('I see no version here')
+        return _response_bad('I see no version here. Did you forget "version=1.0" in request header?')
     want = mainapp.config['API_VERSION']
     if version != want:
         return _response_bad('Bad version: %s != %s' % (version, want))
