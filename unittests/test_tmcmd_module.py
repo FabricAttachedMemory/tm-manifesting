@@ -20,19 +20,6 @@ class PackageTest(unittest.TestCase):
         self.assertTrue(status, 'Could not import module! ImportError.')
 
 
-    def test_TmPackage_exists(self):
-        """ Check if TmPackage from 'tm_packag.py' was imported successfully """
-        import tmcmd
-        status = True
-        try:
-            tmcmd.TmPackage
-            status = True
-        except AttributeError:
-            status = False
-
-        self.assertTrue(status, 'TmPackage was not imported correctly! AttributeError.')
-
-
     def test_tmpkg_exists(self):
         """
             Check if tmpkg variable of type TmPackage is created successfully by

@@ -1,7 +1,5 @@
 #!/usr/bin/python3 -tt
-
 from pdb import set_trace
-
 from . import tm_base
 
 class TmPackage(tm_base.TmCmd):
@@ -12,12 +10,11 @@ class TmPackage(tm_base.TmCmd):
         """
         super().__init__()
         self.args = {
-            'listpkgs' : self.listpkgs,
-            'showpkg' : self.showpkg
+            'listpkgs' : self.listall,
+            'showpkg' : self.show
         }
 
-
-    def listpkgs(self, *args, **options):
+    def listall(self, arg_list=None, **options):
         """
     SYNOPSIS
         listpkgs
@@ -26,12 +23,13 @@ class TmPackage(tm_base.TmCmd):
         List all the packages available in the repo with its metadata in json
     string format.
         """
+        super().listall(arg_list, **options)
         url = "%s%s" % (self.url, 'package/')
         data = self.http_request(url)
         return self.to_json(data)
 
 
-    def showpkg(self, args, **options):
+    def show(self, target, **options):
         """
     SYNOPSIS
         showpkg <name>
@@ -39,10 +37,7 @@ class TmPackage(tm_base.TmCmd):
     DESCRIPTION
         List metadata of the package in json string format.
         """
-        try:
-            name = args[0]
-        except IndexError:
-            return { "error" : "missing package name in function call!" }
-        url = "%s%s%s" % (self.url, 'package/', name)
+        super().show(target, **options)
+        url = "%s%s%s" % (self.url, 'package/', self.show_name)
         data = self.http_request(url)
         return self.to_json(data)

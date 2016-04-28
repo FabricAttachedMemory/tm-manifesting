@@ -1,0 +1,19 @@
+{
+    "Architecture": "all",
+    "Depends": "perl, imagemagick",
+    "Description": "HTML photo album generator with theme support\n Album is a perl script that can create HTML photo albums for your\n directories of images. It supports themes that determine the visual\n appearance of the albums. Album creates thumbnails if necessary, and\n 'medium sized' versions of images for web viewing to avoid large\n downloads of original images. You can also customize your photo\n albums in many other ways.\n .\n This program doesn't require a web server to work. Once the HTML is\n generated, you can put it in your \"www\" directory.",
+    "Filename": "pool/non-free/a/album/album_4.12-3_all.deb",
+    "Homepage": "http://marginalhacks.com/Hacks/album",
+    "Installed-Size": "313",
+    "MD5sum": "d99598b731d80b388fd25e90403d1dd0",
+    "Maintainer": "Joao Eriberto Mota Filho <eriberto@debian.org>",
+    "Package": "album",
+    "Priority": "extra",
+    "Recommends": "album-data",
+    "SHA1": "85c58e53bc50513d372010fcf8062a9155e71a7e",
+    "SHA256": "328a6a5ef392372c51e5f60370277e74f21662cf7a9069cd64f62fb65651fda8",
+    "Section": "non-free/web",
+    "Size": "89616",
+    "Suggests": "httpd, jhead, libav-tools",
+    "Version": "4.12-3"
+}
