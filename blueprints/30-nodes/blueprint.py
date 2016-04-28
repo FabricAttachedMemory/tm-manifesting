@@ -9,23 +9,12 @@ from pdb import set_trace
 from flask import Blueprint, render_template, request, jsonify
 from werkzeug.exceptions import BadRequest
 
-import img_builder
+from . import img_builder   # programmatic import in main requires this
 
 _ERS_element = 'node'
 
-# Mobius circular worked for a while.  I like this better.
-mainapp = sys.modules['__main__'].mainapp
-
 # See the README in the main templates directory.
-BP = Blueprint(
-    _ERS_element,
-    __name__,
-    template_folder='%s/%s' % (mainapp.root_path, mainapp.template_folder)
-    )
-
-###########################################################################
-
-_UPLOADS = os.path.join(mainapp.root_path, 'blueprints/nodes/uploads/')
+BP = Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 # HTML
@@ -33,7 +22,6 @@ _UPLOADS = os.path.join(mainapp.root_path, 'blueprints/nodes/uploads/')
 
 
 @BP.route('/%s/' % _ERS_element)
-# @BP.route('/%s/<name>' % _ERS_element)
 def node():
     return render_template(
         _ERS_element + '_all.tpl',
@@ -44,13 +32,9 @@ def node():
 
 @BP.route('/%s/<name>' % _ERS_element)
 def node_name(name=None):
-    manifests = { 'manifest' : [] }
-    if not _data[name]:
-        manifests['manifest'] = ['No manifests uploaded yet.']
-    else:
-        for manifest in _data[name]:
-            manifests['manifest'].append(os.path.basename(manifest))
-    manifests['manifest'] = '\n'.join(manifests['manifest'])
+    manifest = BP.mainapp.blueprints['manifest'].lookup('ZHOPA')
+    node = BP.mainapp.config['tmconfig'].nodes[int(name)]
+    MACaddress = node.soc.socMacAddress
     return render_template(
         _ERS_element + '.tpl',
         label=__doc__,
@@ -103,7 +87,7 @@ def api_nodenum(nodenum=None):
         assert 1 <= node <= 80, 'Value out of range'
 
         copy_from = os.path.join(manifest.dirpath, manifest.basename)
-        copy_to = '%s/%s/%s' % (_UPLOADS, nodenum, manifest.basename)
+        copy_to = '%s/%s/%s' % (BP.UPLOADS, nodenum, manifest.basename)
         copyfile(copy_from, copy_to)
 
         manifest_path = os.path.join(manifest.dirpath, manifest.basename)
@@ -153,12 +137,16 @@ def customize_image(manifest, node, cfg=None):
     else:
         return { 'error' : 'Something went wrong in the process of generating filesystem image for node "%s" ' % (node) }
 
+###########################################################################
 
-def load_data():
+_data = None
+
+
+def _load_data():
     global _data
     _data = {}
 
-    for root, dirs, files in os.walk(_UPLOADS):
+    for root, dirs, files in os.walk(BP.UPLOADS):
         for dirname in dirs:
             node_path = os.path.join(root, dirname)
             node_path = os.path.normpath(node_path)
@@ -166,7 +154,8 @@ def load_data():
             _data[dirname] = glob(json_pattern)
 
 
-# A singleton without a class
-if '_data' not in locals():
-    _data = None
-    load_data()
+def register(mainapp):  # take what you like and leave the rest
+    BP.mainapp = mainapp
+    BP.UPLOADS = os.path.join(mainapp.root_path, 'blueprints/nodes/uploads/')
+    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    _load_data()

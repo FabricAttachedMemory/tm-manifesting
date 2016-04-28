@@ -1,4 +1,4 @@
-'''L4TM packages'''
+'''System images'''
 
 from collections import defaultdict
 import gzip
@@ -15,19 +15,10 @@ from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify, send_file
 
-# import blueprints_base  # still have not figured out how relative imports work.
-
 _ERS_element = 'sys-image'
 
-# Mobius circular worked for a while.  I like this better.
-mainapp = sys.modules['__main__'].mainapp
-
 # See the README in the main templates directory.
-BP = Blueprint(
-    _ERS_element,
-    __name__,
-    template_folder='%s/%s' % (mainapp.root_path, mainapp.template_folder)
-    )
+BP = Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 # HTML
@@ -70,23 +61,6 @@ def api_download(name=None):
 
 ###########################################################################
 
-def load_data():
-    # https://github.com/raumkraut/python-debian/blob/master/README.deb822
-
-    global _data
-    _data = {}
-    sys_img_dir = mainapp.config['SYS_IMGS']
-
-    for abs_path, dirname, files in os.walk(sys_img_dir):
-        for filename in fnmatch.filter(files, '*.tar'):
-            _data[filename] = os.path.join(abs_path, filename)
-
-    BP.filter = filter     # So manifest can see it
-
-
-def filter(imgs):    # Maybe it's time for a class
-    return [ sysimg for sysimg in imgs if sysimg not in _data ]
-
 
 def data_to_json():
     result = defaultdict(list)
@@ -97,8 +71,28 @@ def data_to_json():
             result['custom'].append(img_name)
     return jsonify({'sys-image' : result })
 
+###########################################################################
 
-# A singleton without a class
-if '_data' not in locals():
-    _data = None
-    load_data()
+_data = None
+
+
+def _load_data(mainapp):
+    # https://github.com/raumkraut/python-debian/blob/master/README.deb822
+
+    global _data
+    _data = {}
+    sys_img_dir = mainapp.config['SYS_IMGS']
+
+    for abs_path, dirname, files in os.walk(sys_img_dir):
+        for filename in fnmatch.filter(files, '*.tar'):
+            _data[filename] = os.path.join(abs_path, filename)
+
+
+def _filter(imgs):    # Maybe it's time for a class
+    return [ sysimg for sysimg in imgs if sysimg not in _data ]
+
+def register(mainapp):  # take what you like and leave the rest
+    BP.UPLOADS = os.path.join(mainapp.root_path, 'blueprints/nodes/uploads/')
+    BP.filter = _filter
+    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    _load_data(mainapp)

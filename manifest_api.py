@@ -1,34 +1,48 @@
 #!/usr/bin/python3 -tt
 
+import glob
 import os
 import sys
+from importlib import import_module
 from pdb import set_trace
 
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
-mainapp = Flask('tm_manifesting', static_url_path='/static')
-mainapp.config.from_object('manifest_config')
-mainapp.config['API_VERSION'] = 1.0
+sys.path.append('/home/rocky/ghe/tm-librarian')     # CHEATING
+from tmconfig import TMConfig
 
 ###########################################################################
-# Must come after mainapp config loading because it's Mobius circular
+# Everything is global until I figure out decorators on class methods
 
-import blueprints.l4tm_packages.blueprint as BPB
-mainapp.register_blueprint(BPB.BP, url_prefix='/manifesting')
+mainapp = Flask('tm_manifesting', static_url_path='/static')
+mainapp.config.from_object('configs.manifest_config')
+mainapp.config['url_prefix'] = '/manifesting'
+mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG_FILE'])
 
-import blueprints.nodes.blueprint as BNB
-mainapp.register_blueprint(BNB.BP, url_prefix='/manifesting')
+###########################################################################
+# Must come after mainapp setup because Mobius
 
-import blueprints.tasks.blueprint as BTB
-mainapp.register_blueprint(BTB.BP, url_prefix='/manifesting')
+paths = sorted([ p for p in glob.glob('blueprints/*') ])
+if not paths:
+    raise SystemExit('Cannot find any blueprints')
+n = 0
+for p in paths:
+    try:
+        modspec = p.replace('/', '.') + '.blueprint'
+        BP = import_module(modspec)
+        BP.register(mainapp)
+        n += 1
+    except ImportError as e:
+        set_trace()
+        print('No blueprint at %s' % p, file=sys.stderr)
+    except AttributeError as e:
+        print('blueprint at %s has no register()' % p, file=sys.stderr)
+    except Exception as e:
+        print('blueprint at %s failed: %s' % (p, e), file=sys.stderr)
 
-# Must come last because it depends on validation support from others
-import blueprints.manifests.blueprint as BMB
-mainapp.register_blueprint(BMB.BP, url_prefix='/manifesting')
-
-import blueprints.sysimage.blueprint as BIB
-mainapp.register_blueprint(BIB.BP, url_prefix='/manifesting')
+if n != len(paths):
+    raise SystemExit('Not all blueprints finished registration')
 
 ###########################################################################
 # Global header handling
@@ -70,6 +84,7 @@ def version(response):
 ###########################################################################
 # Top-level routing
 
+
 @mainapp.route('/manifesting/')
 def root():
     return render_template(
@@ -82,6 +97,7 @@ def root():
 
 ###########################################################################
 # Must come after all route declarations, including blueprint registrations
+
 mainapp.config['rules'] = sorted('%s %s' % (rule.rule, rule.methods) for
     rule in mainapp.url_map.iter_rules())
 
