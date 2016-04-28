@@ -31,15 +31,15 @@ with this repo, use it.  It differs by:
 
 Your system needs to have the L4TM signing keyring installed AND use it.
 
-wget http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm/pool/main/l/l4tm-archive-keyring/l4tm-archive-keyring_2.0.4_all.deb
+wget http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm/pool/main//h/hpelinux-archive-keyring/hpelinux-archive-keyring_2.0.5+hpelinux1_all.deb
 
-sudo dpkg -i l4tm-archive-keyring_2.0.4_all.deb
+sudo dpkg -i hpelinux-archive-keyring_2.0.5+hpelinux1_all.deb
 
 Someday, when vmdebootstrap supports the "--keyring" option, this won't be
 necessary.  Just for today:
 
 $ pushd /usr/share/debootstrap/scripts
-$ sed -e 's/debian-archive-keyring/l4tm-archive-keyring/' sid | sudo tee catapult
+$ sed -e 's/debian-archive-keyring/hpelinux-archive-keyring/' sid | sudo tee catapult
 $ popd
 
 ===========================================================================

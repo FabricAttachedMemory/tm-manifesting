@@ -13,15 +13,8 @@ from flask import Blueprint, render_template, request, jsonify
 
 _ERS_element = 'package'
 
-# Mobius circular worked for a while.  I like this better.
-mainapp = sys.modules['__main__'].mainapp
-
 # See the README in the main templates directory.
-BP = Blueprint(
-    _ERS_element,
-    __name__,
-    template_folder='%s/%s' % (mainapp.root_path, mainapp.template_folder)
-    )
+BP = Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 # HTML
@@ -30,7 +23,7 @@ BP = Blueprint(
 
 @BP.route('/%s/' % _ERS_element)
 @BP.route('/%s/<name>' % _ERS_element)
-def webpage(name=None):
+def _webpage(name=None):
 
     if name is None:
         return render_template(
@@ -47,12 +40,12 @@ def webpage(name=None):
 
 ###########################################################################
 # API
-# See blueprint registration in manifest_api.py, these are relative paths
+# As a blueprint registration against mainapp, these are relative paths
 
 
 @BP.route('/api/%s/' % _ERS_element)
 @BP.route('/api/%s/<name>' % _ERS_element)
-def api(name=None):
+def _api(name=None):
     if name is None:
         packages = [ ]
         for pkg in _data.values():
@@ -77,17 +70,18 @@ def api(name=None):
 
 ###########################################################################
 
+_data = None
 
-def load_data():
+def _load_data():
     # https://github.com/raumkraut/python-debian/blob/master/README.deb822
 
     global _data
-    mirror = mainapp.config['L4TM_MIRROR']
-    release = mainapp.config['L4TM_RELEASE']
+    mirror = BP.config['L4TM_MIRROR']
+    release = BP.config['L4TM_RELEASE']
     repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (mirror, release)
 
     _data = { }
-    for area in mainapp.config['L4TM_AREAS']:
+    for area in BP.config['L4TM_AREAS']:
         for arch in ('binary-all', 'binary-arm64'):
             print('---------- %s/%s/Packages.gz...' % (area, arch), end='')
             sys.stdout.flush()
@@ -105,14 +99,13 @@ def load_data():
             tmp = [ src for src in Packages.iter_paragraphs(unzipped) ]
             _data.update(dict((pkg['Package'], pkg) for pkg in tmp))
 
-    BP.filter = filter     # So manifest can see it
 
-
-def filter(packages):    # Maybe it's time for a class
+def _filter(packages):    # Maybe it's time for a class
     return [ pkg for pkg in packages if pkg not in _data ]
 
 
-# A singleton without a class
-if '_data' not in locals():
-    _data = None
-    load_data()
+def register(mainapp):
+    BP.config = mainapp.config
+    BP.filter = _filter     # So manifest can see it
+    mainapp.register_blueprint(BP, url_prefix=BP.config['url_prefix'])
+    _load_data()

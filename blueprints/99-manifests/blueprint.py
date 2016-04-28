@@ -16,8 +16,7 @@ mainapp = sys.modules['__main__'].mainapp
 # See the README in the main templates directory.
 BP = Blueprint(
     _ERS_element,
-    __name__,
-    template_folder='%s/%s' % (mainapp.root_path, mainapp.template_folder)
+    __name__
     )
 
 ###########################################################################
