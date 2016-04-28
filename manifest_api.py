@@ -13,7 +13,7 @@ from jinja2.environment import create_cache
 # Everything is global until I figure out decorators on class methods
 
 mainapp = Flask('tm_manifesting', static_url_path='/static')
-mainapp.config.from_object('manifest_config')
+mainapp.config.from_object('configs.manifest_config')
 mainapp.config['API_VERSION'] = 1.0
 mainapp.config['url_prefix'] = '/manifesting'
 

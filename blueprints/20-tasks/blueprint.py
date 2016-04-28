@@ -71,7 +71,7 @@ def _load_data(mainapp):
     global _data
 
     _data = { }
-    with open(mainapp.root_path + '/L4TM.desc', 'r') as f:
+    with open(mainapp.root_path + '/configs/L4TM.desc', 'r') as f:
         tmp = [ task for task in Packages.iter_paragraphs(f) ]
         _data.update(dict((task['Task'], task) for task in tmp))
 

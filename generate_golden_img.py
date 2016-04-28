@@ -16,7 +16,7 @@ def main(args):
     if os.getuid() != 0:
         raise EnvironmentError('This script requires root permissions! (forgot sudo?)')
 
-    cmd = "python ./vmdebootstrap.py \
+    cmd = "python ./configs/vmdebootstrap \
             --owner=$LOGNAME --no-default-configs \
             --config=%s --hostname=pxe02" % (args['img_cfg'])
     cmd = shlex.split(cmd)
