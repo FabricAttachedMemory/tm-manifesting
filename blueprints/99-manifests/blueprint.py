@@ -121,7 +121,7 @@ class ManifestDestiny(object):
         except Exception as e:
             raise RuntimeError('not JSON')
         legal = frozenset(
-            ('name', 'description', 'release', 'tasks', 'packages', 'hosts', 'hostname')
+            ('name', 'description', 'release', 'tasks', 'packages' )
         )
         keys = frozenset(m.keys())
         missing = list(legal - keys)
@@ -131,10 +131,10 @@ class ManifestDestiny(object):
         assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
         assert m['tasks'] or m['packages'], 'empty manifest'
 
-        nosuch = mainapp.blueprints['package'].filter(m['packages'])
+        nosuch = BP.mainapp.blueprints['package'].filter(m['packages'])
         assert not nosuch, 'no such package(s) ' + ', '.join(nosuch)
 
-        nosuch = mainapp.blueprints['task'].filter(m['tasks'])
+        nosuch = BP.mainapp.blueprints['task'].filter(m['tasks'])
         assert not nosuch, 'no such task(s) ' + ', '.join(nosuch)
 
         return m
@@ -189,6 +189,8 @@ class ManifestDestiny(object):
 
 
 def _lookup(manifest_name):    # Can be sub/path/name
+    if manifest_name == 'ZHOPA':
+        return _data.get(list(_data.keys())[0])
     return _data.get(manifest_name, None)
 
 ###########################################################################
@@ -214,7 +216,7 @@ def _load_data():
 
 def register(mainapp):  # take what you like and leave the rest
     BP.mainapp = mainapp
-    BP.UPLOADS = os.path.join(mainapp.root_path, 'blueprints/manifests/uploads/')
+    BP.UPLOADS = os.path.dirname(__file__) + '/uploads'
     BP.lookup = _lookup
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _load_data()
