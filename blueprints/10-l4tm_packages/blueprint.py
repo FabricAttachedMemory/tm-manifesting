@@ -104,8 +104,8 @@ def _filter(packages):    # Maybe it's time for a class
     return [ pkg for pkg in packages if pkg not in _data ]
 
 
-def register(mainapp):
+def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.filter = _filter     # So manifest can see it
-    mainapp.register_blueprint(BP, url_prefix=BP.config['url_prefix'])
+    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _load_data()

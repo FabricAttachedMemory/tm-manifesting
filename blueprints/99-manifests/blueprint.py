@@ -10,18 +10,12 @@ from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
 
-# Mobius circular worked for a while.  I like this better.
-mainapp = sys.modules['__main__'].mainapp
-
 # See the README in the main templates directory.
-BP = Blueprint(
-    _ERS_element,
-    __name__
-    )
+BP = Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 
-_UPLOADS = os.path.join(mainapp.root_path, 'blueprints/manifests/uploads')
+
 _UPFROM = 'uploaded_from'
 
 ###########################################################################
@@ -70,7 +64,7 @@ def webpage_upload():
         # fname = str(uuid.uuid4()) + extension
         # file is a mixin, save() is a werkzeug method which calls
         # generic builtin open() and copies file.stream()
-        # file.save(os.path.join(_UPLOADS, fname))
+        # file.save(os.path.join(BP.UPLOADS, fname))
 
         contentstr = file.read().decode()
         m = ManifestDestiny('', '', contentstr)
@@ -159,7 +153,7 @@ class ManifestDestiny(object):
                 'Illegal namespace component "%s"' % e
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
-            self.dirpath = os.path.join(_UPLOADS, dirpath)
+            self.dirpath = os.path.join(BP.UPLOADS, dirpath)
             os.makedirs(self.dirpath, exist_ok=True)
             with open(os.path.join(self.dirpath, fname), 'w') as f:
                 f.write(contentstr)
@@ -180,8 +174,8 @@ class ManifestDestiny(object):
 
     @property
     def namespace(self):
-        if self.dirpath.startswith(_UPLOADS):
-            tmp = self.dirpath.split(_UPLOADS)[-1][1:]    # chomp leading /
+        if self.dirpath.startswith(BP.UPLOADS):
+            tmp = self.dirpath.split(BP.UPLOADS)[-1][1:]    # chomp leading /
             return tmp
         # Some kind of relative path, just send it all back
         tmp = os.path.join(self.dirpath.split(self.basename)[0])
@@ -191,13 +185,24 @@ class ManifestDestiny(object):
     def key(self):
         return os.path.join(self.namespace, self.basename)
 
-def load_data():
+###########################################################################
+
+
+def _lookup(manifest_name):    # Can be sub/path/name
+    return _data.get(manifest_name, None)
+
+###########################################################################
+
+_data = None
+
+
+def _load_data():
     global _data
     _data = { }
     try:    # don't die in a daemon
         manfiles = [    # List comprehension
             (dirpath, b)
-                for dirpath, dirnames, basenames in os.walk(_UPLOADS)
+                for dirpath, dirnames, basenames in os.walk(BP.UPLOADS)
                     for b in basenames
         ]
         for dirpath, basename in manfiles:
@@ -206,14 +211,10 @@ def load_data():
     except Exception as e:
         pass
 
-    BP.lookup = lookup
 
-
-def lookup(manifest_name):    # Can be sub/path/name
-    return _data.get(manifest_name, None)
-
-
-# A singleton without a class
-if '_data' not in locals():
-    _data = None
-    load_data()
+def register(mainapp):  # take what you like and leave the rest
+    BP.mainapp = mainapp
+    BP.UPLOADS = os.path.join(mainapp.root_path, 'blueprints/manifests/uploads/')
+    BP.lookup = _lookup
+    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    _load_data()

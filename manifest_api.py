@@ -3,7 +3,7 @@
 import glob
 import os
 import sys
-from imp import find_module, load_module
+from importlib import import_module
 from pdb import set_trace
 
 from flask import Flask, render_template, request, jsonify
@@ -20,20 +20,23 @@ mainapp.config['url_prefix'] = '/manifesting'
 ###########################################################################
 # Must come after mainapp setup because Mobius
 
-paths = [ p for p in glob.glob('blueprints/*') ]
+paths = sorted([ p for p in glob.glob('blueprints/*') ])
 if not paths:
     raise SystemExit('Cannot find any blueprints')
 n = 0
 for p in paths:
     try:
-        fp, pathname, desc = find_module('blueprint', [ p, ])
-        BP = load_module('BP', fp, pathname, desc)
+        modspec = p.replace('/', '.') + '.blueprint'
+        BP = import_module(modspec)
         BP.register(mainapp)
         n += 1
     except ImportError as e:
+        set_trace()
         print('No blueprint at %s' % p, file=sys.stderr)
     except AttributeError as e:
         print('blueprint at %s has no register()' % p, file=sys.stderr)
+    except Exception as e:
+        print('blueprint at %s failed: %s' % (p, e), file=sys.stderr)
 
 if n != len(paths):
     raise SystemExit('Not all blueprints finished registration')

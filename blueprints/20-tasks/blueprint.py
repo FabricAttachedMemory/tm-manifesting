@@ -66,12 +66,11 @@ def api(name=None):
 
 _data = None
 
-def _load_data():
+def _load_data(mainapp):
     '''Parse the actual tasksel description file.'''
     global _data
 
     _data = { }
-    set_trace()
     with open(mainapp.root_path + '/L4TM.desc', 'r') as f:
         tmp = [ task for task in Packages.iter_paragraphs(f) ]
         _data.update(dict((task['Task'], task) for task in tmp))
@@ -81,8 +80,7 @@ def _filter(tasks):    # Maybe it's time for a class
     return [ task for task in tasks if task not in _data ]
 
 
-def register(junk):
-    BP.config = mainapp.config
+def register(mainapp):  # take what you like and leave the rest
     BP.filter = _filter     # So manifest can see it
-    mainapp.register_blueprint(BP, url_prefix=BP.config['url_prefix'])
-    _load_data()
+    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    _load_data(mainapp)
