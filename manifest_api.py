@@ -9,13 +9,16 @@ from pdb import set_trace
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
+sys.path.append('/home/rocky/ghe/tm-librarian')     # CHEATING
+from tmconfig import TMConfig
+
 ###########################################################################
 # Everything is global until I figure out decorators on class methods
 
 mainapp = Flask('tm_manifesting', static_url_path='/static')
 mainapp.config.from_object('configs.manifest_config')
-mainapp.config['API_VERSION'] = 1.0
 mainapp.config['url_prefix'] = '/manifesting'
+mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG_FILE'])
 
 ###########################################################################
 # Must come after mainapp setup because Mobius
