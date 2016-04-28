@@ -22,7 +22,6 @@ BP = Blueprint(_ERS_element, __name__)
 
 
 @BP.route('/%s/' % _ERS_element)
-# @BP.route('/%s/<name>' % _ERS_element)
 def node():
     return render_template(
         _ERS_element + '_all.tpl',
@@ -33,13 +32,9 @@ def node():
 
 @BP.route('/%s/<name>' % _ERS_element)
 def node_name(name=None):
-    manifests = { 'manifest' : [] }
-    if not _data[name]:
-        manifests['manifest'] = ['No manifests uploaded yet.']
-    else:
-        for manifest in _data[name]:
-            manifests['manifest'].append(os.path.basename(manifest))
-    manifests['manifest'] = '\n'.join(manifests['manifest'])
+    manifest = BP.mainapp.blueprints['manifest'].lookup('ZHOPA')
+    node = BP.mainapp.config['tmconfig'].nodes[int(name)]
+    MACaddress = node.soc.socMacAddress
     return render_template(
         _ERS_element + '.tpl',
         label=__doc__,
@@ -160,6 +155,7 @@ def _load_data():
 
 
 def register(mainapp):  # take what you like and leave the rest
+    BP.mainapp = mainapp
     BP.UPLOADS = os.path.join(mainapp.root_path, 'blueprints/nodes/uploads/')
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _load_data()
