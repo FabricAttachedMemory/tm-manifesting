@@ -6,11 +6,11 @@
 <BODY>
 <H1>
     <IMG SRC='/static/manifest.jpg' align='middle'>
-    {{ keys|length }} {{ label }}
+    {{ nodes|length }} {{ label }}
 </H1>
 
-{% for key in keys %}
-    <a href="{{ url_base }}{{ key }}">{{ key }}</a>,
+{% for node in nodes %}
+    <a href="{{ url_base }}{{ node.coordinate }}">{{ node.dotname }}</a> @ {{ node.soc.socMacAddress }}<br>
 {% endfor %}
 </BODY>
 </HTML>
