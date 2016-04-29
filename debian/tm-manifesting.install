@@ -1,0 +1,8 @@
+blueprints/*            usr/lib/python3/dist-packages/tm-manifesting/blueprints
+L4TM.desc               usr/lib/python3/dist-packages/tm-manifesting/
+manifest_config.py      usr/lib/python3/dist-packages/tm-manifesting/
+manifest_api.py         usr/lib/python3/dist-packages/tm-manifesting/
+static/*                usr/lib/python3/dist-packages/tm-manifesting/static/
+templates/*             usr/lib/python3/dist-packages/tm-manifesting/templates/
+unittests/*             usr/lib/python3/dist-packages/tm-manifesting/unittests/
+tm-manifest/*           usr/lib/python3/dist-packages/tm-manifesting/tm-manifest/

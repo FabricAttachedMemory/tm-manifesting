@@ -186,7 +186,7 @@ class VmDebootstrap(cliapp.Application):
 
             if self.settings['owner']:
                 self.chown(rootdir)
-        except BaseException, e:
+        except BaseException as e:
             self.message('EEEK! Something bad happened...')
             if rootdir:
                 db_log = os.path.join(rootdir, 'debootstrap', 'debootstrap.log')
