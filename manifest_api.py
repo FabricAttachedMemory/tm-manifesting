@@ -9,8 +9,8 @@ from pdb import set_trace
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
-sys.path.append('/home/rocky/ghe/tm-librarian')     # CHEATING
-from tmconfig import TMConfig
+# Assumes tm_librarian.deb installs in normal sys.path place
+from tm_librarian.tmconfig import TMConfig
 
 ###########################################################################
 # Everything is global until I figure out decorators on class methods

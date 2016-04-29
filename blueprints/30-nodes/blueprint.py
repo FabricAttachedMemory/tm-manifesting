@@ -6,7 +6,7 @@ import sys
 from shutil import copyfile
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, make_response
 from werkzeug.exceptions import BadRequest
 
 from . import img_builder   # programmatic import in main requires this
@@ -26,21 +26,24 @@ def node():
     return render_template(
         _ERS_element + '_all.tpl',
         label=__doc__,
-        keys=sorted(_data.keys()),
+        nodes=BP.nodes,
         url_base=request.url)
 
 
-@BP.route('/%s/<name>' % _ERS_element)
+@BP.route('/%s/<path:name>' % _ERS_element)
 def node_name(name=None):
-    manifest = BP.mainapp.blueprints['manifest'].lookup('ZHOPA')
-    node = BP.mainapp.config['tmconfig'].nodes[int(name)]
-    MACaddress = node.soc.socMacAddress
-    return render_template(
-        _ERS_element + '.tpl',
-        label=__doc__,
-        name=name,
-        itemdict=manifests)
-
+    manifest = BP.manifest_lookup('ZHOPA')
+    try:
+        node = BP.nodes[name][0]
+        MACaddress = node.soc.socMacAddress
+        return render_template(
+            _ERS_element + '.tpl',
+            label=__doc__,
+            node=node,
+            manifest=_data.get(name, '(no binding)')
+        )
+    except Exception as e:
+        return make_response('Kaboom', 404)
 
 ###########################################################################
 # API
@@ -111,8 +114,8 @@ def customize_image(manifest, node, cfg=None):
     :param 'node': [int\str] node number or name to generate filesystem image for.
     :return: [json str] success or error status.
     """
-    sys_imgs = mainapp.config['SYS_IMGS']
-    golden = mainapp.config['GOLDEN_IMG']
+    sys_imgs = BP.config['SYS_IMGS']
+    golden = BP.config['GOLDEN_IMG']
 
     if not os.path.exists(golden):
         return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' }
@@ -139,23 +142,28 @@ def customize_image(manifest, node, cfg=None):
 
 ###########################################################################
 
-_data = None
-
+_data = None    # node <-> manifest bindings
 
 def _load_data():
     global _data
-    _data = {}
 
-    for root, dirs, files in os.walk(BP.UPLOADS):
-        for dirname in dirs:
-            node_path = os.path.join(root, dirname)
-            node_path = os.path.normpath(node_path)
-            json_pattern = os.path.normpath('%s/%s/*.json' % (root, dirname))
-            _data[dirname] = glob(json_pattern)
+    try:
+        _data = unpickle(BP.pickle)
+    except Exception as e:
+        _data = {}
+
+
+def _manifest_lookup(name):
+    # blueprints lookup has to be deferred until all are registered
+    return BP.blueprints['manifest'].lookup(name)
 
 
 def register(mainapp):  # take what you like and leave the rest
-    BP.mainapp = mainapp
-    BP.UPLOADS = os.path.join(mainapp.root_path, 'blueprints/nodes/uploads/')
+    # Do some shortcuts
+    BP.config = mainapp.config
+    BP.nodes = BP.config['tmconfig'].nodes
+    BP.blueprints = mainapp.blueprints
+    BP.manifest_lookup = _manifest_lookup
+    BP.pickle = os.path.join(mainapp.root_path, 'blueprints/nodes/node2manifest.bin/')
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _load_data()
