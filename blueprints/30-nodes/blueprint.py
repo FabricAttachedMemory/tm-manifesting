@@ -70,7 +70,7 @@ def api_node(name=None):
 
 ####################### API (PUT) ###############################
 
-@BP.route('/api/%s/<nodenum>' % _ERS_element, methods=('PUT', ))
+@BP.route('/api/%s/<path:node>' % _ERS_element, methods=('PUT', ))
 def api_nodenum(nodenum=None):
     try:
         err_status = 413
@@ -81,13 +81,11 @@ def api_nodenum(nodenum=None):
         manifest = request.get_json(contentstr)
         cfg = manifest.get('config', None)
         manname = manifest['manifest']  # can have path in it
-        manifest = mainapp.blueprints['manifest'].lookup(manname)
+        manifest = BP.lookup_manifest(manname)
         err_status = 404
         assert manifest is not None, 'no such manifest ' + manname
 
-        node = int(nodenum)
-        err_status = 400
-        assert 1 <= node <= 80, 'Value out of range'
+        # Everything from here needs work
 
         copy_from = os.path.join(manifest.dirpath, manifest.basename)
         copy_to = '%s/%s/%s' % (BP.UPLOADS, nodenum, manifest.basename)

@@ -18,7 +18,11 @@ from tm_librarian.tmconfig import TMConfig
 mainapp = Flask('tm_manifesting', static_url_path='/static')
 mainapp.config.from_object('configs.manifest_config')
 mainapp.config['url_prefix'] = '/manifesting'
-mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG_FILE'])
+
+try:
+    mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG_FILE'])
+except Exception as e:
+    mainapp.config['tmconfig'] = TMConfig('configs/hpetmconfig.json')
 
 ###########################################################################
 # Must come after mainapp setup because Mobius

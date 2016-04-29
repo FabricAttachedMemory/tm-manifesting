@@ -7,7 +7,7 @@ PORT = 31178
 HOST = '0.0.0.0'
 MANIFESTING_SERVER_DIR = '/opt/hpetm/manifesting/'
 SYS_IMGS = '/opt/hpetm/manifesting/sys-images/'		# Location of all the system images
-MANIFESTS_DIR = '/opt/hpetm/manifesting/manifests/'	# 
+MANIFESTS_DIR = '/opt/hpetm/manifesting/manifests/'
 GOLDEN_IMG = os.path.normpath('%s/golden/golden.l4tm.amd64.tar' % (SYS_IMGS))
 
 L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
