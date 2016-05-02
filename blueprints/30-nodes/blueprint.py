@@ -1,6 +1,7 @@
 '''TM Nodes'''
 
 from glob import glob
+import json
 import os
 import sys
 from shutil import copyfile
@@ -87,12 +88,14 @@ def api_nodenum(nodenum=None):
 
         # Everything from here needs work
 
-        copy_from = os.path.join(manifest.dirpath, manifest.basename)
-        copy_to = '%s/%s/%s' % (BP.UPLOADS, nodenum, manifest.basename)
-        copyfile(copy_from, copy_to)
+        #copy_from = os.path.join(manifest.dirpath, manifest.basename)
+        #copy_to = '%s/%s/%s' % (BP.UPLOADS, nodenum, manifest.basename)
+        #copyfile(copy_from, copy_to)
 
-        manifest_path = os.path.join(manifest.dirpath, manifest.basename)
-        response = customize_image(manifest_path, nodenum, cfg=cfg)
+        _data[nodenum] = manifest.basename
+        set_trace()
+        #manifest_path = os.path.join(manifest.dirpath, manifest.basename)
+        #response = customize_image(manifest_path, nodenum, cfg=cfg)
 
         return jsonify({"success": "manifest '%s' is set to node '%s'" % (manifest.basename, nodenum)})
     except BadRequest as e:
@@ -145,10 +148,17 @@ _data = None    # node <-> manifest bindings
 def _load_data():
     global _data
 
-    try:
-        _data = unpickle(BP.pickle)
-    except Exception as e:
-        _data = {}
+    if not os.path.exists(BP.binding):
+        with open(BP.binding, 'w+') as file_obj:
+            file_obj.write('{}')
+
+    with open(BP.binding, 'r+') as file_obj:
+        _data = json.loads(file_obj.read())
+
+
+def save_binding(content):
+    with open(BP.binding, 'w+') as file_obj:
+        file_obj.write(content)
 
 
 def _manifest_lookup(name):
@@ -160,6 +170,7 @@ def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
+    BP.binding = '%s/binding.json' % (os.path.dirname(__file__)) # json file of all the Node to Manifest bindings.
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.pickle = os.path.join(mainapp.root_path, 'blueprints/nodes/node2manifest.bin/')
