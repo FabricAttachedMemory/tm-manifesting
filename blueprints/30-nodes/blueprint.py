@@ -71,7 +71,7 @@ def api_node(name=None):
 
 ####################### API (PUT) ###############################
 
-@BP.route('/api/%s/<path:node>' % _ERS_element, methods=('PUT', ))
+@BP.route('/api/%s/<path:nodenum>' % _ERS_element, methods=('PUT', ))
 def api_nodenum(nodenum=None):
     try:
         err_status = 413
@@ -82,20 +82,14 @@ def api_nodenum(nodenum=None):
         manifest = request.get_json(contentstr)
         cfg = manifest.get('config', None)
         manname = manifest['manifest']  # can have path in it
-        manifest = BP.lookup_manifest(manname)
+        manifest = BP.manifest_lookup(manname)
         err_status = 404
         assert manifest is not None, 'no such manifest ' + manname
 
-        # Everything from here needs work
-
-        #copy_from = os.path.join(manifest.dirpath, manifest.basename)
-        #copy_to = '%s/%s/%s' % (BP.UPLOADS, nodenum, manifest.basename)
-        #copyfile(copy_from, copy_to)
-
         _data[nodenum] = manifest.basename
-        set_trace()
-        #manifest_path = os.path.join(manifest.dirpath, manifest.basename)
-        #response = customize_image(manifest_path, nodenum, cfg=cfg)
+        save(_data, BP.binding)
+        manifest_path = os.path.join(manifest.dirpath, manifest.basename)
+        response = customize_image(manifest_path, nodenum, cfg=cfg)
 
         return jsonify({"success": "manifest '%s' is set to node '%s'" % (manifest.basename, nodenum)})
     except BadRequest as e:
@@ -125,7 +119,7 @@ def customize_image(manifest, node, cfg=None):
     node_dir = os.path.join(sys_imgs, node)
 
     if not os.path.isdir(node_dir):
-        os.mkdir(node_dir)
+        os.makedirs(node_dir)
 
     img_location = os.path.normpath('%s/%s/' % (node_dir, img_name))
     if not os.path.isdir(img_location):
@@ -142,23 +136,48 @@ def customize_image(manifest, node, cfg=None):
         return { 'error' : 'Something went wrong in the process of generating filesystem image for node "%s" ' % (node) }
 
 ###########################################################################
-
 _data = None    # node <-> manifest bindings
+
+
+def save(content, destination):
+    """
+        Save json content into destination file.
+    Note: file will be removed before saving into it - e.g. overwritten with a new data.
+
+    :param 'content': [str or dict] data to be saved.
+    :param 'destination': [str] file to save into.
+    """
+    if isinstance(content, dict):
+        content = json.dumps(content)
+    if os.path.exists(destination):
+        os.remove(destination)
+
+    with open(destination, 'w+') as file_obj:
+        file_obj.write(content)
+
+
+def load(target_file):
+    """
+        Load json data from file and return a dictionary.
+
+    :param 'target_file': [str] path to a file to load data from.
+    :return: [dict] data parsed from a json string of the 'target_file'
+    """
+    data = {}
+    with open(target_file, 'r+') as file_obj:
+        data = json.loads(file_obj.read())
+    return data
+
 
 def _load_data():
     global _data
-
+    _data = {}
     if not os.path.exists(BP.binding):
-        with open(BP.binding, 'w+') as file_obj:
-            file_obj.write('{}')
+        for nodeObj in BP.nodes:
+            _data[nodeObj.coordinate] = None
+        save(json.dumps(_data), BP.binding)
 
-    with open(BP.binding, 'r+') as file_obj:
-        _data = json.loads(file_obj.read())
-
-
-def save_binding(content):
-    with open(BP.binding, 'w+') as file_obj:
-        file_obj.write(content)
+    _data = load(BP.binding)
 
 
 def _manifest_lookup(name):
@@ -170,9 +189,9 @@ def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
-    BP.binding = '%s/binding.json' % (os.path.dirname(__file__)) # json file of all the Node to Manifest bindings.
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
-    BP.pickle = os.path.join(mainapp.root_path, 'blueprints/nodes/node2manifest.bin/')
+    BP.pickle = os.path.join(mainapp.root_path, 'blueprints/nodes/node2manifest.bin/') # DEPRECATED?
+    BP.binding = '%s/binding.json' % (os.path.dirname(__file__)) # json file of all the Node to Manifest bindings.
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _load_data()
