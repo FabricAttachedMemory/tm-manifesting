@@ -89,9 +89,10 @@ def api_nodenum(nodenum=None):
         _data[nodenum] = manifest.basename
         save(_data, BP.binding)
         manifest_path = os.path.join(manifest.dirpath, manifest.basename)
-        response = customize_image(manifest_path, nodenum, cfg=cfg)
 
-        return jsonify({"success": "manifest '%s' is set to node '%s'" % (manifest.basename, nodenum)})
+        img_resp = customize_image(manifest_path, nodenum, cfg=cfg)
+        return jsonify(img_resp)
+
     except BadRequest as e:
         response = e.get_response()
     except (AssertionError, ValueError) as e:
@@ -110,30 +111,33 @@ def customize_image(manifest, node, cfg=None):
     :return: [json str] success or error status.
     """
     sys_imgs = BP.config['SYS_IMGS']
-    golden = BP.config['GOLDEN_IMG']
+    golden_tar = BP.config['GOLDEN_IMG']
 
-    if not os.path.exists(golden):
+    if not os.path.exists(golden_tar):
         return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' }
 
     img_name = os.path.basename(manifest).split('.json')[0]
     node_dir = os.path.join(sys_imgs, node)
 
-    if not os.path.isdir(node_dir):
-        os.makedirs(node_dir)
+    try:
+        if not os.path.isdir(node_dir): # directory to save generated img into.
+            os.makedirs(node_dir)
+    except (EnvironmentError):
+        return { 'error' : 'Couldn\'t create destination folder for the image at: %s' % (node_dir) }
 
-    img_location = os.path.normpath('%s/%s/' % (node_dir, img_name))
-    if not os.path.isdir(img_location):
-        os.mkdir(img_location)
+    # absolute path (with a file name) to where Golden image .tar file will be coppied to
+    custom_tar = os.path.normpath('%s/%s.tar' % (node_dir, img_name))
+    try:
+        copyfile(golden_tar, custom_tar)
+    except (EnvironmentError):
+        return { 'error' : 'Couldn\'t copy golden image into node\'s directory "%s" >> "%s"' % (golden_tar, custom_tar) }
 
-    # absolute path (with a file name) to where Golden image will be coppied to
-    tar_file = os.path.normpath('%s/%s.tar' % (img_location, img_name))
-    copyfile(golden, tar_file)
-
-    status = img_builder.default_cfg(manifest, tar_file)
-    if status == 0:
-        return { 'success' : 'Filesystem image for node "%s" was generated.' % (node) }
+    status = img_builder.default_cfg(manifest, custom_tar)
+    if status['status'] is 'success':
+        return { 'success' : 'Manifest "%s" is set to node "%s"' %
+                (os.path.basename(manifest), node) }
     else:
-        return { 'error' : 'Something went wrong in the process of generating filesystem image for node "%s" ' % (node) }
+        return { status['status'] : status['message'] }
 
 ###########################################################################
 _data = None    # node <-> manifest bindings
@@ -148,36 +152,39 @@ def save(content, destination):
     :param 'destination': [str] file to save into.
     """
     if isinstance(content, dict):
-        content = json.dumps(content)
-    if os.path.exists(destination):
-        os.remove(destination)
+        content = json.dumps(content, indent=4)
 
-    with open(destination, 'w+') as file_obj:
-        file_obj.write(content)
+    new_file = '%s.new' % (destination)
+    try:
+        with open(new_file, 'w+') as file_obj: # if that fails, shouldn't bother to rename then.
+            file_obj.write(content)
+        os.rename(new_file, destination)
+    except IOError as error:
+        print('Couldn\'t save file into "%s"' % (destination), file=sys.stderr)
+        return 1
+    return 0
 
 
-def load(target_file):
+def _load_data():
     """
         Load json data from file and return a dictionary.
 
     :param 'target_file': [str] path to a file to load data from.
     :return: [dict] data parsed from a json string of the 'target_file'
     """
-    data = {}
-    with open(target_file, 'r+') as file_obj:
-        data = json.loads(file_obj.read())
-    return data
-
-
-def _load_data():
     global _data
     _data = {}
-    if not os.path.exists(BP.binding):
-        for nodeObj in BP.nodes:
-            _data[nodeObj.coordinate] = None
-        save(json.dumps(_data), BP.binding)
+    try:
+        with open(BP.binding, 'r+') as file_obj:
+            _data = json.loads(file_obj.read())
+    except IOError as err:
+        print ('Couldn\'t load "%s"' % (BP.binding), file=sys.stderr)
 
-    _data = load(BP.binding)
+    for node in _data.keys():
+        if node not in BP.coords:
+            _data.remove(node)
+
+    return _data
 
 
 def _manifest_lookup(name):
@@ -189,9 +196,9 @@ def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
+    BP.coords = [node.coordinate for node in BP.nodes]
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
-    BP.pickle = os.path.join(mainapp.root_path, 'blueprints/nodes/node2manifest.bin/') # DEPRECATED?
     BP.binding = '%s/binding.json' % (os.path.dirname(__file__)) # json file of all the Node to Manifest bindings.
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _load_data()

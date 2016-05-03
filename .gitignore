@@ -9,3 +9,4 @@ artifacts
 uploads
 __pycache__
 *.pyc
+binding.json
