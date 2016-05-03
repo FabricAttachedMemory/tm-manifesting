@@ -1,0 +1,16 @@
+sudo dkpg --add-architecture arm64
+sudo apt-get update
+
+# This is NOT grub-efi:amd64, which will replace grub-pc, will
+# probably break your system.  Nor is it grub-efi-arm64, which collides
+# with grub-pc but doesn't break your system.
+
+sudo apt-get install grub-efi-arm64-bin
+
+# It gives you the auxiliary modules under /usr/lib/grub/arm64-efi/*.mods
+# to build an EFI boot manager:
+
+grub-mkimage --format=arm64-efi --output=grub4tm.pxe --prefix='(pxe)/boot/grub' pxe pxecmd
+
+# except that modules pxe and pxecmd don't exist for ARM.  net.mod does...
+
