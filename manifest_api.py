@@ -20,7 +20,7 @@ mainapp.config.from_object('configs.manifest_config')
 mainapp.config['url_prefix'] = '/manifesting'
 
 try:
-    mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG_FILE'])
+    mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG'])
 except Exception as e:
     mainapp.config['tmconfig'] = TMConfig('configs/hpetmconfig.json')
 

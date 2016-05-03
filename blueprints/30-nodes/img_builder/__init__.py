@@ -1,5 +1,3 @@
-from . import *
-from . import cfg
+from .cfg import customize_node
 
-default_cfg = cfg.default.execute
-default = cfg.default
+customize_node = customize_node.execute

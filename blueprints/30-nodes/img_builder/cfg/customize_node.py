@@ -275,15 +275,16 @@ def untar(target, **options):
     if not os.path.isdir(destination):
         os.mkdir(destination)
 
-    try:
+    try:    # FIXME: using "with" becase 3.4 tarfile is a context manager
         tar.extractall(path=destination)
-        tar.close()
     except tarfile.ExtractError:        # This might be too paranoid.
+        tar.close()
         if options.get('debug', False):
             print ('- Entering <func untar> debugging mode.')
             set_trace()
         raise RuntimeError ('Error occured while untaring "%s"!\n\
                    Couldn\'t extract "%s"!' % (target, destination))
+    tar.close()
 
     return destination
 
@@ -370,13 +371,9 @@ def execute(manifest, sys_img_tar, **args):
         with open(manifest) as data_file:
             manifest = json.load(data_file)
 
-        # Setting hostname...
-        if manifest.get('hostname', False):
-            set_hostname(sys_img, manifest['hostname'], verbose=args['verbose'], debug=args['debug'])
-
-        # Setting hosts... 
-        if manifest.get('hosts', False):
-            set_hosts(sys_img, manifest['hosts'], verbose=args['verbose'], debug=args['debug'])
+        # Setting hostname and hosts...
+        set_hostname(sys_img, manifest['hostname'], verbose=args['verbose'], debug=args['debug'])
+        set_hosts(sys_img, manifest['hosts'], verbose=args['verbose'], debug=args['debug'])
 
         # Fixing sources.list
         cleanup_sources_list(sys_img, verbose=args['verbose'], debug=args['debug'])

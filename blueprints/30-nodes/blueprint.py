@@ -71,8 +71,8 @@ def api_node(name=None):
 
 ####################### API (PUT) ###############################
 
-@BP.route('/api/%s/<path:nodenum>' % _ERS_element, methods=('PUT', ))
-def api_nodenum(nodenum=None):
+@BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('PUT', ))
+def api_node_coord(node_coord=None):
     try:
         err_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Too big'
@@ -86,11 +86,11 @@ def api_nodenum(nodenum=None):
         err_status = 404
         assert manifest is not None, 'no such manifest ' + manname
 
-        _data[nodenum] = manifest.basename
-        save(_data, BP.binding)
+        _data[node_coord] = manifest.basename
+        save(_data, BP.binding)     # FIXME: ignoring return value?
         manifest_path = os.path.join(manifest.dirpath, manifest.basename)
 
-        img_resp = customize_image(manifest_path, nodenum, cfg=cfg)
+        img_resp = customize_image(manifest_path, node_coord, cfg=cfg)
         return jsonify(img_resp)
 
     except BadRequest as e:
@@ -102,22 +102,22 @@ def api_nodenum(nodenum=None):
 
 ###########################################################################
 
-def customize_image(manifest, node, cfg=None):
+def customize_image(manifest, node_coord, cfg=None):
     """
         Generate a custom filesystem image based of the provided manifset.
 
     :param 'manifest': [str] absolute path to manifest.json file.
-    :param 'node': [int\str] node number or name to generate filesystem image for.
+    :param 'node_coord': [int\str] node number or name to generate filesystem image for.
     :return: [json str] success or error status.
     """
-    sys_imgs = BP.config['SYS_IMGS']
-    golden_tar = BP.config['GOLDEN_IMG']
+    sys_imgs = BP.config['FILESYSTEM_IMAGES']
+    golden_tar = BP.config['GOLDEN_IMAGE']
 
     if not os.path.exists(golden_tar):
-        return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' }
+        return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
 
     img_name = os.path.basename(manifest).split('.json')[0]
-    node_dir = os.path.join(sys_imgs, node)
+    node_dir = os.path.join(sys_imgs, node_coord)
 
     try:
         if not os.path.isdir(node_dir): # directory to save generated img into.
@@ -126,16 +126,17 @@ def customize_image(manifest, node, cfg=None):
         return { 'error' : 'Couldn\'t create destination folder for the image at: %s' % (node_dir) }
 
     # absolute path (with a file name) to where Golden image .tar file will be coppied to
+    # FIXME: do not need to copy tarball
     custom_tar = os.path.normpath('%s/%s.tar' % (node_dir, img_name))
     try:
         copyfile(golden_tar, custom_tar)
     except (EnvironmentError):
         return { 'error' : 'Couldn\'t copy golden image into node\'s directory "%s" >> "%s"' % (golden_tar, custom_tar) }
 
-    status = img_builder.default_cfg(manifest, custom_tar)
+    status = img_builder.customize_node(manifest, custom_tar)
     if status['status'] is 'success':
         return { 'success' : 'Manifest "%s" is set to node "%s"' %
-                (os.path.basename(manifest), node) }
+                (os.path.basename(manifest), node_coord) }
     else:
         return { status['status'] : status['message'] }
 
@@ -161,8 +162,8 @@ def save(content, destination):
         os.rename(new_file, destination)
     except IOError as error:
         print('Couldn\'t save file into "%s"' % (destination), file=sys.stderr)
-        return 1
-    return 0
+        return False
+    return True
 
 
 def _load_data():
@@ -181,7 +182,7 @@ def _load_data():
         print ('Couldn\'t load "%s"' % (BP.binding), file=sys.stderr)
 
     for node in _data.keys():
-        if node not in BP.coords:
+        if node not in BP.node_coords:
             _data.remove(node)
 
     return _data
@@ -196,7 +197,7 @@ def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
-    BP.coords = [node.coordinate for node in BP.nodes]
+    BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.binding = '%s/binding.json' % (os.path.dirname(__file__)) # json file of all the Node to Manifest bindings.

@@ -1,14 +1,15 @@
 import os
+import sys
 
 API_VERSION = 1.0
 
-DEBUG = True
+DEBUG = True and sys.stdin.isatty()
 PORT = 31178
 HOST = '0.0.0.0'
-MANIFESTING_SERVER_DIR = '/opt/hpetm/manifesting/'
-SYS_IMGS = '/opt/hpetm/manifesting/sys-images/'         # Location of all the system images
-MANIFESTS_DIR = '/opt/hpetm/manifesting/manifests/'
-GOLDEN_IMG = os.path.normpath('%s/golden/golden.l4tm.amd64.tar' % (SYS_IMGS))
+MANIFESTING_ROOT = '/var/local/tm-manifesting'
+FILESYSTEM_IMAGES = os.path.normpath(MANIFESTING_ROOT + '/sys-images')
+MANIFEST_UPLOADS = os.path.normpath(MANIFESTING_ROOT + '/manifest_uploads')
+GOLDEN_IMAGE = os.path.normpath(FILESYSTEM_IMAGES + '/golden/golden.l4tm.amd64.tar')
 
 L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
 L4TM_RELEASE = 'catapult'
@@ -16,4 +17,4 @@ L4TM_RELEASE = 'catapult'
 L4TM_AREAS = ( 'contrib', 'non-free')
 # L4TM_AREAS = ( 'main', 'contrib', 'non-free')
 
-TMCONFIG_FILE = '/etc/hpetmconfig.json'
+TMCONFIG = '/etc/tmconfig'
