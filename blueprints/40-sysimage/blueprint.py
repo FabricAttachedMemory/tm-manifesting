@@ -81,7 +81,7 @@ def _load_data(mainapp):
 
     global _data
     _data = {}
-    sys_img_dir = mainapp.config['SYS_IMGS']
+    sys_img_dir = mainapp.config['FILESYSTEM_IMAGES']
 
     for abs_path, dirname, files in os.walk(sys_img_dir):
         for filename in fnmatch.filter(files, '*.tar'):
