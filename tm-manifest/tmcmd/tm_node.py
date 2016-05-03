@@ -51,12 +51,13 @@ class TmNode(tm_base.TmCmd):
         setnode <node name> <manifest.json>
 
     DESCRIPTION
-        NOT IMPLEMENTED
+         Select the manifest for the specified node and construct a kernel and root FS that
+        the node will use the next time it boots.
         """
         # TODO: error checking
-        #payload = {}
-        #payload['manifest'] = manifest
-        #url = "%s%s%s" % (self.url, 'node/', node_name)
-        #data = self.http_request(url, payload=payload)
-        #return self.to_json(data)
-        return self.to_json({ 'error' : 'Not Implemented.' })
+        payload = {}
+        payload['manifest'] = manifest
+        url = "%s%s%s" % (self.url, 'node/', node_name)
+        data = self.http_request(url, payload=payload)
+        return self.to_json(data)
+        #return self.to_json({ 'error' : 'Not Implemented.' })
