@@ -356,13 +356,9 @@ def create_cpio(target, destination, **options):
         raise RuntimeError(hasError[0])
 
 
-def execute(manifest, sys_img, **args):
+def execute(sys_img, **args):
     """
-    :param 'manifest': [any class instance] with following variables: 
-                        hostname: name to use in /etc/hostname file.
-                        hosts: list of configuration strings (element per line) for /etc/hosts
-                        dirname: path to a directory of the manifest.json (no basename)
-                        basename: filename of the manifest.
+        TODO: docstr
     """
     args['verbose'] = args.get('verbose', False)
     args['debug'] = args.get('debug', False)
@@ -375,8 +371,8 @@ def execute(manifest, sys_img, **args):
     # time).
     try:
         # Setting hostname and hosts...
-        set_hostname(sys_img, manifest.hostname, verbose=args['verbose'], debug=args['debug'])
-        hosts_str = '\n'.join(manifest.hosts)   # manifest.hosts should be a list representing lines of Hosts file content
+        set_hostname(sys_img, args['hostname'], verbose=args['verbose'], debug=args['debug'])
+        hosts_str = '\n'.join(args['hosts'])   # manifest.hosts should be a list representing lines of Hosts file content
         set_hosts(sys_img, hosts_str, verbose=args['verbose'], debug=args['debug'])
 
         # Fixing sources.list

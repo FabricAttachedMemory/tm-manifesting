@@ -81,10 +81,7 @@ def api_node_coord(node_coord=None):
         contentstr = request.get_data().decode()
         req_body = request.get_json(contentstr)
 
-        # TODO: validate req_body content (manifest, hostname, hosts)
         manname = req_body['manifest']  # can have path in it
-        manifest.hosts = req_body['hosts'] # FIXME: not a good python practice.
-        manifest.hostname = req_body['hostname']
 
         manifest = BP.manifest_lookup(manname)
         err_status = 404
@@ -134,7 +131,7 @@ def build_node(manifest, node_coord):
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
     # customization magic (not so much though).
-    status = customize_node.execute(manifest, custom_tar)
+    status = customize_node.execute(custom_tar, hostname=BP.hostnames[node_coord], hosts=[''])
 
     if status['status'] is 'success':
         return { 'success' : 'Manifest "%s" is set to node "%s"' %
@@ -199,6 +196,7 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
+    BP.hostnames = {node.coordinate:node.hostname for node in BP.nodes}
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
