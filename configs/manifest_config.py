@@ -18,3 +18,4 @@ L4TM_AREAS = ( 'contrib', 'non-free')
 # L4TM_AREAS = ( 'main', 'contrib', 'non-free')
 
 TMCONFIG = '/etc/tmconfig'
+NODE_BINDING= '/etc/node_binding'

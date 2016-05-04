@@ -252,15 +252,16 @@ def set_hosts(sys_img, content, **options):
                             %s' % (err))
 
 
-def untar(target, **options):
+def untar(target, destination=None, **options):
     """
         Untar target file into the same folder of the tarball.
 
     :param 'target': [str] path to a .tar file to untar.
     :return: [str] path to untared content.
     """
-    destination = os.path.dirname(target)
-    destination = os.path.normpath('%s/untar/' % destination)
+    if destination is None:
+        destination = os.path.dirname(target)
+        destination = os.path.normpath('%s/untar/' % destination)
 
     if not tarfile.is_tarfile(target):
         return target
@@ -289,7 +290,7 @@ def untar(target, **options):
     return destination
 
 
-def tar_folder(target, destination, **options):
+def tar_folder(target, destination=None, **options):
     """
         Tar targeted folder/file into destination location.
 
@@ -298,6 +299,10 @@ def tar_folder(target, destination, **options):
                         Note: include destination file name in the path, e.g: path/to/file.name
     :return: [str] destination of the tarred file.
     """
+    if destination is None:
+        destination = os.path.dirname(target)
+        destination = os.path.normpath('%s/untar/' % destination)
+
     if os.path.exists(destination):
         remove_target(destination, **dict(options))
 
@@ -348,12 +353,12 @@ def create_cpio(target, destination, **options):
         if options.get('debug', False):
             print ('- Entering <func untar> debugging mode.')
             set_trace()
-        raise RuntimeError(hasError)
+        raise RuntimeError(hasError[0])
 
 
-def execute(manifest, sys_img_tar, **args):
+def execute(manifest, sys_img, **args):
     """
-        TODO: docstr
+    :param 'manifest': [class] with following variables: hostname, hosts, dirname, basename
     """
     # Untar filesystem image
     args['verbose'] = args.get('verbose', False)
@@ -361,19 +366,20 @@ def execute(manifest, sys_img_tar, **args):
     response = {}
     response['status'] = 'success'  # Nothing happened yet! Let's keep it this way...
     response['message'] = 'System image was created!'
-
     #  It is OK to have a big exception block, because individual exception handling
     # is done inside those functions that would through RuntimeError (most of the
     # time).
     try:
-        sys_img = untar(sys_img_tar, verbose=args['verbose'])
+        #sys_img = untar(sys_img_tar, verbose=args['verbose'])
 
-        with open(manifest) as data_file:
-            manifest = json.load(data_file)
+        #manifest_path = os.path.join(manifest.dirname, manifest.basename)
+        #with open(manifest_path) as data_file:
+        #    manifest_json = json.load(data_file)    # focus "packages" field of manifest.json.
 
         # Setting hostname and hosts...
-        set_hostname(sys_img, manifest['hostname'], verbose=args['verbose'], debug=args['debug'])
-        set_hosts(sys_img, manifest['hosts'], verbose=args['verbose'], debug=args['debug'])
+        set_hostname(sys_img, manifest.hostname, verbose=args['verbose'], debug=args['debug'])
+        hosts_str = '\n'.join(manifest.hosts)   # manifest.hosts should be a list representing lines of Hosts file content
+        set_hosts(sys_img, hosts_str, verbose=args['verbose'], debug=args['debug'])
 
         # Fixing sources.list
         cleanup_sources_list(sys_img, verbose=args['verbose'], debug=args['debug'])
@@ -386,9 +392,9 @@ def execute(manifest, sys_img_tar, **args):
         fix_init(sys_img, verbose=args['verbose'], debug=args['debug'])
 
         # Compress target into .tar format
-        tar_folder(sys_img, sys_img_tar,  verbose=['verbose'])
+        tar_folder(sys_img, verbose=['verbose'])
 
-        dest = os.path.dirname(sys_img_tar)
+        dest = os.path.dirname(sys_img)
         # Create .cpio file from untar.
         create_cpio(sys_img, dest, verbose=args['verbose'], debug=args['debug'])
 
@@ -401,34 +407,8 @@ def execute(manifest, sys_img_tar, **args):
         exc_type, _, exc_tb = sys.exc_info()
         response['status'] = 'error'
         response['message'] = 'Aye! Did not expect that!\n\
-                                [%s]\n\
-                                [%s]\n' % (exc_type, exc_tb.tb_lineno)
+                                [Error: %s]\n\
+                                [Line: %s]\n\
+                                [File: %s]' % \
+                                (exc_type, exc_tb.tb_lineno, os.path.basename(__file__))
     return response
-
-
-def main(args):
-    """
-        Perform a "common" set of operations on the filesystem image to 
-    prepare it to boot on the node. 
-    """
-    return execute(args['manifest'], args['sys_img'], verbose=args['verbose'], debug=args['debug'])
-
-if __name__ == '__main__':
-    """
-        Argument Parser routine.
-    """
-    PARSER = argparse.ArgumentParser(description='Customize golden image on demand.')
-
-    PARSER.add_argument('-i', '--sys-img',
-                        help='Path to a file system image folder.',
-                        required=True)
-    PARSER.add_argument('-M', '--manifest', required=True,
-                        help='Path to a manifest.json file, which follows the manifesting API specs.')
-    PARSER.add_argument('--verbose',
-                        help='Make it talk.',
-                        action='store_true')
-    PARSER.add_argument('--debug',
-                        help='Turn on debugging tool.',
-                        action='store_true')
-    ARGS, _ = PARSER.parse_known_args()
-    main(vars(ARGS))
