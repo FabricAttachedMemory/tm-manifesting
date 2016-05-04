@@ -121,7 +121,7 @@ class ManifestDestiny(object):
         except Exception as e:
             raise RuntimeError('not JSON')
         legal = frozenset(
-            ('name', 'description', 'release', 'tasks', 'packages' )
+            ('name', 'description', 'release', 'tasks', 'packages')
         )
         keys = frozenset(m.keys())
         missing = list(legal - keys)
@@ -189,8 +189,6 @@ class ManifestDestiny(object):
 
 
 def _lookup(manifest_name):    # Can be sub/path/name
-    if manifest_name == 'ZHOPA':
-        return _data.get(list(_data.keys())[0])
     return _data.get(manifest_name, None)
 
 ###########################################################################
@@ -209,14 +207,15 @@ def _load_data():
         ]
         for dirpath, basename in manfiles:
             this = ManifestDestiny(dirpath, basename)
-            _data[this.key] = this
+            _data[basename] = this # search is expected by manifest name, (e.g. manifest.json, not path/manifest.json)
     except Exception as e:
         pass
 
 
 def register(mainapp):  # take what you like and leave the rest
     BP.mainapp = mainapp
-    BP.UPLOADS = os.path.dirname(__file__) + '/uploads'
+    BP.config = mainapp.config
     BP.lookup = _lookup
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    BP.UPLOADS = BP.config['MANIFESTING_ROOT']
     _load_data()
