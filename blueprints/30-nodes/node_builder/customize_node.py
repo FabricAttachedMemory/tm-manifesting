@@ -358,24 +358,22 @@ def create_cpio(target, destination, **options):
 
 def execute(manifest, sys_img, **args):
     """
-    :param 'manifest': [class] with following variables: hostname, hosts, dirname, basename
+    :param 'manifest': [any class instance] with following variables: 
+                        hostname: name to use in /etc/hostname file.
+                        hosts: list of configuration strings (element per line) for /etc/hosts
+                        dirname: path to a directory of the manifest.json (no basename)
+                        basename: filename of the manifest.
     """
-    # Untar filesystem image
     args['verbose'] = args.get('verbose', False)
     args['debug'] = args.get('debug', False)
     response = {}
     response['status'] = 'success'  # Nothing happened yet! Let's keep it this way...
     response['message'] = 'System image was created!'
+
     #  It is OK to have a big exception block, because individual exception handling
     # is done inside those functions that would through RuntimeError (most of the
     # time).
     try:
-        #sys_img = untar(sys_img_tar, verbose=args['verbose'])
-
-        #manifest_path = os.path.join(manifest.dirname, manifest.basename)
-        #with open(manifest_path) as data_file:
-        #    manifest_json = json.load(data_file)    # focus "packages" field of manifest.json.
-
         # Setting hostname and hosts...
         set_hostname(sys_img, manifest.hostname, verbose=args['verbose'], debug=args['debug'])
         hosts_str = '\n'.join(manifest.hosts)   # manifest.hosts should be a list representing lines of Hosts file content
