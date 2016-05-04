@@ -80,9 +80,12 @@ def api_node_coord(node_coord=None):
         # Validate requested manifest exists.
         contentstr = request.get_data().decode()
         req_body = request.get_json(contentstr)
-        # TODO: validate req_body content (manifest, hostname, hosts)
 
+        # TODO: validate req_body content (manifest, hostname, hosts)
         manname = req_body['manifest']  # can have path in it
+        manifest.hosts = req_body['hosts'] # FIXME: not a good python practice.
+        manifest.hostname = req_body['hostname']
+
         manifest = BP.manifest_lookup(manname)
         err_status = 404
         assert manifest is not None, 'no such manifest ' + manname
@@ -90,8 +93,6 @@ def api_node_coord(node_coord=None):
         _data[node_coord] = manifest.basename
         save(_data, BP.binding)     # FIXME: ignoring return value?
 
-        manifest.hosts = req_body['hosts'] # FIXME: not a good python practice.
-        manifest.hostname = req_body['hostname']
         img_resp = build_node(manifest, node_coord)
 
         return jsonify(img_resp)
