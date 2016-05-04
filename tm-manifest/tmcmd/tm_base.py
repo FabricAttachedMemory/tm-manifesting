@@ -54,9 +54,9 @@ class TmCmd():
         :return: [json]
         """
         headers = options.get('headers', self.header)
-        set_trace()
         if options.get('payload', False):
             http_resp = HTTP_REQUESTS.put(url, options['payload'], headers=headers)
+            set_trace()
         else:
             http_resp = HTTP_REQUESTS.get(url, headers=headers)
         #jsondata = http_resp.json()
