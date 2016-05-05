@@ -7,7 +7,7 @@
  - Set correct symbolic link for /init file
  - Set /etc/hostname
  - Set /etc/hosts
- - and some other operations.  
+ - and some other operations.
 """
 
 import argparse

@@ -130,8 +130,10 @@ def build_node(manifest, node_coord):
     custom_tar = os.path.normpath(node_dir + '/untar/')
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
+
     # customization magic (not so much though).
-    status = customize_node.execute(custom_tar, hostname=BP.hostnames[node_coord])
+    node_hostname=BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
+    status = customize_node.execute(custom_tar, hostname=node_hostname)
 
     if status['status'] is 'success':
         return { 'success' : 'Manifest "%s" is set to node "%s"' %
@@ -196,7 +198,6 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
-    BP.hostnames = {node.coordinate:node.hostname for node in BP.nodes}
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
