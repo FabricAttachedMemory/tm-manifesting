@@ -131,7 +131,7 @@ def build_node(manifest, node_coord):
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
     # customization magic (not so much though).
-    status = customize_node.execute(custom_tar, hostname=BP.hostnames[node_coord], hosts=[''])
+    status = customize_node.execute(custom_tar, hostname=BP.hostnames[node_coord])
 
     if status['status'] is 'success':
         return { 'success' : 'Manifest "%s" is set to node "%s"' %
