@@ -81,10 +81,7 @@ def api_node_coord(node_coord=None):
         contentstr = request.get_data().decode()
         req_body = request.get_json(contentstr)
 
-        # TODO: validate req_body content (manifest, hostname, hosts)
         manname = req_body['manifest']  # can have path in it
-        manifest.hosts = req_body['hosts'] # FIXME: not a good python practice.
-        manifest.hostname = req_body['hostname']
 
         manifest = BP.manifest_lookup(manname)
         err_status = 404
@@ -133,8 +130,10 @@ def build_node(manifest, node_coord):
     custom_tar = os.path.normpath(node_dir + '/untar/')
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
+
     # customization magic (not so much though).
-    status = customize_node.execute(manifest, custom_tar)
+    node_hostname=BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
+    status = customize_node.execute(custom_tar, hostname=node_hostname, hosts=[''])
 
     if status['status'] is 'success':
         return { 'success' : 'Manifest "%s" is set to node "%s"' %
