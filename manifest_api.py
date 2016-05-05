@@ -32,13 +32,15 @@ if not paths:
     raise SystemExit('Cannot find any blueprints')
 n = 0
 
-mainapp.VERBOSE = mainapp.config['VERBOSE']  # lower cased already taken
-mainapp.DEBUG = mainapp.config['DEBUG']      #
+#mainapp.VERBOSE = mainapp.config['VERBOSE']  # lower cased already taken
+#mainapp.DEBUG = mainapp.config['DEBUG']      #
 
 for p in paths:
     try:
         modspec = p.replace('/', '.') + '.blueprint'
         BP = import_module(modspec)
+        BP.BP.VERBOSE = mainapp.config['VERBOSE']  # lower cased already taken
+        BP.BP.DEBUG = mainapp.config['DEBUG']      #
         BP.register(mainapp)
         n += 1
     except ImportError as e:
