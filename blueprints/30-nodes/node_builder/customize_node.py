@@ -22,6 +22,9 @@ from shutil import copyfile, rmtree, copytree
 from subprocess import Popen
 from pdb import set_trace
 
+_verbose = None     # Poor man's class
+_debug = None
+
 
 def copy_target_into(target, into, **options):
     """
@@ -315,13 +318,14 @@ def create_cpio(target, destination, **options):
             set_trace()
         raise RuntimeError(hasError[0])
 
-
-def execute(sys_img, **args):
+def execute(sys_img, **kwargs):
     """
         TODO: docstr
     """
-    args['verbose'] = args.get('verbose', False)
-    args['debug'] = args.get('debug', False)
+    global _verbose, _debug
+
+    _verbose = kwargs['verbose']
+    _debug = kwargs['debug']
     response = {}
     response['status'] = 'success'  # Nothing happened yet! Let's keep it this way...
     response['message'] = 'System image was created!'
@@ -331,25 +335,25 @@ def execute(sys_img, **args):
     # time).
     try:
         # Setting hostname and hosts...
-        set_hostname(sys_img, args['hostname'], verbose=args['verbose'], debug=args['debug'])
-        set_hosts(sys_img, args['hostname'], verbose=args['verbose'], debug=args['debug'])
+        set_hostname(sys_img, kwargs['hostname'])
+        set_hosts(sys_img, kwargs['hostname'])
 
         # Fixing sources.list
-        cleanup_sources_list(sys_img, verbose=args['verbose'], debug=args['debug'])
+        cleanup_sources_list(sys_img)
         # Cleaning up kernel
         kernel_dest = sys_img.split('/')
         kernel_dest = '/'.join(kernel_dest[:len(kernel_dest)-1])
         kernel_dest = '%s/' % (kernel_dest)
-        cleanout_kernel(sys_img, kernel_dest, verbose=args['verbose'], debug=args['debug'])
+        cleanout_kernel(sys_img, kernel_dest)
         # Symlink /init
-        fix_init(sys_img, verbose=args['verbose'], debug=args['debug'])
+        fix_init(sys_img)
 
         dest = os.path.dirname(sys_img)
         # Create .cpio file from untar.
-        create_cpio(sys_img, dest, verbose=args['verbose'], debug=args['debug'])
+        create_cpio(sys_img, dest)
 
         # Remove untar'ed, modified fileimage folder
-        remove_target(sys_img, verbose=args['verbose'], debug=args['debug'])
+        remove_target(sys_img)
     except RuntimeError as err:
          response['status'] = 'error'
          response['message'] = 'Ouch! Runtime error! We expected that...\n[%s]' % (err)
