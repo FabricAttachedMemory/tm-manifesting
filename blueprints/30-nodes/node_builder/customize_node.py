@@ -18,7 +18,7 @@ import tarfile
 import shlex
 import sys
 import time
-from shutil import copyfile, rmtree
+from shutil import copyfile, rmtree, copytree
 from subprocess import Popen
 from pdb import set_trace
 
@@ -37,12 +37,15 @@ def copy_target_into(target, into, **options):
     try:
         if options.get('verbose', False):
             print(' - Copying "%s" into "%s"...' % (target, into))
-        copyfile(target, into)
-    except EnvironmentError:
+        if os.path.isdir(target):
+            copytree(target, into) # copy directory
+        else:
+            copyfile(target, into) # copy single file
+    except EnvironmentError as err:
         if options.get('debug', False):
             print ('- Entering <func copy_target_into> debugging mode.')
             set_trace()
-        raise RuntimeError ('Couldn\'t copy "%s" into "%s"!' % (target, into))
+        raise RuntimeError ('Couldn\'t copy "%s" into "%s"! [%s]' % (target, into, err))
 
 
 def remove_target(target, **options):
@@ -269,65 +272,15 @@ def untar(target, destination=None, **options):
         destination = os.path.dirname(target)
         destination = os.path.normpath('%s/untar/' % destination)
 
-    if not tarfile.is_tarfile(target):
-        return target
     try:
-        tar = tarfile.open(target)
-    except tarfile.ReadError as err:    # Make sure "target" is a .tar format file.
-        raise RuntimeError ('Error occured while untaring "%s"! Not a tar format.'\
-                            % (target))
+        if options.get('verbose', False):
+            print(' - Uncompressing "%s" into "%s"...' % (targer, destination))
+        with tarfile.open(target) as tar_obj:
+            tar_obj.extractall(path=destination)
+    except (tarfile.ReadError, tarfile.ExtractError) as err:
+        remove_target(destination)  # cleanup on error.
+        raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
 
-    if options.get('verbose', False):
-        print (' * Extracting "%s" into "%s"' % (target, destination))
-    if not os.path.isdir(destination):
-        os.mkdir(destination)
-
-    try:    # FIXME: using "with" becase 3.4 tarfile is a context manager
-            # FIXME: teach it how to overwrite folder
-        tar.extractall(path=destination)
-    except tarfile.ExtractError:        # This might be too paranoid.
-        tar.close()
-        if options.get('debug', False):
-            print ('- Entering <func untar> debugging mode.')
-            set_trace()
-        raise RuntimeError ('Error occured while untaring "%s"!\n\
-                   Couldn\'t extract "%s"!' % (target, destination))
-    tar.close()
-
-    return destination
-
-
-def tar_folder(target, destination=None, **options):
-    """
-        Tar targeted folder/file into destination location.
-
-    :param 'target': [str] path to a folder to be tared.
-    :param 'destination': [str] path to a folder to save .tar file intto.
-                        Note: include destination file name in the path, e.g: path/to/file.name
-    :return: [str] destination of the tarred file.
-    """
-    if destination is None:
-        destination = os.path.dirname(target)
-        destination = os.path.normpath('%s/untar/' % destination)
-
-    if os.path.exists(destination):
-        remove_target(destination, **dict(options))
-
-    try:
-        tar = tarfile.open(destination, mode='w')
-    except tarfile.ReadError as err:    # make sure tar object can be created.
-        raise RuntimeError ('Error occured while taring "%s"! Not a tar format.'\
-                            % (target))
-
-    if options.get('verbose', False):
-        print (' * Compressing "%s" into "%s"...' % (target, destination))
-
-    # compress everything in the targeted location into a tarball.
-    for dirname in glob('%s/' % target):
-        to_tar = os.path.normpath(dirname).split('/')[-1]
-        tar.add(target, arcname=dirname)   # No need to catch this, since we already opened it as a tar object.
-                                           # Thus, if it fails, main program should pick it up as Unexpected error.
-    tar.close()
     return destination
 
 
@@ -394,9 +347,6 @@ def execute(sys_img, **args):
         dest = os.path.dirname(sys_img)
         # Create .cpio file from untar.
         create_cpio(sys_img, dest, verbose=args['verbose'], debug=args['debug'])
-
-        # Compress target into .tar format
-        tar_folder(sys_img, verbose=['verbose'])
 
         # Remove untar'ed, modified fileimage folder
         remove_target(sys_img, verbose=args['verbose'], debug=args['debug'])
