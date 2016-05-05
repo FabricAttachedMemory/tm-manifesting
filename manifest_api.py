@@ -36,6 +36,10 @@ for p in paths:
         modspec = p.replace('/', '.') + '.blueprint'
         BP = import_module(modspec)
         BP.register(mainapp)
+        assert not hasattr(BP, 'verbose'), 'Oops'
+        BP.verbose = mainapp.config['VERBOSE']
+        assert not hasattr(BP, 'debug'), 'Oops'
+        BP.debug = mainapp.config['DEBUG']
         n += 1
     except ImportError as e:
         set_trace()
