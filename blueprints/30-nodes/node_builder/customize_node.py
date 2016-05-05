@@ -268,31 +268,23 @@ def untar(target, destination=None, **options):
     if destination is None:
         destination = os.path.dirname(target)
         destination = os.path.normpath('%s/untar/' % destination)
+    set_trace()
+    backup_untar = None
+    if os.path.exists(destination):
+        backup_tar = '%s.bak' % destination
+        copy_target_into(destination, backup_untar)   # create a bakup of the destination file
+        remove_target(destination)
 
-    if not tarfile.is_tarfile(target):
-        return target
     try:
-        tar = tarfile.open(target)
-    except tarfile.ReadError as err:    # Make sure "target" is a .tar format file.
-        raise RuntimeError ('Error occured while untaring "%s"! Not a tar format.'\
-                            % (target))
+        if options.get('verbose', False):
+            print(' - Uncompressing "%s" into "%s"...' % (targer, destination))
+        with tarfile.open(target) as tar_obj:
+            tar_obj.extractall(path=destination)
+    except (tarfile.ReadError, tarfile.ExtractError) as err:
+        raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
 
-    if options.get('verbose', False):
-        print (' * Extracting "%s" into "%s"' % (target, destination))
-    if not os.path.isdir(destination):
-        os.mkdir(destination)
-
-    try:    # FIXME: using "with" becase 3.4 tarfile is a context manager
-            # FIXME: teach it how to overwrite folder
-        tar.extractall(path=destination)
-    except tarfile.ExtractError:        # This might be too paranoid.
-        tar.close()
-        if options.get('debug', False):
-            print ('- Entering <func untar> debugging mode.')
-            set_trace()
-        raise RuntimeError ('Error occured while untaring "%s"!\n\
-                   Couldn\'t extract "%s"!' % (target, destination))
-    tar.close()
+    if backup_tar is not None:
+        remove_target(backup_untar)
 
     return destination
 
@@ -308,26 +300,30 @@ def tar_folder(target, destination=None, **options):
     """
     if destination is None:
         destination = os.path.dirname(target)
-        destination = os.path.normpath('%s/untar/' % destination)
+        destination = os.path.normpath('%s/%s.tar' % (destination, os.path.basename(target)))
+    set_trace()
+    backup_tar = None
+    try:
+        if os.path.exists(destination):
+            backup_tar = '%s.bak' % destination
+            copy_target_into(destination, backup_tar)   # create a bakup of the destination file
+            remove_target(destination)
+    except EnvironmentError:
+        raise RuntimeError('Error occured while trying to backup "%s"!' % target)
 
-    if os.path.exists(destination):
-        remove_target(destination, **dict(options))
+    with tarfile.open(destination, 'w') as tar_obj:
+        for dirname in glob('%s/' % target):
+            to_tar = os.path.normpath(dirname).split('/')[-1]
+            tar_obj.add(target, arcname=dirname)
 
     try:
-        tar = tarfile.open(destination, mode='w')
-    except tarfile.ReadError as err:    # make sure tar object can be created.
-        raise RuntimeError ('Error occured while taring "%s"! Not a tar format.'\
-                            % (target))
+        if backup_tar is not None:
+            remove_target(backup_tar)
+        remove_target(target)
+    except EnvironmentError as err: # not a critial issue that shouldn't be halting customization progress.
+        raise RuntimeWarning('Having troubles cleaning up while taring "%s" into "%s".' %\
+                            (target, destination))
 
-    if options.get('verbose', False):
-        print (' * Compressing "%s" into "%s"...' % (target, destination))
-
-    # compress everything in the targeted location into a tarball.
-    for dirname in glob('%s/' % target):
-        to_tar = os.path.normpath(dirname).split('/')[-1]
-        tar.add(target, arcname=dirname)   # No need to catch this, since we already opened it as a tar object.
-                                           # Thus, if it fails, main program should pick it up as Unexpected error.
-    tar.close()
     return destination
 
 
