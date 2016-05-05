@@ -3,7 +3,8 @@ import sys
 
 API_VERSION = 1.0
 
-DEBUG = True and sys.stdin.isatty()
+DEBUG = True and sys.stdin.isatty()     #  running as a Deamon or from a Terminal?
+VERBOSE = True and sys.stdin.isatty()   # enable debugging when from terminal...
 PORT = 31178
 HOST = '0.0.0.0'
 MANIFESTING_ROOT = '/var/local/tm-manifesting'

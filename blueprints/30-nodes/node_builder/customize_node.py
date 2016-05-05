@@ -26,7 +26,7 @@ _verbose = None     # Poor man's class
 _debug = None
 
 
-def copy_target_into(target, into, **options):
+def copy_target_into(target, into):
     """
         Wraper around shutil.copyfile function. Main intention is to catch a spevifiec
     exception and raise RuntimeError with a meaningfull message. Also, provides
@@ -38,20 +38,17 @@ def copy_target_into(target, into, **options):
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
     try:
-        if options.get('verbose', False):
+        if _verbose:
             print(' - Copying "%s" into "%s"...' % (target, into))
         if os.path.isdir(target):
             copytree(target, into) # copy directory
         else:
             copyfile(target, into) # copy single file
     except EnvironmentError as err:
-        if options.get('debug', False):
-            print ('- Entering <func copy_target_into> debugging mode.')
-            set_trace()
         raise RuntimeError ('Couldn\'t copy "%s" into "%s"! [%s]' % (target, into, err))
 
 
-def remove_target(target, **options):
+def remove_target(target):
     """
         Remove "target" file. Provide meaningful feadback on the screen with verbose option.
 
@@ -62,20 +59,17 @@ def remove_target(target, **options):
     """
     filename = slice_path(target)   # used only for prints.
     try:
-        if options.get('verbose', False):
+        if _verbose:
             print(' - Removing "%s"...' % (filename))
         if os.path.isdir(target):
             rmtree(target)      # remove directory tree
         else:
             os.remove(target)   # remove single file
     except EnvironmentError as e:
-        if options.get('debug', False):
-            print ('- Entering debugging mode.')
-            set_trace()
         raise RuntimeError ('Couldn\'t remove "%s"!' % (filename))
 
 
-def symlink_target(source, target, **options):
+def symlink_target(source, target):
     """
         Create symlink for target from the source. Provide meaningful feadback on the screen
     verbose option.
@@ -89,17 +83,14 @@ def symlink_target(source, target, **options):
     src_filename = slice_path(source)
     target_filename = slice_path(target)
     try:
-        if options.get('verbose', False):
+        if _verbose:
             print(' - Creating a symlink from "%s" to "%s"...' % (src_filename, target_filename))
         os.symlink(source, target)
     except EnvironmentError as e:
-        if options.get('debug', False):
-            print ('- Entering <func symlink_target> debugging mode.')
-            set_trace()
         raise RuntimeError ('Couldn\'t create a symlink from "%s" to "%s"!' % (src_filename, target_filename))
 
 
-def write_to_file(target, content, **options):
+def write_to_file(target, content):
     """
         Overwrite file in the targeted location with a new content.
 
@@ -109,14 +100,11 @@ def write_to_file(target, content, **options):
     """
     try:
         with open(target, 'w+') as file_obj:
-            if options.get('verbose', False):
+            if _verbose:
                 print ('Writing into "%s": \n[\n%s\n]\n' % (target, content))
             file_content = '%s\n' % str(content)
             file_obj.write(file_content)
     except EnvironmentError:
-        if options.get('debug', False):
-            print ('- Entering <func write_to_file> debugging mode.')
-            set_trace()
         raise RuntimeError ('Couldn\'t overwrite file "%s"!' % (target))
 
 
@@ -138,7 +126,7 @@ def slice_path(target, slice_ratio=2):
     return '/'.join(sliced)
 
 
-def cleanout_kernel(sys_img, kernel_dest, **options):
+def cleanout_kernel(sys_img, kernel_dest):
     """
         Cleanout boot/vmlinuz* and boot/initrd.img/ files from the system image directory.
     These files are not needed for diskless boot and are just taking up extra space.
@@ -161,14 +149,11 @@ def cleanout_kernel(sys_img, kernel_dest, **options):
             filename = os.path.basename(target)
 
     except RuntimeError as err:
-        if options.get('debug', False):
-            print ('- Entering <func cleanout_kernel> debugging mode.')
-            set_trace()
         raise RuntimeError ('Errror occured while cleaning kernel!\n\
                             %s' % (err))
 
 
-def fix_init(sys_img, **options):
+def fix_init(sys_img):
     """
         Set correct symbolic link to an /init/ file from /sbin/init
 
@@ -181,16 +166,14 @@ def fix_init(sys_img, **options):
 
     try:
         if os.path.exists(new_init):
-            remove_target(new_init, **dict(options))
-        symlink_target(origin_init, new_init, **dict(options))
+            remove_target(new_init)
+        symlink_target(origin_init, new_init)
     except RuntimeError as err:
-        if options.get('debug', False):
-            print ('- Entering <func fix_init> debugging mode.')
         raise RuntimeError('Error occured while fixing /init file!\n\
                             %s' % (err))
 
 
-def cleanup_sources_list(sys_img, **options):
+def cleanup_sources_list(sys_img):
     """
         Check if /etc/apt/source.list.d/base.list file exists. If so, move it into
     /etc/apt/sources.list, cause base.list causing troubles.
@@ -204,67 +187,62 @@ def cleanup_sources_list(sys_img, **options):
     sources_base = '%s/etc/apt/sources.list.d/base.list' % sys_img
 
     if not os.path.exists(sources_base):
-        if options.get('verbose', False):
+        if _verbose:
             print ('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
-            return None
+        return None
     try:
         copy_target_into(sources_base, sources_list)
-        remove_target(sources_base, **dict(options))
+        remove_target(sources_base)
     except RuntimeError as err:
-        if options.get('debug', False):
-            print ('- Entering <func cleanup_sources_list> debugging mode.')
-            set_trace()
         raise RuntimeError('Error occured while cleaning sources.list!\n\
                             %s' % (err))
 
 
-def set_hostname(sys_img, hostname, **options):
+def set_hostname(sys_img, hostname):
     """
         Set new hostname on the file system image. Get rid of the old hostname if it already exists
     and write a new one.
 
     :param 'sys_img': [str] path to the file system location to mess with.
     :param 'hostname': [str] hostname to be used for given system image.
-    :param 'verbose': [bool] Make it talk.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
     hostname_file = '%s/etc/hostname' % (sys_img)
     try:
         if os.path.exists(hostname_file):
-            remove_target(hostname_file, **dict(options))
-        write_to_file(hostname_file, hostname, **dict(options))
+            remove_target(hostname_file)
+        write_to_file(hostname_file, hostname)
     except RuntimeError as err:
         raise RuntimeError ('Error occured while setting hostname!\n\
                             %s' % (err))
 
 
-def set_hosts(sys_img, hostname, **options):
+def set_hosts(sys_img, hostname):
     """
         Set new hostname on the file system image. Get rid of the old hostname if it already exists
     and write a new one.
 
     :param 'sys_img': [str] path to the file system location to mess with.
     :param 'hostname': [str] hostname to be used for given system image.
-    :param 'verbose': [bool] Make it talk.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
     hosts_file = '%s/etc/hosts' % (sys_img)
     try:
         if os.path.exists(hosts_file):
-            remove_target(hosts_file, **dict(options))
+            remove_target(hosts_file)
 
         content = []                                # To ensure correct text alignment
         content.append('127.0.0.1   localhost')     # treat each element as a line in /etc/hosts
         content.append('127.1.0.1   %s' % hostname) #
         content = '\n'.join(content)                # then join it into a string of lines.
 
-        write_to_file(hosts_file, content, **dict(options))
+        write_to_file(hosts_file, content)
     except RuntimeError as err:
         raise RuntimeError ('Error occured while setting hosts content!\n\
                             %s' % (err))
 
 
-def untar(target, destination=None, **options):
+def untar(target, destination=None):
     """
         Untar target file into the same folder of the tarball.
 
@@ -276,18 +254,17 @@ def untar(target, destination=None, **options):
         destination = os.path.normpath('%s/untar/' % destination)
 
     try:
-        if options.get('verbose', False):
+        if _verbose:
             print(' - Uncompressing "%s" into "%s"...' % (targer, destination))
         with tarfile.open(target) as tar_obj:
             tar_obj.extractall(path=destination)
     except (tarfile.ReadError, tarfile.ExtractError) as err:
-        remove_target(destination)  # cleanup on error.
         raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
 
     return destination
 
 
-def create_cpio(target, destination, **options):
+def create_cpio(target, destination):
     """
         Get the bootable pieces: initrd CPIO and a kernel.
 
@@ -301,7 +278,7 @@ def create_cpio(target, destination, **options):
     cmd = shlex.split(cmd)
     hasError = [] # store error message and error object of caught exception.
     try:
-        if options.get('verbose', False):
+        if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
         status = Popen(cmd)
         status.communicate()
@@ -311,12 +288,10 @@ def create_cpio(target, destination, **options):
         hasError[1] = err
 
     if hasError:
-        if options.get('verbose', False):
+        if _verbose:
             print('Error occured while creating cpio!', file=sys.stderr)
-        if options.get('debug', False):
-            print ('- Entering <func untar> debugging mode.')
-            set_trace()
         raise RuntimeError(hasError[0])
+
 
 def execute(sys_img, **kwargs):
     """
