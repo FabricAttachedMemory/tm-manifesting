@@ -135,7 +135,7 @@ def build_node(manifest, node_coord):
     # customization magic (not so much though).
     node_hostname=BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
     status = customize_node.execute(
-        custom_tar, hostname=node_hostname, verbose=BP.verbose, debug=BP.debug)
+        custom_tar, hostname=node_hostname, verbose=BP.VERBOSE, debug=BP.DEBUG)
 
     if status['status'] == 'success':
         return { 'success' : 'Manifest "%s" is set to node "%s"' %
@@ -197,6 +197,7 @@ def _manifest_lookup(name):
 
 def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
+    set_trace()
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])

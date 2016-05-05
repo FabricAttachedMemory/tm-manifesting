@@ -31,15 +31,17 @@ paths = sorted([ p for p in glob.glob('blueprints/*') ])
 if not paths:
     raise SystemExit('Cannot find any blueprints')
 n = 0
+
+#mainapp.VERBOSE = mainapp.config['VERBOSE']  # lower cased already taken
+#mainapp.DEBUG = mainapp.config['DEBUG']      #
+
 for p in paths:
     try:
         modspec = p.replace('/', '.') + '.blueprint'
         BP = import_module(modspec)
+        BP.BP.VERBOSE = mainapp.config['VERBOSE']  # lower cased already taken
+        BP.BP.DEBUG = mainapp.config['DEBUG']      #
         BP.register(mainapp)
-        assert not hasattr(BP, 'verbose'), 'Oops'
-        BP.verbose = mainapp.config['VERBOSE']
-        assert not hasattr(BP, 'debug'), 'Oops'
-        BP.debug = mainapp.config['DEBUG']
         n += 1
     except ImportError as e:
         set_trace()
