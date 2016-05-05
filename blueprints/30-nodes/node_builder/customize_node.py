@@ -7,7 +7,7 @@
  - Set correct symbolic link for /init file
  - Set /etc/hostname
  - Set /etc/hosts
- - and some other operations.  
+ - and some other operations.
 """
 
 import argparse
@@ -232,7 +232,7 @@ def set_hostname(sys_img, hostname, **options):
                             %s' % (err))
 
 
-def set_hosts(sys_img, content, **options):
+def set_hosts(sys_img, hostname, **options):
     """
         Set new hostname on the file system image. Get rid of the old hostname if it already exists
     and write a new one.
@@ -246,6 +246,12 @@ def set_hosts(sys_img, content, **options):
     try:
         if os.path.exists(hosts_file):
             remove_target(hosts_file, **dict(options))
+
+        content = []                                # To ensure correct text alignment
+        content.append('127.0.0.1   localhost')     # treat each element as a line in /etc/hosts
+        content.append('127.1.0.1   %s' % hostname) #
+        content = '\n'.join(content)                # then join it into a string of lines.
+
         write_to_file(hosts_file, content, **dict(options))
     except RuntimeError as err:
         raise RuntimeError ('Error occured while setting hosts content!\n\
@@ -277,6 +283,7 @@ def untar(target, destination=None, **options):
         os.mkdir(destination)
 
     try:    # FIXME: using "with" becase 3.4 tarfile is a context manager
+            # FIXME: teach it how to overwrite folder
         tar.extractall(path=destination)
     except tarfile.ExtractError:        # This might be too paranoid.
         tar.close()
@@ -372,8 +379,7 @@ def execute(sys_img, **args):
     try:
         # Setting hostname and hosts...
         set_hostname(sys_img, args['hostname'], verbose=args['verbose'], debug=args['debug'])
-        hosts_str = '\n'.join(args['hosts'])   # manifest.hosts should be a list representing lines of Hosts file content
-        set_hosts(sys_img, hosts_str, verbose=args['verbose'], debug=args['debug'])
+        set_hosts(sys_img, args['hostname'], verbose=args['verbose'], debug=args['debug'])
 
         # Fixing sources.list
         cleanup_sources_list(sys_img, verbose=args['verbose'], debug=args['debug'])
@@ -385,12 +391,12 @@ def execute(sys_img, **args):
         # Symlink /init
         fix_init(sys_img, verbose=args['verbose'], debug=args['debug'])
 
-        # Compress target into .tar format
-        tar_folder(sys_img, verbose=['verbose'])
-
         dest = os.path.dirname(sys_img)
         # Create .cpio file from untar.
         create_cpio(sys_img, dest, verbose=args['verbose'], debug=args['debug'])
+
+        # Compress target into .tar format
+        tar_folder(sys_img, verbose=['verbose'])
 
         # Remove untar'ed, modified fileimage folder
         remove_target(sys_img, verbose=args['verbose'], debug=args['debug'])
