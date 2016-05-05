@@ -18,7 +18,7 @@ import tarfile
 import shlex
 import sys
 import time
-from shutil import copyfile, rmtree
+from shutil import copyfile, rmtree, copytree
 from subprocess import Popen
 from pdb import set_trace
 
@@ -37,12 +37,15 @@ def copy_target_into(target, into, **options):
     try:
         if options.get('verbose', False):
             print(' - Copying "%s" into "%s"...' % (target, into))
-        copyfile(target, into)
-    except EnvironmentError:
+        if os.path.isdir(target):
+            copytree(target, into) # copy directory
+        else:
+            copyfile(target, into) # copy single file
+    except EnvironmentError as err:
         if options.get('debug', False):
             print ('- Entering <func copy_target_into> debugging mode.')
             set_trace()
-        raise RuntimeError ('Couldn\'t copy "%s" into "%s"!' % (target, into))
+        raise RuntimeError ('Couldn\'t copy "%s" into "%s"! [%s]' % (target, into, err))
 
 
 def remove_target(target, **options):
@@ -268,12 +271,6 @@ def untar(target, destination=None, **options):
     if destination is None:
         destination = os.path.dirname(target)
         destination = os.path.normpath('%s/untar/' % destination)
-    set_trace()
-    backup_untar = None
-    if os.path.exists(destination):
-        backup_tar = '%s.bak' % destination
-        copy_target_into(destination, backup_untar)   # create a bakup of the destination file
-        remove_target(destination)
 
     try:
         if options.get('verbose', False):
@@ -281,48 +278,8 @@ def untar(target, destination=None, **options):
         with tarfile.open(target) as tar_obj:
             tar_obj.extractall(path=destination)
     except (tarfile.ReadError, tarfile.ExtractError) as err:
+        remove_target(destination)  # cleanup on error.
         raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
-
-    if backup_tar is not None:
-        remove_target(backup_untar)
-
-    return destination
-
-
-def tar_folder(target, destination=None, **options):
-    """
-        Tar targeted folder/file into destination location.
-
-    :param 'target': [str] path to a folder to be tared.
-    :param 'destination': [str] path to a folder to save .tar file intto.
-                        Note: include destination file name in the path, e.g: path/to/file.name
-    :return: [str] destination of the tarred file.
-    """
-    if destination is None:
-        destination = os.path.dirname(target)
-        destination = os.path.normpath('%s/%s.tar' % (destination, os.path.basename(target)))
-    set_trace()
-    backup_tar = None
-    try:
-        if os.path.exists(destination):
-            backup_tar = '%s.bak' % destination
-            copy_target_into(destination, backup_tar)   # create a bakup of the destination file
-            remove_target(destination)
-    except EnvironmentError:
-        raise RuntimeError('Error occured while trying to backup "%s"!' % target)
-
-    with tarfile.open(destination, 'w') as tar_obj:
-        for dirname in glob('%s/' % target):
-            to_tar = os.path.normpath(dirname).split('/')[-1]
-            tar_obj.add(target, arcname=dirname)
-
-    try:
-        if backup_tar is not None:
-            remove_target(backup_tar)
-        remove_target(target)
-    except EnvironmentError as err: # not a critial issue that shouldn't be halting customization progress.
-        raise RuntimeWarning('Having troubles cleaning up while taring "%s" into "%s".' %\
-                            (target, destination))
 
     return destination
 
@@ -390,9 +347,6 @@ def execute(sys_img, **args):
         dest = os.path.dirname(sys_img)
         # Create .cpio file from untar.
         create_cpio(sys_img, dest, verbose=args['verbose'], debug=args['debug'])
-
-        # Compress target into .tar format
-        tar_folder(sys_img, verbose=['verbose'])
 
         # Remove untar'ed, modified fileimage folder
         remove_target(sys_img, verbose=args['verbose'], debug=args['debug'])

@@ -73,6 +73,7 @@ def api_node(name=None):
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('PUT', ))
 def api_node_coord(node_coord=None):
+    print ('Requesting customization of "%s"...' % node_coord)
     try:
         err_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Too big'
