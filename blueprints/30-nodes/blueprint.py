@@ -130,8 +130,13 @@ def build_node(manifest, node_coord):
     custom_tar = os.path.normpath(node_dir + '/untar/')
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
+
+    node_obj = _node_lookup(node_coord)
+    if node_obj is None:
+        return { 'error' : 'Couldn\'t find a node for the coordinate "%s"' % node_coord }
+
     # customization magic (not so much though).
-    status = customize_node.execute(custom_tar, hostname=BP.hostnames[node_coord], hosts=[''])
+    status = customize_node.execute(custom_tar, hostname=node_obj.hostname, hosts=[''])
 
     if status['status'] is 'success':
         return { 'success' : 'Manifest "%s" is set to node "%s"' %
@@ -191,12 +196,23 @@ def _manifest_lookup(name):
     return BP.blueprints['manifest'].lookup(name)
 
 
+def _node_lookup(node_coord):
+    """
+        Search a node object by the coordinate.
+
+    :param 'node_coord': [str] node's coordinate to get an object of.
+    :return: <class 'tm_librarian.tmconfig.nodes'>. 'None' if not found.
+    """
+    for node in BP.nodes:
+        if node_coord == node.coordinate:
+            return node
+
+
 def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
-    BP.hostnames = {node.coordinate:node.hostname for node in BP.nodes}
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
