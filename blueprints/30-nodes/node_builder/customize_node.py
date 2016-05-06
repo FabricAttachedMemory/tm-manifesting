@@ -19,7 +19,7 @@ import shlex
 import sys
 import time
 from shutil import copyfile, rmtree, copytree
-from subprocess import Popen
+from subprocess import Popen, PIPE
 from pdb import set_trace
 
 _verbose = None     # Poor man's class
@@ -272,25 +272,25 @@ def create_cpio(target, destination):
     :param 'destination': [str] path to the folder to save .cpio file to.
     :return: returncode of Popen() process.
     """
-    cpio_name = destination.split('/')[-1]
-    cpio_script = os.path.join(os.path.dirname(__file__), 'cpio.sh')
-    cmd = 'sudo %s %s %s' % (cpio_script, target, destination)
-    cmd = shlex.split(cmd)
-    hasError = [] # store error message and error object of caught exception.
+    #  FIXME: This function needs some serious testing!
+    #  Have to verify if created .cpio is good...
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
-        status = Popen(cmd)
-        status.communicate()
-    except subprocess.CalledProcessError as err:
-        hasError[0] = ('Error occured while creating cpio of %s!\n\
-                    [%s]' % (err))
-        hasError[1] = err
+        cmd = 'find %s -not -name vmlinuz -not -name initrd.img \
+                -path ./boot -prune -o -print' % (target)
+        cmd = shlex.split(cmd)
+        find_sh = Popen(cmd, stdout=PIPE)
+        cmd = 'sudo cpio --create --format \'newc\''
+        cmd = shlex.split(cmd)
+        with open(destination, 'w+') as file_obj:
+            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
 
-    if hasError:
-        if _verbose:
-            print('Error occured while creating cpio!', file=sys.stderr)
-        raise RuntimeError(hasError[0])
+        cpio_sh.communicate()
+        find_sh.communicate()
+    except subprocess.CalledProcessError as err:
+        raise RuntimeError('Error occured while creating cpio from "%s"\
+                            ["%s"]' % (target, err))
 
 
 def execute(sys_img, **kwargs):
@@ -323,7 +323,7 @@ def execute(sys_img, **kwargs):
         # Symlink /init
         fix_init(sys_img)
 
-        dest = os.path.dirname(sys_img)
+        dest = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
         # Create .cpio file from untar.
         create_cpio(sys_img, dest)
 

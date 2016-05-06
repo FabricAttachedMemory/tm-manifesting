@@ -197,7 +197,6 @@ def _manifest_lookup(name):
 
 def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
-    set_trace()
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
