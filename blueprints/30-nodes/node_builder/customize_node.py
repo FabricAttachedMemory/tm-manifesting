@@ -284,7 +284,6 @@ def create_cpio(target, destination):
                 -path ./boot -prune -o -print' % (target)
         cmd = shlex.split(cmd)
         find_sh = Popen(cmd, stdout=PIPE)
-
         cmd = 'sudo cpio --create --format \'newc\' > %s/bender.cpio' % (destination)
         cmd = shlex.split(cmd)
         cpio_name = os.path.basename(target)
