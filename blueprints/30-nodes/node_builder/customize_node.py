@@ -272,11 +272,8 @@ def create_cpio(target, destination):
     :param 'destination': [str] path to the folder to save .cpio file to.
     :return: returncode of Popen() process.
     """
-    cpio_name = destination.split('/')[-1]
-    #cpio_script = os.path.join(os.path.dirname(__file__), 'cpio.sh')
-    #cmd = 'sudo %s %s %s' % (cpio_script, target, destination)
-    #cmd = shlex.split(cmd)
-    set_trace()
+    #  FIXME: This function needs some serious testing!
+    #  Have to verify if created .cpio is good...
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
@@ -284,16 +281,13 @@ def create_cpio(target, destination):
                 -path ./boot -prune -o -print' % (target)
         cmd = shlex.split(cmd)
         find_sh = Popen(cmd, stdout=PIPE)
-        cmd = 'sudo cpio --create --format \'newc\' > %s/bender.cpio' % (destination)
+        cmd = 'sudo cpio --create --format \'newc\''
         cmd = shlex.split(cmd)
-        cpio_name = os.path.basename(target)
-        with open('%s/%s' % (destination, target), 'w+') as file_obj:
+        with open(destination, 'w+') as file_obj:
             cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
 
-        find_sh.close()
         cpio_sh.communicate()
-
-        find_sh.wait()
+        find_sh.communicate()
     except subprocess.CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
@@ -329,7 +323,7 @@ def execute(sys_img, **kwargs):
         # Symlink /init
         fix_init(sys_img)
 
-        dest = os.path.dirname(sys_img)
+        dest = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
         # Create .cpio file from untar.
         create_cpio(sys_img, dest)
 
