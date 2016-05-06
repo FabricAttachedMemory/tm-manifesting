@@ -287,12 +287,13 @@ def create_cpio(target, destination):
 
         cmd = 'sudo cpio --create --format \'newc\' > %s/bender.cpio' % (destination)
         cmd = shlex.split(cmd)
-        cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=PIPE)
-
-
+        cpio_name = os.path.basename(target)
+        with open('%s/%s' % (destination, target), 'w+') as file_obj:
+            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
 
         find_sh.close()
         cpio_sh.communicate()
+
         find_sh.wait()
     except subprocess.CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
