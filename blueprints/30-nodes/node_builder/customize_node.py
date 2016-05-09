@@ -255,7 +255,7 @@ def untar(target, destination=None):
 
     try:
         if _verbose:
-            print(' - Uncompressing "%s" into "%s"...' % (targer, destination))
+            print(' - Uncompressing "%s" into "%s"...' % (target, destination))
         with tarfile.open(target) as tar_obj:
             tar_obj.extractall(path=destination)
     except (tarfile.ReadError, tarfile.ExtractError) as err:
