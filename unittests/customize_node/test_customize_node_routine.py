@@ -57,6 +57,7 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
         if os.path.isdir(cls.tmp_folder):
             rmtree(cls.tmp_folder)
 
+
     def test_cleanout_kernel(self):
         """
             Assume there is a mock filesystem image already created. Thus, try
