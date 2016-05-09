@@ -125,5 +125,63 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
             self.assertTrue(True)
 
 
+    def test_cleanup_sources_list(self):
+        """
+            Assume there is a mock filesystem image already created. Thus, try
+        fix sources.list and sources.list.d/base.list using customize_node.cleanup_sources_list
+        function, e.g. move content of base.list into sources.list and removing base.list file.
+        """
+        sourceslist_file = '%s/etc/apt/sources.list' % self.fs_img
+        baselist_file = '%s/etc/apt/sources.list.d/base.list' % self.fs_img
+        CN.cleanup_sources_list(self.fs_img)
+
+        self.assertFalse(os.path.exists(baselist_file),
+                        'base.list file was not removed!')
+        self.assertTrue(os.path.exists(sourceslist_file),
+                    'What happened to sources.list file? Where is it off to?')
+        self.assertIsNone(CN.cleanup_sources_list(self.fs_img), 'base.list still exists?')
+
+
+    def test_set_hostname(self):
+        """
+            Assume there is a mock filesystem image already created. Thus, try
+        to set a custom name to etc/hostname using customize_node.set_hostname
+        function.
+        """
+        hostname_test = 'Abyss'
+        hostname_file = '%s/etc/hostname' % self.fs_img
+
+        CN.set_hostname(self.fs_img, hostname_test)
+        hostname_new = None
+        with open(hostname_file, 'r') as file_obj:
+            hostname_new = file_obj.read()
+        self.assertTrue(hostname_test in hostname_new,
+                'Hostname was not set to "%s"!' % hostname_test)
+
+
+    def test_set_hosts(self):
+        """
+            Assume there is a mock filesystem image already created. Thus, try
+        """
+        hosts_file = '%s/etc/hosts' % self.fs_img
+        hostname = 'Abyss'
+
+        CN.set_hosts(self.fs_img, hostname)
+
+        hosts_new = None
+        with open(hosts_file, 'r') as file_obj:
+            hosts_new = file_obj.read()
+
+        localhost_line = '127.0.0.1   localhost'
+        hostname_line = '127.1.0.1   %s' % hostname
+        self.assertTrue(localhost_line in hosts_new, '"%s" is not in etc/hosts!' % localhost_line)
+        self.assertTrue(hostname_line in hosts_new, '"%s" is not in etc/hosts!' % hostname_line)
+
+
+    #TODO: Test customize_node.untar
+
+
+
+
 if __name__ == '__main__':
     unittest.main()
