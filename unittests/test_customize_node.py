@@ -17,7 +17,7 @@ import customize_node as CN
 
 
 
-class PackageTest(unittest.TestCase):
+class CustomizeNodeHelpersTest(unittest.TestCase):
 
     tmp_folder = "/tmp/UNITTEST_CUSTOMNODE/"
 
