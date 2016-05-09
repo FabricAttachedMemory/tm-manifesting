@@ -19,7 +19,7 @@ import shlex
 import sys
 import time
 from shutil import copyfile, rmtree, copytree
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CalledProcessError
 from pdb import set_trace
 
 _verbose = None     # Poor man's class
@@ -268,8 +268,6 @@ def create_cpio(target, destination):
     :param 'destination': [str] path to the folder to save .cpio file to.
     :return: returncode of Popen() process.
     """
-    #  FIXME: This function needs some serious testing!
-    #  Have to verify if created .cpio is good...
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
@@ -284,7 +282,7 @@ def create_cpio(target, destination):
 
         cpio_sh.communicate()
         find_sh.communicate()
-    except subprocess.CalledProcessError as err:
+    except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
 
