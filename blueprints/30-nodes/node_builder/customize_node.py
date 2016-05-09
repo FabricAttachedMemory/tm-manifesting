@@ -145,7 +145,6 @@ def cleanout_kernel(sys_img, kernel_dest):
             copy_into = os.path.basename(kernel)
             copy_target_into(kernel, '%s/%s' % (kernel_dest, copy_into) )
             remove_target(kernel)
-
     except RuntimeError as err:
         raise RuntimeError ('Errror occured while cleaning kernel!\n\
                             %s' % (err))
@@ -161,12 +160,11 @@ def fix_init(sys_img):
     """
     new_init = os.path.join(sys_img, 'init')
     origin_init = '%s/sbin/init' % (sys_img)
-
     try:
         if os.path.exists(new_init):
             remove_target(new_init)
         symlink_target(origin_init, new_init)
-    except RuntimeError as err:
+    except (RuntimeError, EnvironmentError) as err:
         raise RuntimeError('Error occured while fixing /init file!\n\
                             %s' % (err))
 

@@ -35,11 +35,12 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
         os.makedirs(cls.tmp_folder)
         os.makedirs(cls.fs_img)
 
-        fs_dirtree = ['boot/', 'etc/', 'etc/apt/sources.list.d/']
+        fs_dirtree = ['boot/', 'etc/', 'etc/apt/sources.list.d/', 'sbin/']
         fs_files = ['boot/initrd.img-4.3.0-3-arm64-l4tm',
                     'boot/vmlinuz-4.3.0-3-arm64-l4tm',
                     'etc/hosts',
                     'etc/hostname',
+                    'sbin/init',
                     'etc/apt/sources.list']
 
         for fs_dirname in fs_dirtree:
@@ -73,6 +74,55 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
             self.assertTrue(os.path.exists(boot_new),
                             '"%s" was not found!' % (boot_new))
 
+
+    def test_cleanout_kernel_exception(self):
+        """
+            Assume there is a mock filesystem image already created. Thus, try
+        to move boot/ files into tmp directory using customize_node.cleanout_kernel
+        function. In this test we are trying to catch and error, thus, the boot
+        files will not exist, so that the RuntimeError will be thrown.
+        """
+        boot_dir = '%s/boot/' % self.fs_img
+        rmtree(boot_dir)
+        self.assertFalse(os.path.isdir(boot_dir), 'Couldn\'t remove boot/!')
+
+        self.assertRaises(RuntimeError, CN.cleanout_kernel(self.fs_img, self.tmp_folder),
+                'Unexpected error was raised!')
+
+
+    def test_fix_init(self):
+        """
+            Assume there is a mock filesystem image already created. Thus, try
+        to create a symbolic link from fs_img/sbin/init into fs_img/init.
+        """
+        CN.fix_init(self.fs_img)
+        new_init = '%s/init' % self.fs_img
+
+        self.assertTrue(os.path.exists(new_init),
+                'Symlink to "%s" was not created!' % new_init)
+
+        CN.fix_init(self.fs_img)
+        self.assertTrue(os.path.exists(new_init),
+                'Recreating symlink to "%s" faild! Couldn\'t remove old init!' % new_init)
+
+
+    def test_fix_init_exception(self):
+        """
+            Assume there is a mock filesystem image already created. Thus, try
+        to create a symbolic link from fs_img/sbin/init into fs_img/init. This
+        time, we will try to catch a RuntimeError exception, by removing init
+        file before creating a symlink.
+        """
+        orig_init = '%s/sbin/init' % self.fs_img
+        os.remove(orig_init)
+        self.assertRaises(RuntimeError, CN.fix_init(self.fs_img),
+                'Unexpected error was raised!')
+        wrong_fsimg = '/tmp/'
+        try:
+            CN.fix_init(wrong_fsimg)
+            self.assertTrue(False, 'Should have faild due to a wrong fsimg path')
+        except RuntimeError:
+            self.assertTrue(True)
 
 
 if __name__ == '__main__':
