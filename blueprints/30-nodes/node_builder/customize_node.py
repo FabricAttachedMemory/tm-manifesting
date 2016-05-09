@@ -144,9 +144,7 @@ def cleanout_kernel(sys_img, kernel_dest):
         for kernel in vmlinuz+initrd:
             copy_into = os.path.basename(kernel)
             copy_target_into(kernel, '%s/%s' % (kernel_dest, copy_into) )
-
-        for target in vmlinuz + initrd:
-            filename = os.path.basename(target)
+            remove_target(kernel)
 
     except RuntimeError as err:
         raise RuntimeError ('Errror occured while cleaning kernel!\n\
