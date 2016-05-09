@@ -11,7 +11,7 @@ import unittest
 from shutil import rmtree, copytree
 customize_node = os.path.realpath(__file__)
 customize_node = os.path.dirname(customize_node)
-customize_node = '%s/../blueprints/30-nodes/node_builder/' % (customize_node)
+customize_node = '%s/../../blueprints/30-nodes/node_builder/' % (customize_node)
 sys.path.append(customize_node)
 import customize_node as CN
 
