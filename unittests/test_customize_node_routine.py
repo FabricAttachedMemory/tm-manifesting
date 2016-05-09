@@ -181,6 +181,15 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
     #TODO: Test customize_node.untar
 
 
+    def test_create_cpio(self):
+        """
+        """
+        cpio_file = '%s/fs_img.cpio' % self.tmp_folder
+        CN.create_cpio(self.fs_img, cpio_file)
+        self.assertTrue(os.path.exists(cpio_file), 'cpio file was not created!')
+
+
+    #TODO: Test create_cpio exceptions
 
 
 if __name__ == '__main__':
