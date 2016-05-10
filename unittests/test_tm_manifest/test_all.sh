@@ -4,6 +4,8 @@ TEST_FILES=`find . -name "test_*.py"`
 
 set -ue
 
+IGNORE="None"
+
 if [ "${1:-}" ]; then
     if [ -z "${2:-}" ];then
         echo "Missing script ignore string!"
@@ -11,6 +13,7 @@ if [ "${1:-}" ]; then
     fi
     IGNORE=$2
 fi
+
 
 for test_file in $TEST_FILES
 do

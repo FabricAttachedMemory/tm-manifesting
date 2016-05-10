@@ -30,7 +30,7 @@ class TmCmd():
             arg_list = []
         assert len(arg_list) == 0, 'This function does not take non-optional arguments!'
         if 'verbose' in options and options['verbose']:
-            print(' - Sending request to "%s"...' % url)
+            print(' - Sending request to "%s"...' % self.url)
 
 
     def show(self, target, **options):
@@ -42,7 +42,7 @@ class TmCmd():
         #Passing list is helpfull for a generic function call, (as in tm_manifest.py)
         self.show_name = target[0] if type(target) is list else target
         if 'verbose' in options and options['verbose']:
-            print(' - Sending request to "%s"...' % url)
+            print(' - Sending request to "%s"...' % self.url)
 
 
     def http_request(self, url, **options):
@@ -59,9 +59,6 @@ class TmCmd():
             set_trace()
         else:
             http_resp = HTTP_REQUESTS.get(url, headers=headers)
-        #jsondata = http_resp.json()
-        #set_trace()
-        #return self.to_json(http_resp.content)
         jsondata = self.to_json(http_resp)
         return jsondata
 
