@@ -44,7 +44,7 @@ class TmTask(tm_base.TmCmd):
         """
         super().show(target, **options)
         url = "%s%s%s" % (self.url, 'task/', self.show_name)
-        data = self.http_request(self.url)
+        data = self.http_request(url)
         return self.to_json(data)
 
 
