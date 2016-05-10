@@ -114,7 +114,6 @@ def build_node(manifest, node_coord):
     """
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     golden_tar = BP.config['GOLDEN_IMAGE']
-
     if not os.path.exists(golden_tar):
         return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
 
@@ -183,9 +182,9 @@ def _load_data():
             _data = json.loads(file_obj.read())
     except IOError as err:
         print ('Couldn\'t load "%s"' % (BP.binding), file=sys.stderr)
-    for node in _data.keys():
-        if node not in BP.node_coords:
-            _data.remove(node)
+    #for node in _data.keys():
+    #    if node not in BP.node_coords:
+    #        _data.remove(node)
 
     return _data
 
