@@ -2,26 +2,27 @@
 """
     Set of tests for for tmcmd/tm_package.py of the API.
 """
-
 import unittest
 import tmcmd
 import json
 from pdb import set_trace
+import config
 
 class PackageTest(unittest.TestCase):
 
-    URL = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
+    URL = ''
     tm_cmd = None
     pkg_name = 'album'
 
     @classmethod
     def setUpClass(cls):
+        cls.URL = config.MANIFESTING_SERVER
         cls.tm_cmd = tmcmd.tmpkg
 
 
     def test_album_isInList(self):
         """ Test if showpkg can return non-error data for the package. """
-        output = self.tm_cmd.listall(self.pkg_name)
+        output = self.tm_cmd.listall()
         status = '"%s"' % (self.pkg_name) in output
         self.assertTrue(status, msg='"album" package should be in the list')
 
