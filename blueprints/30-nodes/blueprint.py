@@ -53,9 +53,12 @@ def node_name(name=None):
 
 @BP.route('/api/%s/' % _ERS_element, methods=('GET', ))
 def get_all():
-    nodes = list(_data.keys())
-    response = jsonify( { 'node' : nodes } )
-    response.status_code = 200
+    nodes = { 'node' : [] }
+    for key in BP.nodes:
+        nodes['node'].append(key.coordinate)
+    set_trace()
+    response = jsonify( nodes )
+    response.status_code = 404
     return response
 
 

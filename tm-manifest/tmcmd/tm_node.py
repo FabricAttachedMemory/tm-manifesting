@@ -24,10 +24,10 @@ class TmNode(tm_base.TmCmd):
         NOT IMPLEMENTED
         """
         super().listall(arg_list, **options)
-        #url = "%s%s" % (self.url, 'node/')
-        #data = self.http_request(url)
-        #return self.to_json(data)
-        return { 'error' : 'Not implemented.' }
+        url = "%s%s" % (self.url, 'node/')
+        data = self.http_request(url)
+        return self.to_json(data)
+        #return { 'error' : 'Not implemented.' }
 
 
     def show(self, target, **options):
@@ -45,7 +45,7 @@ class TmNode(tm_base.TmCmd):
         return { 'error' : 'Not implemented.' }
 
 
-    def set_node(self, node_name, manifest, **options):
+    def set_node(self, target, **options):
         """
     SYNOPSIS
         setnode <node name> <manifest.json>
@@ -53,10 +53,10 @@ class TmNode(tm_base.TmCmd):
     DESCRIPTION
         NOT IMPLEMENTED
         """
-        # TODO: error checking
-        #payload = {}
-        #payload['manifest'] = manifest
-        #url = "%s%s%s" % (self.url, 'node/', node_name)
-        #data = self.http_request(url, payload=payload)
-        #return self.to_json(data)
-        return self.to_json({ 'error' : 'Not Implemented.' })
+        assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
+        payload = { 'manifest' :  target[1] }
+        api_url = "%s/%s/%s" % (self.url, 'node/', ntarget[2])
+        api_url = os.path.normpath(api_url)
+        set_trace()
+        data = self.http_request(api_url, payload=payload)
+        return self.to_json(data)
