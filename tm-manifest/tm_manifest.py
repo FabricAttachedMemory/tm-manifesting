@@ -25,7 +25,6 @@ def main(args):
         cmdlookup['help']()
         return
     _cleanup_sysarg(sys.argv, args)
-    set_trace()
     try:
         print(cmdlookup[sys.argv[1]](*tuple(sys.argv[2:]), **args))
     except (AssertionError, KeyError) as e:
