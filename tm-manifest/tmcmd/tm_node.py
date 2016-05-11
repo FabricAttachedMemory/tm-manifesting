@@ -1,5 +1,6 @@
 #!/usr/bin/python3 -tt
 from pdb import set_trace
+import os
 from . import tm_base
 
 class TmNode(tm_base.TmCmd):
@@ -53,11 +54,9 @@ class TmNode(tm_base.TmCmd):
     DESCRIPTION
         NOT IMPLEMENTED
         """
-        #set_trace()
         #assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
-        #payload = { 'manifest' :  target[1] }
-        #api_url = "%s/%s/%s" % (self.url, 'node/', ntarget[2])
-        #api_url = os.path.normpath(api_url)
+        #payload = { 'manifest' :  target[0] }
+        #api_url = "%s/%s/%s" % (self.url, 'node/', target[1])
         #data = self.http_request(api_url, payload=payload)
         #return self.to_json(data)
         return { 'error' : 'Not implemented.' }
