@@ -56,7 +56,6 @@ def get_all():
     nodes = { 'node' : [] }
     for key in BP.nodes:
         nodes['node'].append(key.coordinate)
-    set_trace()
     response = jsonify( nodes )
     response.status_code = 404
     return response

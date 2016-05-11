@@ -57,6 +57,5 @@ class TmNode(tm_base.TmCmd):
         payload = { 'manifest' :  target[1] }
         api_url = "%s/%s/%s" % (self.url, 'node/', ntarget[2])
         api_url = os.path.normpath(api_url)
-        set_trace()
         data = self.http_request(api_url, payload=payload)
         return self.to_json(data)
