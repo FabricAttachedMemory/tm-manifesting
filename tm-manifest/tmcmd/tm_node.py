@@ -53,7 +53,8 @@ class TmNode(tm_base.TmCmd):
     DESCRIPTION
         NOT IMPLEMENTED
         """
-        assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
+        #set_trace()
+        #assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
         #payload = { 'manifest' :  target[1] }
         #api_url = "%s/%s/%s" % (self.url, 'node/', ntarget[2])
         #api_url = os.path.normpath(api_url)
