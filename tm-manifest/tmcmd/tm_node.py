@@ -15,19 +15,19 @@ class TmNode(tm_base.TmCmd):
             'setnode' : self.set_node
         }
 
+
     def listall(self, arg_list=None, **options):
         """
     SYNOPSIS
         listnodes
 
     DESCRIPTION
-        NOT IMPLEMENTED
+        List all the available nodes in the network.
         """
         super().listall(arg_list, **options)
         url = "%s%s" % (self.url, 'node/')
         data = self.http_request(url)
         return self.to_json(data)
-        #return { 'error' : 'Not implemented.' }
 
 
     def show(self, target, **options):
@@ -53,11 +53,10 @@ class TmNode(tm_base.TmCmd):
     DESCRIPTION
         NOT IMPLEMENTED
         """
-        #set_trace()
-        #assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
-        #payload = { 'manifest' :  target[1] }
-        #api_url = "%s/%s/%s" % (self.url, 'node/', ntarget[2])
-        #api_url = os.path.normpath(api_url)
-        #data = self.http_request(api_url, payload=payload)
+        # TODO: error checking
+        #payload = {}
+        #payload['manifest'] = manifest
+        #url = "%s%s%s" % (self.url, 'node/', node_name)
+        #data = self.http_request(url, payload=payload)
         #return self.to_json(data)
-        return { 'error' : 'Not implemented.' }
+        return self.to_json({ 'error' : 'Not Implemented.' })
