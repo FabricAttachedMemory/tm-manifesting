@@ -54,8 +54,9 @@ class TmNode(tm_base.TmCmd):
         NOT IMPLEMENTED
         """
         assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
-        payload = { 'manifest' :  target[1] }
-        api_url = "%s/%s/%s" % (self.url, 'node/', ntarget[2])
-        api_url = os.path.normpath(api_url)
-        data = self.http_request(api_url, payload=payload)
-        return self.to_json(data)
+        #payload = { 'manifest' :  target[1] }
+        #api_url = "%s/%s/%s" % (self.url, 'node/', ntarget[2])
+        #api_url = os.path.normpath(api_url)
+        #data = self.http_request(api_url, payload=payload)
+        #return self.to_json(data)
+        return { 'error' : 'Not implemented.' }
