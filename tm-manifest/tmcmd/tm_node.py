@@ -12,7 +12,7 @@ class TmNode(tm_base.TmCmd):
         super().__init__()
         self.args = {
             'listnodes' : self.listall,
-            'list' : self.show,
+            'getnode' : self.show,
             'setnode' : self.set_node
         }
 
@@ -34,16 +34,16 @@ class TmNode(tm_base.TmCmd):
     def show(self, target, **options):
         """
     SYNOPSIS
-        list <name>
+        getnode <name>
 
     DESCRIPTION
-        NOT IMPLEMENTED
+         Show the manifest name that the specified node is currently directed to
+        use at next boot.
         """
         super().show(target, **options)
-        #url = "%s%s%s" % (self.url, 'package/', self.show_name)
-        #data = self.http_request(url)
-        #return self.to_json(data)
-        return { 'error' : 'Not implemented.' }
+        api_url = "%s%s%s" % (self.url, 'node/', self.show_name)
+        data = self.http_request(api_url)
+        return self.to_json(data)
 
 
     def set_node(self, target, **options):
@@ -52,11 +52,13 @@ class TmNode(tm_base.TmCmd):
         setnode <node name> <manifest.json>
 
     DESCRIPTION
-        NOT IMPLEMENTED
+            Select the manifest for the specified node and construct a kernel
+        and root FS that the node will use the next time it boots.
         """
-        #assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
-        #payload = { 'manifest' :  target[0] }
-        #api_url = "%s/%s/%s" % (self.url, 'node/', target[1])
-        #data = self.http_request(api_url, payload=payload)
-        #return self.to_json(data)
-        return { 'error' : 'Not implemented.' }
+        assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
+        payload = '{ "manifest" :  "%s" }' % target[0]
+        api_url = '%s/%s/%s' % (self.url, 'node/', target[1])
+        clean_url = os.path.normpath(api_url.split('http://')[1])
+        api_url = 'http://' + clean_url
+        data = self.http_request(api_url, payload=payload)
+        return self.to_json(data)
