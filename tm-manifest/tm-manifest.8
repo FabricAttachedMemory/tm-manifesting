@@ -1,0 +1,124 @@
+.TH tm-manifest "8" "2016" "The Machine" "Manifesting"
+
+.SH NAME
+tm-manifest \- Control the Manifesting service of an instance of The Machine
+
+.SH SYNOPSIS
+\fBtm-manifest\fP [options] <directive> [arguments]
+
+.SH DESCRIPTION
+\fBtm-manifest\fP is used to control the workflow that generates
+bootable filesystem images for nodes of The Machine.  These images are
+governed by "manifests", essentialy lists of individual Debian packages.
+"Tasks" as described by \fBtasksel(1m)\fP can also appear in manifests.
+\fBtm-manifest\fP will bind a manifest to a node, producing a manifest-
+driven filesystem image customized for that node.
+
+\fBtm-manifest\fP works by calling the ReST API of the Manifesting 
+service hosted on a Top-of-Rack Management Server (ToRMS) for an 
+instance of The Machine.  There are four classes of directives:
+Debian packages, predefined tasks, manifest upload/download, and
+binding a node to a manifest.
+
+.SH DIRECTIVES
+.SS Packages
+\fBtm-manifest\fP needs an L4TM repo from which to pull (Debian) packages.
+These directives allow you to peruse that repo.
+
+.PP
+.TP
+\fBtm-manifest\fP listpkgs
+
+List a summary of all packages available in the repo.
+
+.PP
+.TP
+\fBtm-manifest\fP showpkg <name>
+
+Show all the repo metadata for an individual package.
+
+.SS Tasks
+Tasks are essentially collections of packages grouped by a common purpose.
+For example, "C Development" might include gcc, gdb, git, make, and strace.
+These tasks are built in to the manifesting service and cannot be uploaded.
+
+.PP
+.TP
+\fBtm-manifest\fP listtasks
+
+.PP
+.TP
+\fBtm-manifest\fP showtask <name>
+
+.SS Manifests
+Manifests represent the packages present in a filesystem image.  Every
+image gets a default set of packages that allows booting and connection to
+The Machine fabric.   Manifests allow extra packages and tasks to be
+added to that default image.   The format of a manifest is JSON as shown
+below:
+
+{
+	"foo": "Got to find the nroff macro",
+}
+
+.PP
+.TP
+\fBtm-manifest\fP list
+
+.PP
+.TP
+\fBtm-manifest\fP show <name>
+
+.PP
+.TP
+\fBtm-manifest\fP upload <file>
+
+.SS Node and manifest binding
+.PP
+The nodes in an instance of The Machine can be listed out.  The value string
+is a hierarchical description of physical locations.  An individual node
+can be bound to a single manifest.  That binding will create a file system
+image customized for the node according to the manifest.  The image and
+a kernel will be moved to the TFTP download area to allow the node to
+PXE boot that image.
+
+.PP
+.TP
+\fBtm-manifest\fP listnodes
+Shows all nodes and their manifest bindings.
+
+.PP
+.TP
+\fBtm-manifest\fP setnode <nodestring> <manifestname>
+
+
+
+\fP
+.SH OPTIONS
+.PP
+
+.TP
+\fB-?\fR
+Print a synopsis of all options and hints
+
+.TP
+\fB-d\fR
+Turn on debugging
+
+.TP
+\fB-v\fR
+Make it talk
+
+\fP
+.SH FILES
+http://some.where/software-arch.pdf for the L4TM Software ERS.
+Section XXX describes the JSON format of manifest files.
+
+The global config file for the manifesting service on the ToRMS is at
+/etc/tm-manifest/wherever.  Comments should make it self-documenting.
+
+On the ToRMS, file system images can be found under the TFTP directory,
+usually /var/local/manifesting/xxxxx
+
+.SH BUGS
+None that we know of.  Today.  Between noon and 1 pm.
