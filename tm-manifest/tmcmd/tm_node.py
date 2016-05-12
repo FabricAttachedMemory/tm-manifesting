@@ -15,19 +15,19 @@ class TmNode(tm_base.TmCmd):
             'setnode' : self.set_node
         }
 
+
     def listall(self, arg_list=None, **options):
         """
     SYNOPSIS
         listnodes
 
     DESCRIPTION
-        NOT IMPLEMENTED
+        List all the available nodes in the network.
         """
         super().listall(arg_list, **options)
-        #url = "%s%s" % (self.url, 'node/')
-        #data = self.http_request(url)
-        #return self.to_json(data)
-        return { 'error' : 'Not implemented.' }
+        url = "%s%s" % (self.url, 'node/')
+        data = self.http_request(url)
+        return self.to_json(data)
 
 
     def show(self, target, **options):
@@ -45,7 +45,7 @@ class TmNode(tm_base.TmCmd):
         return { 'error' : 'Not implemented.' }
 
 
-    def set_node(self, node_name, manifest, **options):
+    def set_node(self, target, **options):
         """
     SYNOPSIS
         setnode <node name> <manifest.json>
