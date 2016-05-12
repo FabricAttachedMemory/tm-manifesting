@@ -6,9 +6,7 @@ from pdb import set_trace
 
 class TmCmd():
 
-    # url ='http://rocky42.americas.hpqcorp.net:31178/manifesting/api/'
-    #url='http://localhost:31178/manifesting/api/'
-    url = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
+    url = 'http://localhost:31178/manifesting/api/'
     args = {}
 
     def __init__(self, sort=True, headers=None, indent=4, **options):
