@@ -14,6 +14,10 @@ from tm_librarian.tmconfig import TMConfig
 
 ###########################################################################
 # Everything is global until I figure out decorators on class methods
+# Flask sets mainapp.root_path to cwd.  Fix that, because I also need
+# it changed for other things.
+
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 mainapp = Flask('tm_manifesting', static_url_path='/static')
 mainapp.config.from_object('configs.manifest_config')
