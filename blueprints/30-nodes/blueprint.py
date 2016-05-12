@@ -58,14 +58,14 @@ def get_all():
     return response
 
 
-@BP.route('/api/%s/<name>' % _ERS_element, methods=('GET', ))
-def api_node(name=None):
-    if name not in _data:
-        response = jsonify({ 'error': '"%s" node doesn\'t exist! ' })
+@BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('GET', ))
+def api_node(node_coord=None):
+    if node_coord not in _data:
+        response = jsonify({ '%s' % BP.nodes[node_coord][0].soc.socMacAddress : 'No binding' })
         response.status_code = 404
         return response
-    response = jsonify({ 'manifest' : _data[name] })
-    response.status_code = 404
+    response = jsonify({ 'manifest' : _data[node_coord] })
+    response.status_code = 200
     return response
 
 ####################### API (PUT) ###############################
@@ -136,7 +136,7 @@ def build_node(manifest, node_coord):
         custom_tar, hostname=node_hostname, verbose=BP.VERBOSE, debug=BP.DEBUG)
 
     if status['status'] == 'success':
-        return { 'success' : 'Manifest "%s" is set to node "%s"' %
+        return { 'success' : 'Manifest [%s] is set to node [%s]' %
                 (os.path.basename(manifest.basename), node_coord) }
     else:
         return { status['status'] : status['message'] }
