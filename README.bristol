@@ -1,0 +1,76 @@
+Quick Start to Manifesting
+
+tm-manifesting is developed on L4TM system, thus, as of today, we do not provide
+support of Manifesting services on any other distribution.
+
+===============================================================================
+
+Clone latest repo from github.hpe:
+
+git clone https://github.hpe.com/hpelinux/manifesting.git
+
+===============================================================================
+
+tm-manifesting depends on tm-librarian and is developed on python3, thus it is
+requires several libraries that needed to be installed on your system:
+
+sudo apt install tm-librarian python3 python3-flask python3-requests
+
+===============================================================================
+
+Next, we need a folder in a specifiec location for tm-manifesting to save its
+filesystem images and other production files:
+
+mkdir /var/lib/tm-manifesting/
+mkdir /var/lib/tm-manifesting/sys-images/
+mkdir /var/lib/tm-manifesting/manifest_uploads/
+
+
+===============================================================================
+
+(Optional step that make interaction with manifesting cmd line sligtly more convenient)
+
+Create a symbolic link to tm_manifest.py to use it as if it is an installed
+application
+
+NOTE: in the next command, ~/Development/... is MY location of the cloned manifesting.
+Change it to the location where you cloned yours."/usr/local/bin/tm-manifest" stays
+the same.
+
+sudo ln -s ~/Development/manifesting/tm-manifest/tm_manifest.py /usr/local/bin/tm-manifest
+
+
+===============================================================================
+
+(Optional step that make interaction with manifesting api launcher sligtly more convenient)
+
+Create a symbolic link to manifest_api.py to use it as if it is an installed
+application.
+
+NOTE: in the next command, ~/Development/... is MY location of the cloned manifesting.
+Change it to the location where you cloned yours."/usr/local/bin/tm-manifest-server" stays
+the same.
+
+sudo ln -s ~/Development/manifesting/tm-manifest/tm_manifest.py /usr/local/bin/tm-manifest
+
+===============================================================================
+
+If you run:
+
+tm-manifest help
+
+you should get a list of commands.
+This is equivalent to (if you were not doing symbolic links):
+
+~/Development/manifesting/tm-manifest/tm_manifest.py help
+
+-------------------------------------------------------------------------------
+
+If you run:
+
+tm-manifest-server
+
+That should start a manifesting server and print out bunch of stuff on the screen.
+This is equivalent to (if you were not doing symbolic links):
+
+~/Development/manifesting/manifest_api.py
