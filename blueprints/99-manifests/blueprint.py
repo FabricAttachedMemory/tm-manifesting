@@ -55,6 +55,7 @@ def webpage_upload():
     # for file in files:
         # if not file: #
             # continue
+    set_trace()
     try:
         assert int(request['Content-Length']) < 20000, 'Too big'
         file = request.files['file[]']
@@ -65,7 +66,6 @@ def webpage_upload():
         # file is a mixin, save() is a werkzeug method which calls
         # generic builtin open() and copies file.stream()
         # file.save(os.path.join(BP.UPLOADS, fname))
-
         contentstr = file.read().decode()
         m = ManifestDestiny('', '', contentstr)
         msg = 'Overwrote' if  m.key in _data else 'Uploaded'    # before...
@@ -93,20 +93,28 @@ def api(name=None):
     return response
 
 
-@BP.route('/api/%s/<path:namespace>/' % _ERS_element, methods=(('POST', )))
-def api_upload(namespace=None):
+@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
+def api_upload(manname=None):
+    manname = manname.rstrip('/')
+    set_trace()
+    msg = { 'success' : 'A new manifest has been created with the provided contetnts!' }
+    if os.path.exists(BP.UPLOADS + '/' + manname + '.json'):
+        response.status_code = 200
+        msg = { 'error' : 'An existing manifest has been replaced with new contents.' }
+
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
-        contentstr = request.get_data().decode()
-        m = ManifestDestiny(namespace, '', contentstr)
+        contentstr = request.files.read().decode()
+        m = ManifestDestiny(manname, '', contentstr)
     except Exception as e:
-        response = jsonify({ 'error': str(e) })
+        response = jsonify({ 'error': 'Couldn\'t upload manifest! [%s]' % str(e) })
         response.status_code = 422
         return response
 
-    response = jsonify({ 'status': 'life is good' })
+    response = jsonify(msg)
     response.status_code = 201  # but not always
     return response
+
 
 ###########################################################################
 
@@ -190,6 +198,10 @@ class ManifestDestiny(object):
 
 def _lookup(manifest_name):    # Can be sub/path/name
     return _data.get(manifest_name, None)
+
+
+def is_file_allowed(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1] in BP.allowed_files
 
 ###########################################################################
 

@@ -11,9 +11,9 @@ class TmManifest(tm_base.TmCmd):
         """
         super().__init__()
         self.args = {
-            'listnodes' : self.listall,
-            'getnode' : self.show,
-            'setnode' : self.set_node
+            'list' : self.listall,
+            'get' : self.show,
+            'put' : self.upload
         }
 
 
@@ -46,19 +46,21 @@ class TmManifest(tm_base.TmCmd):
         return self.to_json(data)
 
 
-    def set_node(self, target, **options):
+    def upload(self, target, **options):
         """
     SYNOPSIS
-        setnode <node name> <manifest.json>
+        put <manifest name> <manifest file>
 
     DESCRIPTION
             Select the manifest for the specified node and construct a kernel
         and root FS that the node will use the next time it boots.
         """
-        assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
-        payload = '{ "manifest" :  "%s" }' % target[0]
-        api_url = '%s/%s/%s' % (self.url, 'node/', target[1])
-        clean_url = os.path.normpath(api_url.split('http://')[1])
-        api_url = 'http://' + clean_url
-        data = self.http_request(api_url, payload=payload)
+        assert len(target) >= 2, 'Missing argument: put <manifest name> <manifest file>!'
+        payload = { "manifest" :  "%s" % target[0] }
+        api_url = '%s/%s/%s' % (self.url, 'manifest/', target[0])
+        clean_url = os.path.normpath(api_url.split('http://localhost')[1])
+        api_url = 'http://zachv.americas.hpqcorp.net' + clean_url + '/'
+        file_real_path = os.path.realpath(target[1])
+        set_trace()
+        data = self.http_upload(api_url, file_real_path, payload=payload)
         return self.to_json(data)
