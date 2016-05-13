@@ -58,8 +58,8 @@ class TmManifest(tm_base.TmCmd):
         assert len(target) >= 2, 'Missing argument: put <manifest name> <manifest file>!'
         payload = { "manifest" :  "%s" % target[0] }
         api_url = '%s/%s/%s' % (self.url, 'manifest/', target[0])
-        clean_url = os.path.normpath(api_url.split('http://localhost')[1])
-        api_url = clean_url + '/'
+        clean_url = os.path.normpath(api_url.split('http://')[1])
+        api_url = 'http://' + clean_url + '/'
         file_real_path = os.path.realpath(target[1])
         data = self.http_upload(api_url, file_real_path, payload=payload)
         return self.to_json(data)
