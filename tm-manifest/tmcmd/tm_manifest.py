@@ -59,7 +59,7 @@ class TmManifest(tm_base.TmCmd):
         payload = { "manifest" :  "%s" % target[0] }
         api_url = '%s/%s/%s' % (self.url, 'manifest/', target[0])
         clean_url = os.path.normpath(api_url.split('http://localhost')[1])
-        api_url = 'http://zachv.americas.hpqcorp.net' + clean_url + '/'
+        api_url = clean_url + '/'
         file_real_path = os.path.realpath(target[1])
         data = self.http_upload(api_url, file_real_path, payload=payload)
         return self.to_json(data)
