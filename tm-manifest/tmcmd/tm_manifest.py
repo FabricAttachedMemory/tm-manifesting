@@ -61,6 +61,5 @@ class TmManifest(tm_base.TmCmd):
         clean_url = os.path.normpath(api_url.split('http://localhost')[1])
         api_url = 'http://zachv.americas.hpqcorp.net' + clean_url + '/'
         file_real_path = os.path.realpath(target[1])
-        set_trace()
         data = self.http_upload(api_url, file_real_path, payload=payload)
         return self.to_json(data)

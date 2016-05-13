@@ -87,9 +87,9 @@ class TmCmd():
         """
         headers = kwargs.get('headers', self.header)
         payload = kwargs.get('payload', {})
-        files = { 'file' : open(file_path, 'rb') }
+        files = { 'manifest_file' : open(file_path, 'rb') }
         upload = HTTP_REQUESTS.put(url, headers=headers, data=payload, files=files)
-
+        return upload
 
     def to_json(self, content):
         """
