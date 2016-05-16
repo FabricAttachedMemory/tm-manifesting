@@ -3,6 +3,7 @@
 import glob
 import json
 import os
+import re
 import sys
 from shutil import copyfile
 from pdb import set_trace
@@ -91,6 +92,7 @@ def deletemanifest(manname=None):
     manifest itself and that any nodes configured to use the manifest will continue to
     boot using the constructed kernel and root file system.
     """
+    _load_data()
     if not manname.endswith('.json'):
         manname = manname + '.json'
     manifest = BP.lookup(manname)
@@ -115,6 +117,7 @@ def listall():
         GET request that returns a json string response of all the manifests uploaded
     to the server.
     """
+    _load_data()
     all_manifests = { 'manifest' : [] }
     for manfile in glob.glob(BP.UPLOADS + '/*'):
         all_manifests['manifest'].append(os.path.basename(manfile))
@@ -133,6 +136,7 @@ def api(name=None):
 
 @BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
 def api_upload(manname=None):
+    _load_data()
     manname = manname.rstrip('/')
     response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
     response.status_code = 201  # but not always
@@ -286,16 +290,41 @@ def delete_manifest(manname):
     :return: True - on success. False - on fail.
     """
     trashbin = BP.config['MANIFESTING_ROOT'] + '/trashbin/'
+    cp_from = BP.config['MANIFEST_UPLOADS'] + '/' + manname
+    cp_into = trashbin + '/' + manname
+
     if not os.path.isdir(trashbin):
         os.makedirs(trashbin)
-    if not manname.endswith('.json'):
-        manname = manname + '.json'
+
+    while os.path.exists(cp_into):                  # increment file's copy index
+        cp_into = increment_copy_name(cp_into)      # until a 'non existing copy in the folder' is found.
+
     try:
-        copyfile(BP.config['MANIFEST_UPLOADS'] + '/' + manname, trashbin + '/' + manname)
+        copyfile(cp_from, cp_into)
         os.remove(BP.config['MANIFEST_UPLOADS'] + '/' + manname)
     except EnvironmentError as err:
         return False # Don't care about error. It failed doing "move" operating. That all I need.
     return True
+
+
+def increment_copy_name(filename):
+    """
+        Add a '(number)' string to the end of filename. If pattern already in
+    the string - increment 'number' and return a new filename with an incremented
+    copy number, e.g. filename = manifest.json  ---> manifest.json(1)
+                      filename = manifest.json(1) ---> manifest.json(2)
+    """
+    pttrn_found = re.search(r'\(\d+\)', filename)
+    if pttrn_found is None:
+        return filename + '(1)'
+
+    if not filename.endswith(pttrn_found.group(0)):
+        return filename + '(1)'
+
+    curr_copy_index = re.search('\d+', pttrn_found.group(0)).group(0)
+    new_copy_index = int(curr_copy_index) + 1
+    return filename.replace(pttrn_found.group(0), '(%s)' % new_copy_index)
+
 
 ###########################################################################
 
