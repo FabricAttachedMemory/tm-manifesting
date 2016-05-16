@@ -1,5 +1,6 @@
 '''TM Manifests'''
 
+import glob
 import json
 import os
 import sys
@@ -82,6 +83,19 @@ def webpage_upload():
 ###########################################################################
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
+
+@BP.route('/api/%s/' % _ERS_element)
+def listall():
+    """
+        GET request that returns a json string response of all the manifests uploaded
+    to the server.
+    """
+    all_manifests = { 'manifest' : [] }
+    for manfile in glob.glob(BP.UPLOADS + '/*'):
+        all_manifests['manifest'].append(os.path.basename(manfile))
+    response = jsonify(all_manifests)
+    response.status_code = 200
+    return response
 
 
 @BP.route('/api/%s/' % _ERS_element)

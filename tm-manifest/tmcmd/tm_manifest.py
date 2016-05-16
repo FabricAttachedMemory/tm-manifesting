@@ -26,7 +26,7 @@ class TmManifest(tm_base.TmCmd):
         List all the available nodes in the network.
         """
         super().listall(arg_list, **options)
-        url = "%s%s" % (self.url, 'node/')
+        url = "%s%s" % (self.url, 'manifest/')
         data = self.http_request(url)
         return self.to_json(data)
 
