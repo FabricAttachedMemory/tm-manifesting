@@ -156,26 +156,6 @@ def api_upload(manname=None):
 
 ###########################################################################
 
-def delete_manifest(manname):
-    """
-        Move an existed uploaded manifest into a trashbin.
-
-    :param 'manname': [str] manifest to delete (move to trashbin)
-    :return: True - on success. False - on fail.
-    """
-    trashbin = BP.config['MANIFESTING_ROOT'] + '/trashbin/'
-    if not os.path.isdir(trashbin):
-        os.makedirs(trashbin)
-    if not manname.endswith('.json'):
-        manname = manname + '.json'
-    try:
-        copyfile(BP.config['MANIFEST_UPLOADS'] + '/' + manname, trashbin + '/' + manname)
-        os.remove(BP.config['MANIFEST_UPLOADS'] + '/' + manname)
-    except EnvironmentError as err:
-        return False # Don't care about error. It failed doing "move" operating. That all I need.
-    return True
-
-
 class ManifestDestiny(object):
 
     from shutil import copyfile
@@ -296,6 +276,26 @@ def _lookup(manifest_name):    # Can be sub/path/name
 
 def is_file_allowed(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in BP.allowed_files
+
+
+def delete_manifest(manname):
+    """
+        Move an existed uploaded manifest into a trashbin.
+
+    :param 'manname': [str] manifest to delete (move to trashbin)
+    :return: True - on success. False - on fail.
+    """
+    trashbin = BP.config['MANIFESTING_ROOT'] + '/trashbin/'
+    if not os.path.isdir(trashbin):
+        os.makedirs(trashbin)
+    if not manname.endswith('.json'):
+        manname = manname + '.json'
+    try:
+        copyfile(BP.config['MANIFEST_UPLOADS'] + '/' + manname, trashbin + '/' + manname)
+        os.remove(BP.config['MANIFEST_UPLOADS'] + '/' + manname)
+    except EnvironmentError as err:
+        return False # Don't care about error. It failed doing "move" operating. That all I need.
+    return True
 
 ###########################################################################
 
