@@ -4,6 +4,7 @@ import glob
 import json
 import os
 import sys
+from shutil import copyfile
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify, g
@@ -83,6 +84,30 @@ def webpage_upload():
 ###########################################################################
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
+@BP.route('/api/%s/<manname>' % _ERS_element, methods=('DELETE',))
+def deletemanifest(manname=None):
+    """
+        Deletes an existing manifest from the service. Note that this simply deletes the
+    manifest itself and that any nodes configured to use the manifest will continue to
+    boot using the constructed kernel and root file system.
+    """
+    if not manname.endswith('.json'):
+        manname = manname + '.json'
+    manifest = BP.lookup(manname)
+    if not manifest:
+        response = jsonify( {'error' : 'Manifest "%s" was not found!' % manname} )
+        response.status_code = 404
+        return response
+
+    if not delete_manifest(manname):
+        response = jsonify ( {'error' : 'Error occured while removing "%s"!' % manname } )
+        response.status_code = 500
+        return response
+
+    response = jsonify({'success' : 'Manifest "%s" was removed!' % manname })
+    response.status_code = 200
+    return response
+
 
 @BP.route('/api/%s/' % _ERS_element)
 def listall():
@@ -130,6 +155,25 @@ def api_upload(manname=None):
 
 
 ###########################################################################
+
+def delete_manifest(manname):
+    """
+        Move an existed uploaded manifest into a trashbin.
+
+    :param 'manname': [str] manifest to delete (move to trashbin)
+    :return: True - on success. False - on fail.
+    """
+    trashbin = BP.config['MANIFESTING_ROOT'] + '/trashbin/'
+    if not os.path.isdir(trashbin):
+        os.makedirs(trashbin)
+    if not manname.endswith('.json'):
+        manname = manname + '.json'
+    try:
+        copyfile(BP.config['MANIFEST_UPLOADS'] + '/' + manname, trashbin + '/' + manname)
+        os.remove(BP.config['MANIFEST_UPLOADS'] + '/' + manname)
+    except EnvironmentError as err:
+        return False # Don't care about error. It failed doing "move" operating. That all I need.
+    return True
 
 
 class ManifestDestiny(object):
