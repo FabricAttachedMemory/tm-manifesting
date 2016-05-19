@@ -119,9 +119,6 @@ def api_upload(manname=None):
 
 class ManifestDestiny(object):
 
-    from shutil import copyfile
-
-
     @staticmethod
     def validate_manifest(contentstr):
         '''Raise an error or return a dictionary representing a manifest.'''
