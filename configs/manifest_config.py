@@ -16,4 +16,5 @@ L4TM_RELEASE = 'catapult'
 
 # Remove 'main' for a much faster starter (3 seconds vs 20)
 L4TM_AREAS = ( 'contrib', 'non-free' )
+#L4TM_AREAS = ( 'contrib', 'non-free' )
 # L4TM_AREAS = ( 'main', 'contrib', 'non-free' )

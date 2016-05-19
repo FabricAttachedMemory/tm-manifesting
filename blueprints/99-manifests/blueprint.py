@@ -97,16 +97,16 @@ def api_upload(manname=None):
     manname = manname.rstrip('/')
     response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
     response.status_code = 201  # but not always
-    if os.path.exists(BP.UPLOADS + '/' + manname + '.json'):
+
+    if os.path.exists(BP.UPLOADS + '/' + manname):
         response = jsonify({ 'warning' :
-            'An existed manifest [%s] has been replaced with new contents.' % manname})
+            'An existed manifest "%s" has been replaced with new contents.' % manname })
         response.status_code = 200
 
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
-        contentstr = request.files['manifest_file'].read().decode()
-        contentstr = json.loads(contentstr)
-        m = ManifestDestiny('', '', json.dumps(contentstr, indent=4))
+        contentstr = request.get_data().decode()
+        ManifestDestiny('', '', contentstr)
     except Exception as e:
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
