@@ -98,7 +98,6 @@ def listall():
     return response
 
 
-@BP.route('/api/%s/' % _ERS_element)
 @BP.route('/api/%s/<path:name>/' % _ERS_element)
 def api(name=None):
     response = jsonify({ 'error': 'API GET not implemented' })
