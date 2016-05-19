@@ -164,8 +164,8 @@ class ManifestDestiny(object):
             assert fname == self.thedict['name'], 'Illegal (file) name'
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
             os.makedirs(self.dirpath, exist_ok=True)
-            with open(os.path.join(self.dirpath, fname), 'w+') as f:
-                                f.write(contentstr)
+            with open(os.path.join(self.dirpath, fname), 'w') as f:
+                f.write(contentstr)
             return
 
         assert '/' not in basename, 'basename is not a leaf element'
