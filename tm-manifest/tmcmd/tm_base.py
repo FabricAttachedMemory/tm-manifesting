@@ -1,7 +1,9 @@
 #/usr/bin/python3 -tt
 
+
 import requests as HTTP_REQUESTS
 import json
+from werkzeug.datastructures import FileStorage
 from pdb import set_trace
 
 class TmCmd():
@@ -64,7 +66,7 @@ class TmCmd():
         """
             Do a download http request on the provided url that is pointing to a file.
         Save the file to the requested destination.
-        :param 'url': [str] url lint to a file to download.
+        :param 'url': [str] url link to a file to download.
         :param 'destination': [str] destination on the local disk to save downloaded file to.
         :return: None
         """
@@ -73,6 +75,22 @@ class TmCmd():
         with open(destination, "wb") as dest_file:
             # need to feedback a download bar to the screen here.
             dest_file.write(downloaded.content)
+
+
+    def http_upload(self, url, **kwargs):
+        """
+            Upload a file to a destination url.
+
+        :param 'url': [str] url link to a destination to upload a file.
+        :param 'file_path': [str] path to a file to upload on the local system.
+        :param 'kwargs': [dict] additional parameters:
+                        :header: [str] HTTP request header string.
+        """
+        headers = kwargs.get('headers', self.header)
+        payload = kwargs.get('payload', {})
+        files = payload.get('files', None)
+        upload = HTTP_REQUESTS.put(url, headers=headers, data=json.dumps(payload) )
+        return upload
 
 
     def to_json(self, content):

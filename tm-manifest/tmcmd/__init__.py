@@ -6,6 +6,7 @@ from . import tm_package
 from . import tm_task
 from . import tm_sysimg
 from . import tm_node
+from . import tm_manifest
 
 
 cmdlookup = {}
@@ -14,11 +15,14 @@ tmpkg = tm_package.TmPackage()
 tmtask = tm_task.TmTask()
 tmsysimg = tm_sysimg.TmSysImg()
 tmnode = tm_node.TmNode()
+tmmanifest = tm_manifest.TmManifest()
 
 tmpkg.update_cmd(cmdlookup)
 tmtask.update_cmd(cmdlookup)
 tmsysimg.update_cmd(cmdlookup)
 tmnode.update_cmd(cmdlookup)
+tmmanifest.update_cmd(cmdlookup)
+
 
 def set_help(func_dict):
     """

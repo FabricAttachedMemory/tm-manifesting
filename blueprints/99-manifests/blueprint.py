@@ -65,7 +65,6 @@ def webpage_upload():
         # file is a mixin, save() is a werkzeug method which calls
         # generic builtin open() and copies file.stream()
         # file.save(os.path.join(BP.UPLOADS, fname))
-
         contentstr = file.read().decode()
         m = ManifestDestiny('', '', contentstr)
         msg = 'Overwrote' if  m.key in _data else 'Uploaded'    # before...
@@ -78,7 +77,7 @@ def webpage_upload():
 
     load_data()
     return render_all(okmsg='Upload %s complete' % file.filename)
-    # return redirect(url_for('uploaded_files', filenames=filenames))
+
 
 ###########################################################################
 # API
@@ -93,20 +92,27 @@ def api(name=None):
     return response
 
 
-@BP.route('/api/%s/<path:namespace>/' % _ERS_element, methods=(('POST', )))
-def api_upload(namespace=None):
+@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
+def api_upload(manname=None):
+    manname = manname.rstrip('/')
+    response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
+    response.status_code = 201  # but not always
+
+    if os.path.exists(BP.UPLOADS + '/' + manname):
+        response = jsonify({ 'warning' :
+            'An existed manifest "%s" has been replaced with new contents.' % manname })
+        response.status_code = 200
+
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
-        m = ManifestDestiny(namespace, '', contentstr)
+        ManifestDestiny(manname, '', contentstr)
     except Exception as e:
-        response = jsonify({ 'error': str(e) })
+        response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
-        return response
 
-    response = jsonify({ 'status': 'life is good' })
-    response.status_code = 201  # but not always
     return response
+
 
 ###########################################################################
 
@@ -147,10 +153,13 @@ class ManifestDestiny(object):
             self.thedict = self.validate_manifest(contentstr)
             self.raw = contentstr
             elems = dirpath.split(os.path.sep)
+
             assert len(elems) < 10, 'Really? %d deep? Get a life.' % len(elems)
+
             for e in elems:
                 assert e == secure_filename(e), \
                 'Illegal namespace component "%s"' % e
+
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
@@ -161,8 +170,10 @@ class ManifestDestiny(object):
 
         assert '/' not in basename, 'basename is not a leaf element'
         fname = os.path.join(dirpath, basename)
+
         with open(fname, 'r') as f:
             self.raw = f.read()
+
         self.thedict = self.validate_manifest(self.raw)
         self.dirpath = dirpath
         self.basename = basename
@@ -191,6 +202,10 @@ class ManifestDestiny(object):
 def _lookup(manifest_name):    # Can be sub/path/name
     return _data.get(manifest_name, None)
 
+
+def is_file_allowed(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1] in BP.allowed_files
+
 ###########################################################################
 
 _data = None
@@ -217,5 +232,5 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.lookup = _lookup
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    BP.UPLOADS = BP.config['MANIFESTING_ROOT']
+    BP.UPLOADS = BP.config['FILESYSTEM_IMAGES']
     _load_data()
