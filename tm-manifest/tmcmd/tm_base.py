@@ -77,9 +77,10 @@ class TmCmd():
             dest_file.write(downloaded.content)
 
 
-    def http_upload(self, url, file_path, **kwargs):
+    def http_upload(self, url, **kwargs):
         """
             Upload a file to a destination url.
+
         :param 'url': [str] url link to a destination to upload a file.
         :param 'file_path': [str] path to a file to upload on the local system.
         :param 'kwargs': [dict] additional parameters:
@@ -87,9 +88,10 @@ class TmCmd():
         """
         headers = kwargs.get('headers', self.header)
         payload = kwargs.get('payload', {})
-        files = { 'manifest_file' : open(file_path, 'rb') }
-        upload = HTTP_REQUESTS.put(url, headers=headers, data=payload, files=files)
+        files = payload.get('files', None)
+        upload = HTTP_REQUESTS.put(url, headers=headers, data=json.dumps(payload) )
         return upload
+
 
     def to_json(self, content):
         """

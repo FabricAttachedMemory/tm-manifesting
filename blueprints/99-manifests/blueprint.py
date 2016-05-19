@@ -111,20 +111,19 @@ def api_upload(manname=None):
     manname = manname.rstrip('/')
     response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
     response.status_code = 201  # but not always
-    if os.path.exists(BP.UPLOADS + '/' + manname + '.json'):
+
+    if os.path.exists(BP.UPLOADS + '/' + manname):
         response = jsonify({ 'warning' :
-            'An existed manifest [%s] has been replaced with new contents.' % manname})
+            'An existed manifest "%s" has been replaced with new contents.' % manname })
         response.status_code = 200
 
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
-        contentstr = request.files['manifest_file'].read().decode()
-        contentstr = json.loads(contentstr)
-        m = ManifestDestiny('', '', json.dumps(contentstr, indent=4))
+        contentstr = request.get_data().decode()
+        ManifestDestiny(manname, '', contentstr)
     except Exception as e:
-        response = jsonify({ 'error': 'Couldn\'t upload manifest! [%s]' % str(e) })
+        response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
-        return response
 
     return response
 
@@ -133,9 +132,6 @@ def api_upload(manname=None):
 
 
 class ManifestDestiny(object):
-
-    from shutil import copyfile
-
 
     @staticmethod
     def validate_manifest(contentstr):
@@ -178,52 +174,23 @@ class ManifestDestiny(object):
                 assert e == secure_filename(e), \
                 'Illegal namespace component "%s"' % e
 
-            fname = secure_filename(self.thedict['name']).lower()   # Lowercase manifest name here!
-            assert fname == self.thedict['name'].lower(), 'Illegal (file) name'  # validate as non-case sensitive
+            fname = secure_filename(self.thedict['name'])
+            assert fname == self.thedict['name'], 'Illegal (file) name'
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
             os.makedirs(self.dirpath, exist_ok=True)
-            manifest_file = os.path.join(self.dirpath, fname)
-
-            if not manifest_file.endswith('.json'):
-                manifest_file = manifest_file + '.json'
-
-            self.create_file(manifest_file, contentstr)
-
+            with open(os.path.join(self.dirpath, fname), 'w') as f:
+                f.write(contentstr)
             return
 
         assert '/' not in basename, 'basename is not a leaf element'
         fname = os.path.join(dirpath, basename)
+
         with open(fname, 'r') as f:
             self.raw = f.read()
+
         self.thedict = self.validate_manifest(self.raw)
         self.dirpath = dirpath
         self.basename = basename
-
-
-    def create_file(self, target, content):
-        """
-            Create a file in the targeted location with a desiered content.
-        If file exists - then it will be overwritten.
-        :param 'target': [str] full path to a file to create (including a file name itself)
-        :param 'content': [str] data for to put inside the new created file.
-        :return: None. Or RuntimeError is raised on error.
-        """
-        backupfile = target + '.old'
-        try:
-            if os.path.exists(backupfile):
-                copyfile(target, backupfile)
-                os.remove(target)
-        except EnvironmentError as err:
-            raise RuntimeError('Couldn\'t backup file during manifest creation! [%s]' % err)
-
-        with open(target, 'w') as f:
-            f.write(content)
-
-        try:
-            if os.path.exists(backupfile):
-                os.remove(backupfile)
-        except EnvironmentError as err:
-            raise RuntimeWarning('Couldn\'t remove a backup file during manifest creation! [%s]' % err)
 
 
     @property
@@ -279,5 +246,5 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.lookup = _lookup
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    BP.UPLOADS = os.path.normpath(BP.config['MANIFESTING_ROOT'] + '/manifest_uploads/')
+    BP.UPLOADS = BP.config['FILESYSTEM_IMAGES']
     _load_data()

@@ -1,4 +1,4 @@
-sudo dkpg --add-architecture arm64
+sudo dpkg --add-architecture arm64
 sudo apt-get update
 
 # This is NOT grub-efi:amd64, which will replace grub-pc, will

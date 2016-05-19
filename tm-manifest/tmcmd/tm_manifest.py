@@ -1,5 +1,6 @@
 #!/usr/bin/python3 -tt
 from pdb import set_trace
+import json
 import os
 from . import tm_base
 
@@ -56,10 +57,19 @@ class TmManifest(tm_base.TmCmd):
         and root FS that the node will use the next time it boots.
         """
         assert len(target) >= 2, 'Missing argument: put <manifest name> <manifest file>!'
-        payload = { "manifest" :  "%s" % target[0] }
+        file_real_path = os.path.realpath(target[1])
+
+        with open(file_real_path, 'r') as file_obj:
+            manifest_content = file_obj.read()
+
+        try:
+            payload = json.loads(manifest_content)
+        except ValueError as err:
+            return self.to_json({ 'error' : 'Incorrect file type! JSON is expected.' })
+
         api_url = '%s/%s/%s' % (self.url, 'manifest/', target[0])
         clean_url = os.path.normpath(api_url.split('http://')[1])
         api_url = 'http://' + clean_url + '/'
-        file_real_path = os.path.realpath(target[1])
-        data = self.http_upload(api_url, file_real_path, payload=payload)
+
+        data = self.http_upload(api_url, payload=payload)
         return self.to_json(data)
