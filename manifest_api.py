@@ -23,6 +23,22 @@ mainapp = Flask('tm_manifesting', static_url_path='/static')
 mainapp.config.from_object('configs.manifest_config')
 mainapp.config['url_prefix'] = '/manifesting'
 
+# Moved from config file
+mainapp.config['API_VERSION'] = 1.0
+mroot = mainapp.config['MANIFESTING_ROOT']
+mainapp.config['NODE_BINDING'] = os.path.normpath(mroot + '/node_binding')
+mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/sys-images')
+mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifest_uploads')
+mainapp.config['GOLDEN_IMAGE'] = \
+    os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
+                                    '/golden/golden.l4tm.amd64.tar')
+
+# Move to cmdline processing
+mainapp.config['DEBUG'] = \
+    True and sys.stdin.isatty()     #  running as a Deamon or from a Terminal?
+mainapp.config['VERBOSE'] = \
+    True and sys.stdin.isatty()   # enable debugging when from terminal...
+
 try:
     mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG'])
 except Exception as e:
