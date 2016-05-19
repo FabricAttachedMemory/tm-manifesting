@@ -106,7 +106,7 @@ def api_upload(manname=None):
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
-        ManifestDestiny('', '', contentstr)
+        ManifestDestiny(manname, '', contentstr)
     except Exception as e:
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
@@ -232,5 +232,5 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.lookup = _lookup
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    BP.UPLOADS = os.path.normpath(BP.config['MANIFESTING_ROOT'] + '/manifest_uploads/')
+    BP.UPLOADS = BP.config['FILESYSTEM_IMAGES']
     _load_data()
