@@ -1,22 +1,19 @@
-import os
-import sys
+# Config file for Manifest API, can be used from Python or Bash
 
-API_VERSION = 1.0
+# Global topology config file for this instance of The Machine
+TMCONFIG = '/etc/tmconfig'
 
-DEBUG = True and sys.stdin.isatty()     #  running as a Deamon or from a Terminal?
-VERBOSE = True and sys.stdin.isatty()   # enable debugging when from terminal...
-PORT = 31178
-HOST = '0.0.0.0'
+# Select which interfaces on which the Manifest API listens
+HOST = '0.0.0.0'    # bind to all interfaces in this computer
+PORT = 31178        # listen on this port
+
+# Working directory
 MANIFESTING_ROOT = '/var/lib/tm-manifesting'
-FILESYSTEM_IMAGES = os.path.normpath(MANIFESTING_ROOT + '/sys-images')
-MANIFEST_UPLOADS = os.path.normpath(MANIFESTING_ROOT + '/manifest_uploads')
-GOLDEN_IMAGE = os.path.normpath(FILESYSTEM_IMAGES + '/golden/golden.l4tm.amd64.tar')
 
+# L4TM repo information
 L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
 L4TM_RELEASE = 'catapult'
-# Remove 'main' for a much faster starter (3 seconds vs 20)
-L4TM_AREAS = ( 'contrib', 'non-free')
-#L4TM_AREAS = ( 'main', 'contrib', 'non-free')
 
-TMCONFIG = '/etc/tmconfig'
-NODE_BINDING= os.path.normpath(MANIFESTING_ROOT + '/node_binding')
+# Remove 'main' for a much faster starter (3 seconds vs 20)
+L4TM_AREAS = ( 'contrib', 'non-free' )
+# L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
