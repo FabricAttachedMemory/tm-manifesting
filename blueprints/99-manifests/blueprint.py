@@ -108,9 +108,8 @@ def api_upload(manname=None):
         contentstr = json.loads(contentstr)
         m = ManifestDestiny('', '', json.dumps(contentstr, indent=4))
     except Exception as e:
-        response = jsonify({ 'error': 'Couldn\'t upload manifest! [%s]' % str(e) })
+        response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
-        return response
 
     return response
 
@@ -168,12 +167,8 @@ class ManifestDestiny(object):
             assert fname == self.thedict['name'], 'Illegal (file) name'
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
             os.makedirs(self.dirpath, exist_ok=True)
-            manifest_file = os.path.join(self.dirpath, fname)
-
-            new_man_file = BP.config['MANIFESTS_UPLOAD'] + '/' + fname
-            with open(new_man_file, 'w+') as f:
-                f.write(content)
-
+            with open(os.path.join(self.dirpath, fname), 'w+') as f:
+                                f.write(contentstr)
             return
 
         assert '/' not in basename, 'basename is not a leaf element'
