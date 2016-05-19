@@ -164,52 +164,27 @@ class ManifestDestiny(object):
                 assert e == secure_filename(e), \
                 'Illegal namespace component "%s"' % e
 
-            fname = secure_filename(self.thedict['name']).lower()   # Lowercase manifest name here!
-            assert fname == self.thedict['name'].lower(), 'Illegal (file) name'  # validate as non-case sensitive
+            fname = secure_filename(self.thedict['name'])
+            assert fname == self.thedict['name'], 'Illegal (file) name'
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
             os.makedirs(self.dirpath, exist_ok=True)
             manifest_file = os.path.join(self.dirpath, fname)
 
-            if not manifest_file.endswith('.json'):
-                manifest_file = manifest_file + '.json'
-
-            self.create_file(manifest_file, contentstr)
+            new_man_file = BP.config['MANIFESTS_UPLOAD'] + '/' + fname
+            with open(new_man_file, 'w+') as f:
+                f.write(content)
 
             return
 
         assert '/' not in basename, 'basename is not a leaf element'
         fname = os.path.join(dirpath, basename)
+
         with open(fname, 'r') as f:
             self.raw = f.read()
+
         self.thedict = self.validate_manifest(self.raw)
         self.dirpath = dirpath
         self.basename = basename
-
-
-    def create_file(self, target, content):
-        """
-            Create a file in the targeted location with a desiered content.
-        If file exists - then it will be overwritten.
-        :param 'target': [str] full path to a file to create (including a file name itself)
-        :param 'content': [str] data for to put inside the new created file.
-        :return: None. Or RuntimeError is raised on error.
-        """
-        backupfile = target + '.old'
-        try:
-            if os.path.exists(backupfile):
-                copyfile(target, backupfile)
-                os.remove(target)
-        except EnvironmentError as err:
-            raise RuntimeError('Couldn\'t backup file during manifest creation! [%s]' % err)
-
-        with open(target, 'w') as f:
-            f.write(content)
-
-        try:
-            if os.path.exists(backupfile):
-                os.remove(backupfile)
-        except EnvironmentError as err:
-            raise RuntimeWarning('Couldn\'t remove a backup file during manifest creation! [%s]' % err)
 
 
     @property
