@@ -131,9 +131,11 @@ def build_node(manifest, node_coord):
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
     # customization magic (not so much though).
+
     node_hostname=BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
     status = customize_node.execute(
-        custom_tar, hostname=node_hostname, verbose=BP.VERBOSE, debug=BP.DEBUG)
+        custom_tar, hostname=node_hostname,
+        verbose=BP.config['VERBOSE'])
 
     if status['status'] == 'success':
         return { 'success' : 'Manifest [%s] is set to node [%s]' %

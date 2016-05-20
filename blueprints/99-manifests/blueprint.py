@@ -125,7 +125,6 @@ def listall():
     response.status_code = 200
     return response
 
-
 @BP.route('/api/%s/' % _ERS_element)
 @BP.route('/api/%s/<path:name>/' % _ERS_element)
 def api(name=None):
@@ -149,7 +148,7 @@ def api_upload(manname=None):
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
-        ManifestDestiny(manname, '', contentstr)
+        ManifestDestiny(manname, '', contentstr, dry_run=BP.config['DRYRUN'])
     except Exception as e:
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
@@ -188,8 +187,10 @@ class ManifestDestiny(object):
         return m
 
 
-    def __init__(self, dirpath, basename, contentstr=None):
+    def __init__(self, dirpath, basename, contentstr=None, **kwargs):
         '''If contentstr is given, it is an upload, else read a file.'''
+        self._dry_run = kwargs.get('dry_run', False)
+
         if contentstr is not None:
             # some kind of upload, basename not used
             self.thedict = self.validate_manifest(contentstr)
@@ -205,9 +206,16 @@ class ManifestDestiny(object):
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
+
+            if self._dry_run:
+                print('Dry mode: skipping manifest creation.')       # keep 'print', until Log to file is implemented
+                return
+
             os.makedirs(self.dirpath, exist_ok=True)
+
             with open(os.path.join(self.dirpath, fname), 'w') as f:
                 f.write(contentstr)
+
             return
 
         assert '/' not in basename, 'basename is not a leaf element'
@@ -319,5 +327,5 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.lookup = _lookup
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    BP.UPLOADS = BP.config['FILESYSTEM_IMAGES']
+    BP.UPLOADS = BP.config['MANIFEST_UPLOADS']
     _load_data()
