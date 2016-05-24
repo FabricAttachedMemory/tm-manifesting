@@ -69,17 +69,20 @@ def remove_target(target):
         raise RuntimeError ('Couldn\'t remove "%s"!' % (filename))
 
 
-def symlink_target(source, target):
+def symlink_target(source, target, workdir=None):
     """
         Create symlink for target from the source. Provide meaningful feadback on the screen
     verbose option.
 
     :param 'source': [str] path to a file to create a symbolic link from.
     :param 'target': [str] path to the file to create a symbolic link to.
-    :param 'verbose': [bool] Make it talk.
-    :param 'debug': [bool] set_trace if exception was caught.
+    :param 'workdir': [str](default=None) path to change python working directory
+                    to create symbolic link. Helpful to avoid relative path issue.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
+    if workdir is not None:
+        os.chdir(workdir)
+
     src_filename = slice_path(source)
     target_filename = slice_path(target)
     try:
@@ -163,7 +166,7 @@ def fix_init(sys_img):
     try:
         if os.path.exists(new_init):
             remove_target(new_init)
-        symlink_target(origin_init, new_init)
+        symlink_target('sbin/init', 'init', sys_img)
     except (RuntimeError, EnvironmentError) as err:
         raise RuntimeError('Error occured while fixing /init file!\n\
                             %s' % (err))
@@ -271,17 +274,18 @@ def create_cpio(target, destination):
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
-        cmd = 'find %s -not -name vmlinuz -not -name initrd.img \
-                -path ./boot -prune -o -print' % (target)
+        os.chdir(target)    # changin directory to create cpio file with correct folder path in it.
+        cmd = 'find . -not -name vmlinuz -not -name initrd.img \
+                -path ./boot -prune -o -print'
         cmd = shlex.split(cmd)
-        find_sh = Popen(cmd, stdout=PIPE)
+        find_sh = Popen(cmd, stdout=PIPE, cwd=target)
         cmd = 'sudo cpio --create --format \'newc\''
         cmd = shlex.split(cmd)
         with open(destination, 'w+') as file_obj:
-            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
+            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj, cwd=target)
 
-        cpio_sh.communicate()
         find_sh.communicate()
+        cpio_sh.communicate()
     except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
@@ -322,7 +326,7 @@ def execute(sys_img, **kwargs):
         create_cpio(sys_img, dest)
 
         # Remove untar'ed, modified fileimage folder
-        remove_target(sys_img)
+        #remove_target(sys_img)
     except RuntimeError as err:
          response['status'] = 'error'
          response['message'] = 'Ouch! Runtime error! We expected that...\n[%s]' % (err)
