@@ -325,7 +325,7 @@ def execute(sys_img, **kwargs):
         create_cpio(sys_img, dest)
 
         # Remove untar'ed, modified fileimage folder
-        #remove_target(sys_img)
+        remove_target(sys_img)
     except RuntimeError as err:
          response['status'] = 'error'
          response['message'] = 'Ouch! Runtime error! We expected that...\n[%s]' % (err)
