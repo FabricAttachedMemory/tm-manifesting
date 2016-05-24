@@ -162,7 +162,6 @@ def fix_init(sys_img):
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
     new_init = os.path.join(sys_img, 'init')
-    origin_init = '%s/sbin/init' % (sys_img)
     try:
         if os.path.exists(new_init):
             remove_target(new_init)
