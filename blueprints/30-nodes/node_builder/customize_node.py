@@ -94,9 +94,6 @@ def symlink_target(source, target, workdir=None):
                     to create symbolic link. Helpful to avoid relative path issue.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
-    #if workdir is not None:
-    #    os.chdir(workdir)
-
     src_filename = slice_path(source)
     target_filename = slice_path(target)
     try:
