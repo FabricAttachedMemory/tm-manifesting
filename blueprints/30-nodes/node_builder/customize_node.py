@@ -83,7 +83,7 @@ def remove_target(target):
         raise RuntimeError ('Couldn\'t remove "%s"!' % (filename))
 
 
-def symlink_target(source, target, workdir=None):
+def symlink_target(source, target):
     """
         Create symlink for target from the source. Provide meaningful feadback on the screen
     verbose option.
