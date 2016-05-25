@@ -11,6 +11,7 @@
 """
 
 import argparse
+from contextlib import contextmanager
 from glob import glob
 import json
 import os
@@ -24,6 +25,19 @@ from pdb import set_trace
 
 _verbose = None     # Poor man's class
 _debug = None
+
+#===============================================================================
+
+@contextmanager
+def workdir(path):
+    """
+        Change script's work directory to perform a set of operation. Set original
+    directory back when done.
+    """
+    orig_dir = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(orig_dir)
 
 
 def copy_target_into(target, into):
@@ -80,8 +94,8 @@ def symlink_target(source, target, workdir=None):
                     to create symbolic link. Helpful to avoid relative path issue.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
-    if workdir is not None:
-        os.chdir(workdir)
+    #if workdir is not None:
+    #    os.chdir(workdir)
 
     src_filename = slice_path(source)
     target_filename = slice_path(target)
@@ -129,6 +143,9 @@ def slice_path(target, slice_ratio=2):
     return '/'.join(sliced)
 
 
+#===============================================================================
+
+
 def cleanout_kernel(sys_img, kernel_dest):
     """
         Cleanout boot/vmlinuz* and boot/initrd.img/ files from the system image directory.
@@ -165,7 +182,8 @@ def fix_init(sys_img):
     try:
         if os.path.exists(new_init):
             remove_target(new_init)
-        symlink_target('sbin/init', 'init', sys_img)
+        with workdir(sys_img):
+            symlink_target('sbin/init', 'init')
     except (RuntimeError, EnvironmentError) as err:
         raise RuntimeError('Error occured while fixing /init file!\n\
                             %s' % (err))
@@ -288,6 +306,7 @@ def create_cpio(target, destination):
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
 
+#===============================================================================
 
 def execute(sys_img, **kwargs):
     """
