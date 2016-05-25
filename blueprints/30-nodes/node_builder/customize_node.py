@@ -273,14 +273,14 @@ def create_cpio(target, destination):
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
-        cmd = 'find $s -not -name vmlinuz -not -name initrd.img \
+        cmd = 'find %s -not -name vmlinuz -not -name initrd.img \
                 -path ./boot -prune -o -print' % (target)
         cmd = shlex.split(cmd)
         find_sh = Popen(cmd, stdout=PIPE)
         cmd = 'sudo cpio --create --format \'newc\''
         cmd = shlex.split(cmd)
         with open(destination, 'w+') as file_obj:
-            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj, cwd=target)
+            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
 
         cpio_sh.communicate()
         find_sh.communicate()
