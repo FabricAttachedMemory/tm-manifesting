@@ -274,6 +274,10 @@ def create_cpio(target, destination):
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
         os.chdir(target)    # changin directory to create cpio file with correct folder path in it.
+
+        cpio_stdin = []
+        #for root, dirs, files in os.walk(target, topdown=False):
+
         cmd = 'find . -not -name vmlinuz -not -name initrd.img \
                 -path ./boot -prune -o -print'
         cmd = shlex.split(cmd)
@@ -291,10 +295,10 @@ def create_cpio(target, destination):
         with open('/tmp/man_find.log', 'w') as file_obj:
             file_obj.write(find_out.decode('utf-8'))
 
-        #cpio_out, cpio_err = cpio_sh.communicate()
+        cpio_out, cpio_err = cpio_sh.communicate()
         #set_trace()
-        #with open(destination, 'w') as file_obj:
-        #    file_obj.write(str(cpio_out))
+        with open(destination, 'w') as file_obj:
+            file_obj.write(str(cpio_out))
     except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
