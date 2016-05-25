@@ -282,8 +282,8 @@ def create_cpio(target, destination):
         with open(destination, 'w+') as file_obj:
             cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj, cwd=target)
 
-        find_sh.communicate()
         cpio_sh.communicate()
+        find_sh.communicate()
     except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
