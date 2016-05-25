@@ -277,14 +277,24 @@ def create_cpio(target, destination):
         cmd = 'find . -not -name vmlinuz -not -name initrd.img \
                 -path ./boot -prune -o -print'
         cmd = shlex.split(cmd)
-        find_sh = Popen(cmd, stdout=PIPE, cwd=target)
+        find_sh = Popen(cmd, stdout=PIPE)
         cmd = 'sudo cpio --create --format \'newc\''
         cmd = shlex.split(cmd)
-        with open(destination, 'w+') as file_obj:
-            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj, cwd=target)
+        with open(destination, 'w') as file_obj:
+            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
+            cpio_out, cpio_err = cpio_sh.communicate()
+            #set_trace()
+        #cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=PIPE)
 
-        find_sh.communicate()
-        cpio_sh.communicate()
+        # output find data to a log file
+        find_out, find_err = find_sh.communicate()
+        with open('/tmp/man_find.log', 'w') as file_obj:
+            file_obj.write(find_out.decode('utf-8'))
+
+        #cpio_out, cpio_err = cpio_sh.communicate()
+        #set_trace()
+        #with open(destination, 'w') as file_obj:
+        #    file_obj.write(str(cpio_out))
     except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
@@ -325,7 +335,7 @@ def execute(sys_img, **kwargs):
         create_cpio(sys_img, dest)
 
         # Remove untar'ed, modified fileimage folder
-        remove_target(sys_img)
+        #remove_target(sys_img)
     except RuntimeError as err:
          response['status'] = 'error'
          response['message'] = 'Ouch! Runtime error! We expected that...\n[%s]' % (err)
