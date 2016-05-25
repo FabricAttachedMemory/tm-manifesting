@@ -11,6 +11,7 @@
 """
 
 import argparse
+from contextlib import contextmanager
 from glob import glob
 import json
 import os
@@ -24,6 +25,19 @@ from pdb import set_trace
 
 _verbose = None     # Poor man's class
 _debug = None
+
+#===============================================================================
+
+@contextmanager
+def workdir(path):
+    """
+        Change script's work directory to perform a set of operation. Set original
+    directory back when done.
+    """
+    orig_dir = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(orig_dir)
 
 
 def copy_target_into(target, into):
@@ -69,7 +83,7 @@ def remove_target(target):
         raise RuntimeError ('Couldn\'t remove "%s"!' % (filename))
 
 
-def symlink_target(source, target, workdir=None):
+def symlink_target(source, target):
     """
         Create symlink for target from the source. Provide meaningful feadback on the screen
     verbose option.
@@ -80,9 +94,6 @@ def symlink_target(source, target, workdir=None):
                     to create symbolic link. Helpful to avoid relative path issue.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
-    if workdir is not None:
-        os.chdir(workdir)
-
     src_filename = slice_path(source)
     target_filename = slice_path(target)
     try:
@@ -129,6 +140,9 @@ def slice_path(target, slice_ratio=2):
     return '/'.join(sliced)
 
 
+#===============================================================================
+
+
 def cleanout_kernel(sys_img, kernel_dest):
     """
         Cleanout boot/vmlinuz* and boot/initrd.img/ files from the system image directory.
@@ -165,7 +179,8 @@ def fix_init(sys_img):
     try:
         if os.path.exists(new_init):
             remove_target(new_init)
-        symlink_target('sbin/init', 'init', sys_img)
+        with workdir(sys_img):
+            symlink_target('sbin/init', 'init')
     except (RuntimeError, EnvironmentError) as err:
         raise RuntimeError('Error occured while fixing /init file!\n\
                             %s' % (err))
@@ -273,36 +288,35 @@ def create_cpio(target, destination):
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
-        os.chdir(target)    # changin directory to create cpio file with correct folder path in it.
 
         cpio_stdin = []
-        #for root, dirs, files in os.walk(target, topdown=False):
+        with workdir(target):       # so that can walk relative to untar'ed FS folder.
+            # TODO: explain what is going on
+            for root, dirs, files in os.walk('.'):
+                for dirname in dirs:
+                    cpio_stdin(os.path.join(root, dirname))
+                for filename in files:
+                    cpio_stdin(os.path.join(root, filename))
 
-        cmd = 'find . -not -name vmlinuz -not -name initrd.img \
-                -path ./boot -prune -o -print'
-        cmd = shlex.split(cmd)
-        find_sh = Popen(cmd, stdout=PIPE)
-        cmd = 'sudo cpio --create --format \'newc\''
-        cmd = shlex.split(cmd)
+        cmd = 'find %s -not -name vmlinuz -not -name initrd.img \
+                -path ./boot -prune -o -print' % (target)
         with open(destination, 'w') as file_obj:
             cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
             cpio_out, cpio_err = cpio_sh.communicate()
-            #set_trace()
-        #cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=PIPE)
 
         # output find data to a log file
         find_out, find_err = find_sh.communicate()
         with open('/tmp/man_find.log', 'w') as file_obj:
-            file_obj.write(find_out.decode('utf-8'))
+            file_obj.write('\n'.join(cpio_stdin))
 
-        cpio_out, cpio_err = cpio_sh.communicate()
-        #set_trace()
-        with open(destination, 'w') as file_obj:
-            file_obj.write(str(cpio_out))
+      #  cpio_out, cpio_err = cpio_sh.communicate()
+      #  with open(destination, 'w') as file_obj:
+      #      file_obj.write(str(cpio_out))
     except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
 
+#===============================================================================
 
 def execute(sys_img, **kwargs):
     """
