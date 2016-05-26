@@ -13,7 +13,6 @@
 import argparse
 from contextlib import contextmanager
 from glob import glob
-import io
 import json
 import os
 import tarfile
@@ -294,13 +293,19 @@ def create_cpio(target, destination):
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
+
         found_data = find(target, ignore_files=['vmlinuz', 'initrd.img'], ignore_dirs=['boot'])
 
         cmd = 'cpio --create --format \'newc\''
         cmd = shlex.split(cmd)
+        cpio_stdin = '\n'.join(found_data).encode() # needed for Popen pipe.
 
-        cpio_stdin = '\n'.join(found_data).encode()
         with open(destination, 'w') as file_obj:
+            # create CPIO relative to the 'find' path, otherwise - cpio cant find directory.
+            # Note: searching outside of  untar folder results in a "full path"
+            # string (e.g. whatever/untar/boot...., instead ./boot...). This causes
+            # Kernel Panic when trying to boot such cpio file. Thus, search and
+            # generate cpio file RELATIVE to the Untar folder.
             with workdir(target):
                 cpio_sh = Popen(cmd, stdin=PIPE, stdout=file_obj)
                 cpio_out, cpio_err = cpio_sh.communicate(input=cpio_stdin)
@@ -311,8 +316,7 @@ def create_cpio(target, destination):
                 file_obj.write('\n'.join(found_data))       # MUST FIXME for a
                                                             # propper log process later
     except CalledProcessError as err:
-        raise RuntimeError('Error occured while creating cpio from "%s"\
-                            ["%s"]' % (target, err))
+        raise RuntimeError('Couldn\'t create cpio from "%s"!' % target)
 
 
 def find(start_path, ignore_files=[], ignore_dirs=[]):
@@ -382,7 +386,7 @@ def execute(sys_img, **kwargs):
         create_cpio(sys_img, dest)
 
         # Remove untar'ed, modified fileimage folder
-        #remove_target(sys_img)
+        remove_target(sys_img)
     except RuntimeError as err:
          response['status'] = 'error'
          response['message'] = 'Ouch! Runtime error! We expected that...\n[%s]' % (err)
