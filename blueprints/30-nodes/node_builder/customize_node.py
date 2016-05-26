@@ -21,7 +21,6 @@ import sys
 import time
 from shutil import copyfile, rmtree, copytree
 from subprocess import Popen, PIPE, CalledProcessError
-import subprocess
 from pdb import set_trace
 
 _verbose = None     # Poor man's class
