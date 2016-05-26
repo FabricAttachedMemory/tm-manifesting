@@ -13,6 +13,7 @@
 import argparse
 from contextlib import contextmanager
 from glob import glob
+import io
 import json
 import os
 import tarfile
@@ -21,6 +22,7 @@ import sys
 import time
 from shutil import copyfile, rmtree, copytree
 from subprocess import Popen, PIPE, CalledProcessError
+import subprocess
 from pdb import set_trace
 
 _verbose = None     # Poor man's class
@@ -288,33 +290,52 @@ def create_cpio(target, destination):
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
-
-        cpio_stdin = []
-        with workdir(target):       # so that can walk relative to untar'ed FS folder.
-            # TODO: explain what is going on
-            for root, dirs, files in os.walk('.'):
-                for dirname in dirs:
-                    cpio_stdin(os.path.join(root, dirname))
-                for filename in files:
-                    cpio_stdin(os.path.join(root, filename))
+        found_data = find(target, ignore_files=['vmlinuz', 'initrd.img'], ignore_dirs=['boot'])
 
         cmd = 'find %s -not -name vmlinuz -not -name initrd.img \
-                -path ./boot -prune -o -print' % (target)
+              -path ./boot -prune -o -print' % (target)
+        cmd = shlex.split(cmd)
+        find_sh = Popen(cmd, stdout=PIPE)
+        cmd = 'cpio --create --format \'newc\''
+        cmd = shlex.split(cmd)
+
+        cpio_stdin = '\n'.join(found_data).encode()
         with open(destination, 'w') as file_obj:
-            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
-            cpio_out, cpio_err = cpio_sh.communicate()
+            with workdir(target):
+                cpio_sh = Popen(cmd, stdin=PIPE, stdout=file_obj)
+                cpio_out, cpio_err = cpio_sh.communicate(input=cpio_stdin)
 
         # output find data to a log file
         find_out, find_err = find_sh.communicate()
         with open('/tmp/man_find.log', 'w') as file_obj:
-            file_obj.write('\n'.join(cpio_stdin))
+            file_obj.write('\n'.join(found_data))
 
-      #  cpio_out, cpio_err = cpio_sh.communicate()
-      #  with open(destination, 'w') as file_obj:
-      #      file_obj.write(str(cpio_out))
     except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
+
+
+def find(target, ignore_files=[], ignore_dirs=[]):
+    """
+        Emulating output of unix "find" command. Thus, have to build a list of all
+    the directories and filenames using os.walk relative to the start of its walking
+    directory.
+    Note: os.walk expands its data into three variables, where 'dirs' and 'files'
+    are not relative path, but  rather "basenames". Combining all together will 
+    result in a full path string.
+    """
+    result = []
+    with workdir(target):       # so that can walk relative to untar'ed FS folder.
+        for root, dirs, files in os.walk('.'):
+            for dirname in dirs:
+                if dirname in ignore_dirs:
+                    continue
+                result.append(os.path.join(root, dirname))
+            for filename in files:
+                if filename in ignore_files:
+                    continue
+                result.append(os.path.join(root, filename))
+    return result
 
 #===============================================================================
 
