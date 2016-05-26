@@ -36,10 +36,14 @@ def workdir(path):
         Change script's work directory to perform a set of operation. Set original
     directory back when done.
     """
-    orig_dir = os.getcwd()
-    os.chdir(path)
-    yield
-    os.chdir(orig_dir)
+    try:
+        orig_dir = os.getcwd()
+        os.chdir(path)
+        yield
+    except OSError:
+        raise RuntimeError('Couldn\'t change working directory into "%s"!' % (path))
+    finally:
+        os.chdir(orig_dir)
 
 
 def copy_target_into(target, into):
