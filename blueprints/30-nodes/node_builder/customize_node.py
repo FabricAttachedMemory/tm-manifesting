@@ -296,10 +296,6 @@ def create_cpio(target, destination):
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
         found_data = find(target, ignore_files=['vmlinuz', 'initrd.img'], ignore_dirs=['boot'])
 
-        cmd = 'find %s -not -name vmlinuz -not -name initrd.img \
-              -path ./boot -prune -o -print' % (target)
-        cmd = shlex.split(cmd)
-        find_sh = Popen(cmd, stdout=PIPE)
         cmd = 'cpio --create --format \'newc\''
         cmd = shlex.split(cmd)
 
@@ -310,32 +306,40 @@ def create_cpio(target, destination):
                 cpio_out, cpio_err = cpio_sh.communicate(input=cpio_stdin)
 
         # output find data to a log file
-        find_out, find_err = find_sh.communicate()
-        with open('/tmp/man_find.log', 'w') as file_obj:
-            file_obj.write('\n'.join(found_data))
-
+        if _verbose:
+            with open('/tmp/man_find.log', 'w') as file_obj:# OK for now, but
+                file_obj.write('\n'.join(found_data))       # MUST FIXME for a
+                                                            # propper log process later
     except CalledProcessError as err:
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
 
 
-def find(target, ignore_files=[], ignore_dirs=[]):
+def find(start_path, ignore_files=[], ignore_dirs=[]):
     """
         Emulating output of unix "find" command. Thus, have to build a list of all
     the directories and filenames using os.walk relative to the start of its walking
     directory.
     Note: os.walk expands its data into three variables, where 'dirs' and 'files'
-    are not relative path, but  rather "basenames". Combining all together will 
-    result in a full path string.
+    are not relative path, but  rather "basenames". Combining all together will
+    result in a full path string. e.g:
+            root + "/" dirs[0] + "/" + files[0] = /root/elemenOfDirs/elementOfFIles
+
+    :param 'start_path': [str] path to start walk from.
+    :param 'ignore_files': [list] filenames to ignore during the walk.
+    :param 'ignore_dirs': [list] directories to ignore from walking through.
+    :return: [list] all the walked directories and filenames  relative to the 'start_path'.
+            This will save EACH directory relative path e,g: /path/to/top/ will 
+            be saved as /path/, /path/to/ and /path/to/top/
     """
     result = []
-    with workdir(target):       # so that can walk relative to untar'ed FS folder.
+    with workdir(start_path):       # so that can walk relative to untar'ed FS folder.
         for root, dirs, files in os.walk('.'):
-            for dirname in dirs:
+            for dirname in dirs:        # each directory relative path to the root
                 if dirname in ignore_dirs:
                     continue
                 result.append(os.path.join(root, dirname))
-            for filename in files:
+            for filename in files:      # each filename relative path to the root
                 if filename in ignore_files:
                     continue
                 result.append(os.path.join(root, filename))
