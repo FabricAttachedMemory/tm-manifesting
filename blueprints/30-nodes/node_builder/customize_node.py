@@ -11,6 +11,7 @@
 """
 
 import argparse
+from contextlib import contextmanager
 from glob import glob
 import json
 import os
@@ -24,6 +25,23 @@ from pdb import set_trace
 
 _verbose = None     # Poor man's class
 _debug = None
+
+#===============================================================================
+
+@contextmanager
+def workdir(path):
+    """
+        Change script's work directory to perform a set of operation. Set original
+    directory back when done.
+    """
+    try:
+        orig_dir = os.getcwd()
+        os.chdir(path)
+        yield
+    except OSError:
+        raise RuntimeError('Couldn\'t change working directory into "%s"!' % (path))
+    finally:
+        os.chdir(orig_dir)
 
 
 def copy_target_into(target, into):
@@ -76,8 +94,8 @@ def symlink_target(source, target):
 
     :param 'source': [str] path to a file to create a symbolic link from.
     :param 'target': [str] path to the file to create a symbolic link to.
-    :param 'verbose': [bool] Make it talk.
-    :param 'debug': [bool] set_trace if exception was caught.
+    :param 'workdir': [str](default=None) path to change python working directory
+                    to create symbolic link. Helpful to avoid relative path issue.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
     src_filename = slice_path(source)
@@ -126,6 +144,9 @@ def slice_path(target, slice_ratio=2):
     return '/'.join(sliced)
 
 
+#===============================================================================
+
+
 def cleanout_kernel(sys_img, kernel_dest):
     """
         Cleanout boot/vmlinuz* and boot/initrd.img/ files from the system image directory.
@@ -159,11 +180,11 @@ def fix_init(sys_img):
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
     new_init = os.path.join(sys_img, 'init')
-    origin_init = '%s/sbin/init' % (sys_img)
     try:
         if os.path.exists(new_init):
             remove_target(new_init)
-        symlink_target(origin_init, new_init)
+        with workdir(sys_img):
+            symlink_target('sbin/init', 'init')
     except (RuntimeError, EnvironmentError) as err:
         raise RuntimeError('Error occured while fixing /init file!\n\
                             %s' % (err))
@@ -286,6 +307,7 @@ def create_cpio(target, destination):
         raise RuntimeError('Error occured while creating cpio from "%s"\
                             ["%s"]' % (target, err))
 
+#===============================================================================
 
 def execute(sys_img, **kwargs):
     """
