@@ -292,20 +292,61 @@ def create_cpio(target, destination):
     try:
         if _verbose:
             print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
-        cmd = 'find %s -not -name vmlinuz -not -name initrd.img \
-                -path ./boot -prune -o -print' % (target)
-        cmd = shlex.split(cmd)
-        find_sh = Popen(cmd, stdout=PIPE)
-        cmd = 'sudo cpio --create --format \'newc\''
-        cmd = shlex.split(cmd)
-        with open(destination, 'w+') as file_obj:
-            cpio_sh = Popen(cmd, stdin=find_sh.stdout, stdout=file_obj)
 
-        cpio_sh.communicate()
-        find_sh.communicate()
+        found_data = find(target, ignore_files=['vmlinuz', 'initrd.img'], ignore_dirs=['boot'])
+
+        cmd = 'cpio --create --format \'newc\''
+        cmd = shlex.split(cmd)
+        cpio_stdin = '\n'.join(found_data).encode() # needed for Popen pipe.
+
+        with open(destination, 'w') as file_obj:
+            # create CPIO relative to the 'find' path, otherwise - cpio cant find directory.
+            # Note: searching outside of  untar folder results in a "full path"
+            # string (e.g. whatever/untar/boot...., instead ./boot...). This causes
+            # Kernel Panic when trying to boot such cpio file. Thus, search and
+            # generate cpio file RELATIVE to the Untar folder.
+            with workdir(target):
+                cpio_sh = Popen(cmd, stdin=PIPE, stdout=file_obj)
+                cpio_out, cpio_err = cpio_sh.communicate(input=cpio_stdin)
+
+        # output find data to a log file
+        if _verbose:
+            with open('/tmp/man_find.log', 'w') as file_obj:# OK for now, but
+                file_obj.write('\n'.join(found_data))       # MUST FIXME for a
+                                                            # propper log process later
     except CalledProcessError as err:
-        raise RuntimeError('Error occured while creating cpio from "%s"\
-                            ["%s"]' % (target, err))
+        raise RuntimeError('Couldn\'t create cpio from "%s"!' % target)
+
+
+def find(start_path, ignore_files=[], ignore_dirs=[]):
+    """
+        Emulating output of unix "find" command. Thus, have to build a list of all
+    the directories and filenames using os.walk relative to the start of its walking
+    directory.
+    Note: os.walk expands its data into three variables, where 'dirs' and 'files'
+    are not relative path, but  rather "basenames". Combining all together will
+    result in a full path string. e.g:
+            root + "/" dirs[0] + "/" + files[0] = /root/elemenOfDirs/elementOfFIles
+
+    :param 'start_path': [str] path to start walk from.
+    :param 'ignore_files': [list] filenames to ignore during the walk.
+    :param 'ignore_dirs': [list] directories to ignore from walking through.
+    :return: [list] all the walked directories and filenames  relative to the 'start_path'.
+            This will save EACH directory relative path e,g: /path/to/top/ will 
+            be saved as /path/, /path/to/ and /path/to/top/
+    """
+    result = []
+    with workdir(start_path):       # so that can walk relative to untar'ed FS folder.
+        for root, dirs, files in os.walk('.'):
+            for dirname in dirs:        # each directory relative path to the root
+                if dirname in ignore_dirs:
+                    continue
+                result.append(os.path.join(root, dirname))
+            for filename in files:      # each filename relative path to the root
+                if filename in ignore_files:
+                    continue
+                result.append(os.path.join(root, filename))
+    return result
 
 #===============================================================================
 
