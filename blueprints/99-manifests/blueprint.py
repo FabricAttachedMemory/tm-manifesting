@@ -1,6 +1,4 @@
 '''TM Manifests'''
-
-import glob
 import json
 import os
 import re
@@ -118,14 +116,16 @@ def listall():
     to the server.
     """
     _load_data()
-    all_manifests = { 'manifest' : [] }
-    for manfile in glob.glob(BP.UPLOADS + '/*'):
-        all_manifests['manifest'].append(os.path.basename(manfile))
+    all_manifests = { 'manifest' : [], 'directory' : [] }
+    for manname, man_obj in _data.items():
+        all_manifests['manifest'].append(manname)
+        all_manifests['directory'].append(man_obj.dirpath)
+
     response = jsonify(all_manifests)
     response.status_code = 200
     return response
 
-@BP.route('/api/%s/' % _ERS_element)
+
 @BP.route('/api/%s/<path:name>/' % _ERS_element)
 def api(name=None):
     response = jsonify({ 'error': 'API GET not implemented' })

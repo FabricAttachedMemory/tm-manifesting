@@ -24,7 +24,7 @@ class TmManifest(tm_base.TmCmd):
         listnodes
 
     DESCRIPTION
-        List all the available nodes in the network.
+        List all available manifests uploaded to the server.
         """
         super().listall(arg_list, **options)
         url = "%s%s" % (self.url, 'manifest/')
