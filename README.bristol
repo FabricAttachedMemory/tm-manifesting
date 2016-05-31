@@ -14,7 +14,7 @@ git clone https://github.hpe.com/hpelinux/manifesting.git
 tm-manifesting depends on tm-librarian and is developed on python3, thus it is
 requires several libraries that needed to be installed on your system:
 
-sudo apt install tm-librarian python3 python3-flask python3-requests
+sudo apt install tm-librarian python3 python3-flask python3-requests python3-debian
 
 ===============================================================================
 
@@ -73,4 +73,46 @@ tm-manifest-server
 That should start a manifesting server and print out bunch of stuff on the screen.
 This is equivalent to (if you were not doing symbolic links):
 
-~/Development/manifesting/manifest_api.py
+
+-------------------------------------------------------------------------------
+
+
+Known Errors
+
+
+*******************************************************************************
+
+Getting error running tm-manifest-serser, while tm-librarian is installed?
+
+Traceback (most recent call last):
+        File "/usr/local/bin/tm-manifest-server", line 13, in <module>
+          from tm_librarian.tmconfig import TMConfig
+      ImportError: No module named 'tm_librarian'
+
+ ----------------- Fix ---------------------
+
+Check if /usr/lib/python3/dist-packages/tm_librarian exists.
+
+If not, there are two possible approaches to fix that:
+
+Renaming tm-librarian:
+ sudo mv /usr/lib/python3/dist-packages/tm-librarian/ /usr/lib/python3/dist-packages/tm_librarian
+
+OR
+
+Creating Symbolic Link
+ sudo ln -s /usr/lib/python3/dist-packages/tm-librarian/ /usr/lib/python3/dist-packages/tm_librarian
+
+
+Check if fixed by running in the terminal:
+
+python3
+
+Then, in the launched python3 interpreter:
+import tm_librarian
+
+If no error occured - then error should be fixed now.
+
+*******************************************************************************
+
+
