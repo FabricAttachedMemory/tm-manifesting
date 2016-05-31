@@ -73,6 +73,7 @@ tm-manifest-server
 That should start a manifesting server and print out bunch of stuff on the screen.
 This is equivalent to (if you were not doing symbolic links):
 
+~/Development/manifesting/manifest_api.py
 
 -------------------------------------------------------------------------------
 
