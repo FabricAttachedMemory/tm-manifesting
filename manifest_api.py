@@ -31,7 +31,8 @@ mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/sys-images')
 mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifest_uploads')
 mainapp.config['GOLDEN_IMAGE'] = \
     os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
-                                    '/golden/golden.l4tm.arm64.tar')
+                                    '/golden/golden.arm.tar')
+mainapp.config['TFTP'] = os.path.normpath(mroot + '/tftp/')
 
 # Move to cmdline processing
 mainapp.config['DEBUG'] = \
