@@ -23,7 +23,7 @@ def main(args):
             --owner=$LOGNAME --no-default-configs \
             --config=%s --hostname=pxe02" % (args['img_cfg'])
     cmd = shlex.split(cmd)
-    status = subprocess.Popen(cmd)
+    status = subprocess.call(cmd)
 
     print('Done')
     return 0
