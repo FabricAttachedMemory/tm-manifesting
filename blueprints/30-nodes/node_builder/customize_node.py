@@ -21,6 +21,7 @@ import sys
 import time
 from shutil import copyfile, rmtree, copytree
 from subprocess import Popen, PIPE, CalledProcessError
+import subprocess
 from pdb import set_trace
 
 _verbose = None     # Poor man's class
@@ -208,8 +209,11 @@ def cleanup_sources_list(sys_img):
             print ('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
         return None
     try:
-        copy_target_into(sources_base, sources_list)
         remove_target(sources_base)
+        remove_target(sources_list)
+        write_to_file(sources_list, 'deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm catapult main contrib non-free')
+        #copy_target_into(sources_base, sources_list)
+        #remove_target(sources_base)
     except RuntimeError as err:
         raise RuntimeError('Error occured while cleaning sources.list!\n\
                             %s' % (err))
@@ -350,6 +354,38 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
 
 #===============================================================================
 
+
+def install_packages(sys_img, pkg_list):
+    """
+        TODO
+    """
+    script_header = """#!/bin/bash
+set -ue
+exec > /manifesting.log 2>&1  # /tmp/ is cleaned out of boot
+apt-get update
+    """
+
+    #install_script = sys_img + '/install.sh'
+    #to_copy = os.path.normpath(os.path.dirname(__file__) + '/install_packages.sh')
+    #copy_target_into(to_copy, install_script)
+    #os.chmod(install_script, 0o744)
+    script_file = sys_img + '/install.sh'
+    with open(script_file, 'w') as file_obj:
+        file_obj.write(script_header)
+        for pkg in pkg_list:
+            cmd = 'apt-get install --assume-yes ' + pkg
+            #cmd = 'touch /pkg.log'
+            file_obj.write(cmd)
+    os.chmod(script_file, 0o744)
+    try:
+        cmd = 'chroot %s %s ' % (sys_img, '/install.sh')
+        cmd = shlex.split(cmd)
+        subprocess.call(cmd)
+    except CalledProcessError as err:
+        raise RuntimeError('Couldn\'t install packages! Error: %s' % err)
+
+#===============================================================================
+
 def execute(sys_img, **kwargs):
     """
         TODO: docstr
@@ -380,12 +416,20 @@ def execute(sys_img, **kwargs):
         # Symlink /init
         fix_init(sys_img)
 
-        dest = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
+        install_packages(sys_img, kwargs['package_list'])
+
+        cpio_file = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
         # Create .cpio file from untar.
-        create_cpio(sys_img, dest)
+        create_cpio(sys_img, cpio_file)
 
         # Remove untar'ed, modified fileimage folder
         remove_target(sys_img)
+
+        if kwargs.get('tftp', False):
+            vmlinuz = os.path.dirname(cpio_file) + '/vmlinuz-4.3.0-3-arm64-l4tm'
+            copy_target_into(cpio_file, kwargs['tftp'] + '/l4tm.cpio')
+            copy_target_into(vmlinuz, kwargs['tftp'] + '/l4tm.vmlinuz')
+
     except RuntimeError as err:
          response['status'] = 'error'
          response['message'] = 'Ouch! Runtime error! We expected that...\n[%s]' % (err)
