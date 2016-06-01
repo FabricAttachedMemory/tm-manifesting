@@ -423,7 +423,7 @@ def execute(sys_img, **kwargs):
         create_cpio(sys_img, cpio_file)
 
         # Remove untar'ed, modified fileimage folder
-        #remove_target(sys_img)
+        remove_target(sys_img)
 
         if kwargs.get('tftp', False):
             vmlinuz = os.path.dirname(cpio_file) + '/vmlinuz-4.3.0-3-arm64-l4tm'

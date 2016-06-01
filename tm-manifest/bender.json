@@ -1,0 +1,10 @@
+{
+    "description": "Evil Bender",
+    "_comment": "Comments are allowed at any point",
+    "name": "bender",
+    "tasks": [],
+    "packages": [
+        "album"
+    ],
+    "release": "the operating system release (unstable/testing/stable)"
+}

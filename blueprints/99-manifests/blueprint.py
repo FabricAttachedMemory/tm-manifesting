@@ -74,7 +74,7 @@ def webpage_upload():
         return render_all(errmsg='Upload("%s") failed: %s' %
             (file.filename, str(e)))
 
-    load_data()
+    _load_data()
     return render_all(okmsg='Upload %s complete' % file.filename)
 
 
