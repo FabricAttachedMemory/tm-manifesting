@@ -209,8 +209,11 @@ def cleanup_sources_list(sys_img):
             print ('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
         return None
     try:
-        copy_target_into(sources_base, sources_list)
         remove_target(sources_base)
+        remove_target(sources_list)
+        write_to_file(sources_list, 'deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm catapult main contrib non-free')
+        #copy_target_into(sources_base, sources_list)
+        #remove_target(sources_base)
     except RuntimeError as err:
         raise RuntimeError('Error occured while cleaning sources.list!\n\
                             %s' % (err))
@@ -358,7 +361,7 @@ def install_packages(sys_img, pkg_list):
     """
     script_header = """#!/bin/bash
 set -ue
-exec > /tmp/manifesting.log 2>&1
+exec > /manifesting.log 2>&1  # /tmp/ is cleaned out of boot
 apt-get update
     """
 
@@ -370,14 +373,14 @@ apt-get update
     with open(script_file, 'w') as file_obj:
         file_obj.write(script_header)
         for pkg in pkg_list:
-            cmd = 'apt-get install -assume-yes ' + pkg
+            cmd = 'apt-get install --assume-yes ' + pkg
             #cmd = 'touch /pkg.log'
             file_obj.write(cmd)
     os.chmod(script_file, 0o744)
     try:
         cmd = 'chroot %s %s ' % (sys_img, '/install.sh')
         cmd = shlex.split(cmd)
-        subprocess.Popen(cmd)
+        subprocess.call(cmd)
     except CalledProcessError as err:
         raise RuntimeError('Couldn\'t install packages! Error: %s' % err)
 

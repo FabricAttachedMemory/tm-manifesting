@@ -1,8 +1,0 @@
-{
-    "_comment": "Comments are allowed at any point",
-    "name": "manifest name",
-    "description": "a description of the contents and intended use",
-    "release": "the operating system release (unstable/testing/stable)",
-    "tasks" : [ ],
-    "packages": [ "amoebax" ]
-}

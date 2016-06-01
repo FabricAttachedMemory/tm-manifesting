@@ -116,7 +116,7 @@ def build_node(manifest, node_coord):
     if not os.path.exists(golden_tar):
         return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
 
-    img_name = manifest.basename.split('.json')[0]
+    #img_name = manifest.basename.split('.json')[0]
     node_dir = os.path.join(sys_imgs, node_coord)
 
     try:
