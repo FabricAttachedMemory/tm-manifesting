@@ -1,5 +1,4 @@
 '''TM Manifests'''
-
 import json
 import os
 import sys
@@ -10,19 +9,12 @@ from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
 
-# Mobius circular worked for a while.  I like this better.
-mainapp = sys.modules['__main__'].mainapp
-
 # See the README in the main templates directory.
-BP = Blueprint(
-    _ERS_element,
-    __name__,
-    template_folder='%s/%s' % (mainapp.root_path, mainapp.template_folder)
-    )
+BP = Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 
-_UPLOADS = os.path.join(mainapp.root_path, 'blueprints/manifests/uploads')
+
 _UPFROM = 'uploaded_from'
 
 ###########################################################################
@@ -71,8 +63,7 @@ def webpage_upload():
         # fname = str(uuid.uuid4()) + extension
         # file is a mixin, save() is a werkzeug method which calls
         # generic builtin open() and copies file.stream()
-        # file.save(os.path.join(_UPLOADS, fname))
-
+        # file.save(os.path.join(BP.UPLOADS, fname))
         contentstr = file.read().decode()
         m = ManifestDestiny('', '', contentstr)
         msg = 'Overwrote' if  m.key in _data else 'Uploaded'    # before...
@@ -85,14 +76,30 @@ def webpage_upload():
 
     load_data()
     return render_all(okmsg='Upload %s complete' % file.filename)
-    # return redirect(url_for('uploaded_files', filenames=filenames))
+
 
 ###########################################################################
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
 
-
 @BP.route('/api/%s/' % _ERS_element)
+def listall():
+    """
+        GET request that returns a json string response of all the manifests uploaded
+    to the server.
+    """
+    _load_data()
+
+    all_manifests = { 'manifest' : [], 'directory' : [] }
+    for manname, man_obj in _data.items():
+        all_manifests['manifest'].append(manname)
+        all_manifests['directory'].append(man_obj.dirpath)
+
+    response = jsonify(all_manifests)
+    response.status_code = 200
+    return response
+
+
 @BP.route('/api/%s/<path:name>/' % _ERS_element)
 def api(name=None):
     response = jsonify({ 'error': 'API GET not implemented' })
@@ -100,20 +107,27 @@ def api(name=None):
     return response
 
 
-@BP.route('/api/%s/<path:namespace>/' % _ERS_element, methods=(('POST', )))
-def api_upload(namespace=None):
+@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
+def api_upload(manname=None):
+    manname = manname.rstrip('/')
+    response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
+    response.status_code = 201  # but not always
+
+    if os.path.exists(BP.UPLOADS + '/' + manname):
+        response = jsonify({ 'warning' :
+            'An existed manifest "%s" has been replaced with new contents.' % manname })
+        response.status_code = 200
+
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
-        m = ManifestDestiny(namespace, '', contentstr)
+        ManifestDestiny(manname, '', contentstr)
     except Exception as e:
-        response = jsonify({ 'error': str(e) })
+        response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
-        return response
 
-    response = jsonify({ 'status': 'life is good' })
-    response.status_code = 201  # but not always
     return response
+
 
 ###########################################################################
 
@@ -128,7 +142,7 @@ class ManifestDestiny(object):
         except Exception as e:
             raise RuntimeError('not JSON')
         legal = frozenset(
-            ('name', 'description', 'release', 'tasks', 'packages', 'hosts', 'hostname')
+            ('name', 'description', 'release', 'tasks', 'packages')
         )
         keys = frozenset(m.keys())
         missing = list(legal - keys)
@@ -138,10 +152,10 @@ class ManifestDestiny(object):
         assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
         assert m['tasks'] or m['packages'], 'empty manifest'
 
-        nosuch = mainapp.blueprints['package'].filter(m['packages'])
+        nosuch = BP.mainapp.blueprints['package'].filter(m['packages'])
         assert not nosuch, 'no such package(s) ' + ', '.join(nosuch)
 
-        nosuch = mainapp.blueprints['task'].filter(m['tasks'])
+        nosuch = BP.mainapp.blueprints['task'].filter(m['tasks'])
         assert not nosuch, 'no such task(s) ' + ', '.join(nosuch)
 
         return m
@@ -154,13 +168,16 @@ class ManifestDestiny(object):
             self.thedict = self.validate_manifest(contentstr)
             self.raw = contentstr
             elems = dirpath.split(os.path.sep)
+
             assert len(elems) < 10, 'Really? %d deep? Get a life.' % len(elems)
+
             for e in elems:
                 assert e == secure_filename(e), \
                 'Illegal namespace component "%s"' % e
+
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
-            self.dirpath = os.path.join(_UPLOADS, dirpath)
+            self.dirpath = os.path.join(BP.UPLOADS, dirpath)
             os.makedirs(self.dirpath, exist_ok=True)
             with open(os.path.join(self.dirpath, fname), 'w') as f:
                 f.write(contentstr)
@@ -168,8 +185,10 @@ class ManifestDestiny(object):
 
         assert '/' not in basename, 'basename is not a leaf element'
         fname = os.path.join(dirpath, basename)
+
         with open(fname, 'r') as f:
             self.raw = f.read()
+
         self.thedict = self.validate_manifest(self.raw)
         self.dirpath = dirpath
         self.basename = basename
@@ -181,8 +200,8 @@ class ManifestDestiny(object):
 
     @property
     def namespace(self):
-        if self.dirpath.startswith(_UPLOADS):
-            tmp = self.dirpath.split(_UPLOADS)[-1][1:]    # chomp leading /
+        if self.dirpath.startswith(BP.UPLOADS):
+            tmp = self.dirpath.split(BP.UPLOADS)[-1][1:]    # chomp leading /
             return tmp
         # Some kind of relative path, just send it all back
         tmp = os.path.join(self.dirpath.split(self.basename)[0])
@@ -192,29 +211,41 @@ class ManifestDestiny(object):
     def key(self):
         return os.path.join(self.namespace, self.basename)
 
-def load_data():
+###########################################################################
+
+
+def _lookup(manifest_name):    # Can be sub/path/name
+    return _data.get(manifest_name, None)
+
+
+def is_file_allowed(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1] in BP.allowed_files
+
+###########################################################################
+
+_data = None
+
+
+def _load_data():
     global _data
     _data = { }
     try:    # don't die in a daemon
         manfiles = [    # List comprehension
             (dirpath, b)
-                for dirpath, dirnames, basenames in os.walk(_UPLOADS)
+                for dirpath, dirnames, basenames in os.walk(BP.UPLOADS)
                     for b in basenames
         ]
         for dirpath, basename in manfiles:
             this = ManifestDestiny(dirpath, basename)
-            _data[this.key] = this
+            _data[basename] = this # search is expected by manifest name, (e.g. manifest.json, not path/manifest.json)
     except Exception as e:
         pass
 
-    BP.lookup = lookup
 
-
-def lookup(manifest_name):    # Can be sub/path/name
-    return _data.get(manifest_name, None)
-
-
-# A singleton without a class
-if '_data' not in locals():
-    _data = None
-    load_data()
+def register(mainapp):  # take what you like and leave the rest
+    BP.mainapp = mainapp
+    BP.config = mainapp.config
+    BP.lookup = _lookup
+    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    BP.UPLOADS = BP.config['MANIFEST_UPLOADS']
+    _load_data()

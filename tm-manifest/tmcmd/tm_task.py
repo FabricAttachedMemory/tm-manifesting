@@ -43,8 +43,8 @@ class TmTask(tm_base.TmCmd):
         List all the packages defined by a task in json string format.
         """
         super().show(target, **options)
-        url = "%s%s%s" % (self.url, 'task/', self.show_name)
-        data = self.http_request(url)
+        url_to_task = "%s%s%s" % (self.url, 'task/', self.show_name)
+        data = self.http_request(url_to_task)
         return self.to_json(data)
 
 

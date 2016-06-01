@@ -13,11 +13,20 @@ class TaskTest(unittest.TestCase):
     URL = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
     tm_cmd = None
     task_name = 'golden.l4tm.amd64.tar'
+    tmp_folder = '/tmp/UNITTEST_GOLDEN/'
+
+    @classmethod
+    def setUp(cls):
+        cls.tm_cmd = tmcmd.tmsysimg
+        if os.path.isdir(cls.tmp_folder):
+            shutil.rmtree(cls.tmp_folder)
+        os.makedirs(cls.tmp_folder)
 
 
     @classmethod
-    def setUpClass(cls):
-        cls.tm_cmd = tmcmd.tmsysimg
+    def tearDown(cls):
+        if os.path.isdir(cls.tmp_folder):
+            shutil.rmtree(cls.tmp_folder)
 
 
     def test_golden_exists(self):
@@ -30,19 +39,13 @@ class TaskTest(unittest.TestCase):
 
     def test_golden_download(self):
         """ Test if can download golden image into destination (/tmp/UNITTEST_GOLDEN) """
-        destination = '/tmp/UNITTEST_GOLDEN/'
-        if os.path.isdir(destination):
-            self.assertTrue(False, '"%s" already exist! Clean out the environment.' % (destination))
-        os.mkdir(destination)
-
-        output_file = os.path.join(destination, 'golden.l4tm.amd64.tar')
+        output_file = os.path.join(self.tmp_folder, 'golden.l4tm.amd64.tar')
         self.tm_cmd.download(['golden.l4tm.amd64.tar', output_file])
 
-        downloaded = os.path.join(destination, 'golden.l4tm.amd64.tar')
+        downloaded = os.path.join(self.tmp_folder, 'golden.l4tm.amd64.tar')
         self.assertTrue(os.path.exists(downloaded),
-                        '"golden.l4tm.amd64.tar" was not downloaded into "%s"!' % (destination))
+                        '"golden.l4tm.amd64.tar" was not downloaded into "%s"!' % (self.tmp_folder))
 
-        shutil.rmtree(destination)
 
 if __name__ == '__main__':
     unittest.main()

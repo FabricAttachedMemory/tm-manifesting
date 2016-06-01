@@ -1,7 +1,7 @@
 # Trying for minimum bootable to boot diskless into RAM
 # "debootstrapopts" or "variant" depending on version of vmdebootstrap
 
-# sudo vmdebootstrap --no-default-configs --config=dux.l4tm.vmd --owner=$LOGNAME --hostname=xyzzy
+# sudo vmdebootstrap --no-default-configs --config=dux.l4tm.amd64.vmd  --owner=$LOGNAME --hostname=xyzzy
 
 [config]
 log = artifacts/l4tm.log
@@ -31,7 +31,7 @@ owner = rocky
 
 # minbase only does "Required", keyrings are only "Important".
 # debian-archive-keyring is handled manually by debootstrap.
-package = l4tm-archive-keyring,linux-image-4.3-amd64-l4tm,avahi-utils,ifupdown,iputils-ping,isc-dhcp-client,libnss-mdns,locales,pciutils,psmisc,psutils,ssh,tm-librarian-client,vim
+package = l4tm-archive-keyring,linux-image-4.3-amd64-l4tm,avahi-utils,ifupdown,iputils-ping,isc-dhcp-client,libnss-mdns,locales,pciutils,psmisc,psutils,ssh,tm-librarian,vim
 custom-package =
 
 # L4TM doesn't follow simple name generation, must do this manually (above)
@@ -39,12 +39,12 @@ no-kernel = True
 sudo = True
 
 enable-dhcp = True
-root-password = aresquare
+root-password = iforgot
 lock-root-password = False
 
 customize = 
-hostname = fabricXX
-user = fabric/rocks
+hostname = l4tmXX
+user = l4tm/iforgot
 serial-console = True
 serial-console-command = /sbin/getty -L ttyS0 115200 vt100
 

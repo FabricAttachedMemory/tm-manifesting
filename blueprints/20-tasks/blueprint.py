@@ -9,15 +9,8 @@ from flask import Blueprint, render_template, request, jsonify
 
 _ERS_element = 'task'
 
-# Mobius circular worked for a while.  I like this better.
-mainapp = sys.modules['__main__'].mainapp
-
 # See the README in the main templates directory.
-BP = Blueprint(
-    _ERS_element,
-    __name__,
-    template_folder='%s/%s' % (mainapp.root_path, mainapp.template_folder)
-    )
+BP = Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 # HTML
@@ -71,24 +64,23 @@ def api(name=None):
 
 ###########################################################################
 
+_data = None
 
-def load_data():
+def _load_data(mainapp):
     '''Parse the actual tasksel description file.'''
     global _data
 
     _data = { }
-    with open(mainapp.root_path + '/L4TM.desc', 'r') as f:
+    with open(mainapp.root_path + '/configs/L4TM.desc', 'r') as f:
         tmp = [ task for task in Packages.iter_paragraphs(f) ]
         _data.update(dict((task['Task'], task) for task in tmp))
 
-    BP.filter = filter
 
-
-def filter(tasks):    # Maybe it's time for a class
+def _filter(tasks):    # Maybe it's time for a class
     return [ task for task in tasks if task not in _data ]
 
 
-# A singleton without a class
-if '_data' not in locals():
-    _data = None
-    load_data()
+def register(mainapp):  # take what you like and leave the rest
+    BP.filter = _filter     # So manifest can see it
+    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    _load_data(mainapp)

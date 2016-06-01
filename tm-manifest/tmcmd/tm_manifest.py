@@ -1,9 +1,10 @@
 #!/usr/bin/python3 -tt
 from pdb import set_trace
+import json
 import os
 from . import tm_base
 
-class TmNode(tm_base.TmCmd):
+class TmManifest(tm_base.TmCmd):
 
     def __init__(self):
         """
@@ -11,9 +12,9 @@ class TmNode(tm_base.TmCmd):
         """
         super().__init__()
         self.args = {
-            'listnodes' : self.listall,
-            'getnode' : self.show,
-            'setnode' : self.set_node
+            'list' : self.listall,
+            'get' : self.show,
+            'put' : self.upload
         }
 
 
@@ -23,10 +24,10 @@ class TmNode(tm_base.TmCmd):
         listnodes
 
     DESCRIPTION
-        List all the available nodes in the network.
+        List all available manifests uploaded to the server.
         """
         super().listall(arg_list, **options)
-        url = "%s%s" % (self.url, 'node/')
+        url = "%s%s" % (self.url, 'manifest/')
         data = self.http_request(url)
         return self.to_json(data)
 
@@ -46,19 +47,29 @@ class TmNode(tm_base.TmCmd):
         return self.to_json(data)
 
 
-    def set_node(self, target, **options):
+    def upload(self, target, **options):
         """
     SYNOPSIS
-        setnode <node name> <manifest.json>
+        put <manifest name> <manifest file>
 
     DESCRIPTION
             Select the manifest for the specified node and construct a kernel
         and root FS that the node will use the next time it boots.
         """
-        assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
-        payload = '{ "manifest" :  "%s" }' % target[0]
-        api_url = '%s/%s/%s' % (self.url, 'node/', target[1])
+        assert len(target) >= 2, 'Missing argument: put <manifest name> <manifest file>!'
+        file_real_path = os.path.realpath(target[1])
+
+        with open(file_real_path, 'r') as file_obj:
+            manifest_content = file_obj.read()
+
+        try:
+            payload = json.loads(manifest_content)
+        except ValueError as err:
+            return self.to_json({ 'error' : 'Incorrect file type! JSON is expected.' })
+
+        api_url = '%s/%s/%s' % (self.url, 'manifest/', target[0])
         clean_url = os.path.normpath(api_url.split('http://')[1])
-        api_url = 'http://' + clean_url
-        data = self.http_request(api_url, payload=payload)
+        api_url = 'http://' + clean_url + '/'
+
+        data = self.http_upload(api_url, payload=payload)
         return self.to_json(data)

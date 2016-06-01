@@ -6,15 +6,12 @@
 <BODY>
 <H1>
 <IMG SRC='/static/manifest.jpg' align='middle'>
-{{ label }}: {{ name }}
+Node to manifest
 </H1>
 
 <dl>
-    {% for key, value in itemdict.items() %}
-        <dt>{{ key }}</dt>
-        <dd>{{ value }}</dd>
-	<p>
-    {% endfor %}
+    <dt>{{ node.coordinate }}</dt>
+    <dd>{{ node.soc.socMacAddress }}<br>{{ manifest }}</dd>
 <dl>
 
 </BODY>

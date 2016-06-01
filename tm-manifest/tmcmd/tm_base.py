@@ -1,14 +1,14 @@
 #/usr/bin/python3 -tt
 
+
 import requests as HTTP_REQUESTS
 import json
+from werkzeug.datastructures import FileStorage
 from pdb import set_trace
 
 class TmCmd():
 
-    # url ='http://rocky42.americas.hpqcorp.net:31178/manifesting/api/'
-    #url='http://localhost:31178/manifesting/api/'
-    url = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
+    url = 'http://localhost:31178/manifesting/api/'
     args = {}
 
     def __init__(self, sort=True, headers=None, indent=4, **options):
@@ -30,7 +30,7 @@ class TmCmd():
             arg_list = []
         assert len(arg_list) == 0, 'This function does not take non-optional arguments!'
         if 'verbose' in options and options['verbose']:
-            print(' - Sending request to "%s"...' % url)
+            print(' - Sending request to "%s"...' % self.url)
 
 
     def show(self, target, **options):
@@ -42,7 +42,7 @@ class TmCmd():
         #Passing list is helpfull for a generic function call, (as in tm_manifest.py)
         self.show_name = target[0] if type(target) is list else target
         if 'verbose' in options and options['verbose']:
-            print(' - Sending request to "%s"...' % url)
+            print(' - Sending request to "%s"...' % self.url)
 
 
     def http_request(self, url, **options):
@@ -56,12 +56,8 @@ class TmCmd():
         headers = options.get('headers', self.header)
         if options.get('payload', False):
             http_resp = HTTP_REQUESTS.put(url, options['payload'], headers=headers)
-            set_trace()
         else:
             http_resp = HTTP_REQUESTS.get(url, headers=headers)
-        #jsondata = http_resp.json()
-        #set_trace()
-        #return self.to_json(http_resp.content)
         jsondata = self.to_json(http_resp)
         return jsondata
 
@@ -70,7 +66,7 @@ class TmCmd():
         """
             Do a download http request on the provided url that is pointing to a file.
         Save the file to the requested destination.
-        :param 'url': [str] url lint to a file to download.
+        :param 'url': [str] url link to a file to download.
         :param 'destination': [str] destination on the local disk to save downloaded file to.
         :return: None
         """
@@ -79,6 +75,22 @@ class TmCmd():
         with open(destination, "wb") as dest_file:
             # need to feedback a download bar to the screen here.
             dest_file.write(downloaded.content)
+
+
+    def http_upload(self, url, **kwargs):
+        """
+            Upload a file to a destination url.
+
+        :param 'url': [str] url link to a destination to upload a file.
+        :param 'file_path': [str] path to a file to upload on the local system.
+        :param 'kwargs': [dict] additional parameters:
+                        :header: [str] HTTP request header string.
+        """
+        headers = kwargs.get('headers', self.header)
+        payload = kwargs.get('payload', {})
+        files = payload.get('files', None)
+        upload = HTTP_REQUESTS.put(url, headers=headers, data=json.dumps(payload) )
+        return upload
 
 
     def to_json(self, content):
