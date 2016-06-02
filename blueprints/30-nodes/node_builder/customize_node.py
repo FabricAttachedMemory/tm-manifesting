@@ -215,7 +215,7 @@ def cleanup_sources_list(sys_img):
     try:
         remove_target(sources_base)
         remove_target(sources_list)
-        write_to_file(sources_list, 'deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm catapult main contrib non-free')
+        write_to_file(sources_list, sources_updated)
     except RuntimeError as err:
         raise RuntimeError('Error occured while cleaning sources.list!\n\
                             %s' % (err))
@@ -463,7 +463,7 @@ def execute(sys_img, **kwargs):
         # Remove untar'ed, modified fileimage folder
         remove_target(sys_img)
 
-        if kwargs.get('tftp', False):
+        if 'tftp' in kwargs:
             vmlinuz = os.path.dirname(cpio_file) + '/vmlinuz-4.3.0-3-arm64-l4tm'
             copy_target_into(cpio_file, kwargs['tftp'] + '/l4tm.cpio')
             copy_target_into(vmlinuz, kwargs['tftp'] + '/l4tm.vmlinuz')

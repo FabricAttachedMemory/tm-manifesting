@@ -131,7 +131,7 @@ def build_node(manifest, node_coord):
 
     tftp_arm = os.path.normpath(BP.config['TFTP'] + '/arm64/')
     # customization magic (not so much though).
-    node_hostname=BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
+    node_hostname = BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
 
     status = customize_node.execute(
         custom_tar, hostname=node_hostname, tftp=tftp_arm,
