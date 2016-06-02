@@ -11,7 +11,7 @@ import shlex
 
 def main(args):
     """
-        TODO: Docstr.
+        Generate golden image into the manifesting work directory using vmdebootstrap.
     """
     if os.getuid() != 0:
         raise RuntimeError('This script requires root permissions! (forgot sudo?)')
