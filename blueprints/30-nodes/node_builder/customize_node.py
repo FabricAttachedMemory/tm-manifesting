@@ -190,6 +190,7 @@ def fix_init(sys_img):
         raise RuntimeError('Error occured while fixing /init file!\n\
                             %s' % (err))
 
+#===============================================================================
 
 def cleanup_sources_list(sys_img):
     """
@@ -208,16 +209,45 @@ def cleanup_sources_list(sys_img):
         if _verbose:
             print ('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
         return None
+
+    sources_updated = set_sources_areas(sources_base, ['main', 'contrib', 'non-free'])
+
     try:
         remove_target(sources_base)
         remove_target(sources_list)
         write_to_file(sources_list, 'deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm catapult main contrib non-free')
-        #copy_target_into(sources_base, sources_list)
-        #remove_target(sources_base)
     except RuntimeError as err:
         raise RuntimeError('Error occured while cleaning sources.list!\n\
                             %s' % (err))
 
+
+def set_sources_areas(sources_list, areas):
+    """
+        Set mirror areas in the sources.list, e.g each line that starts with
+    'deb' will be modified the end of its line to provided "areas":
+      deb http://l4tm.mirror cattleprod main --> areas = ['non-free', 'contrib']
+      deb http://l4tm.mirror cattleprod non-free contrib
+
+    :param 'sources_list': [str] path to a sources.list file to be modified.
+    :param 'areas': [list] of areas to be set ['main', 'contrib', 'non-free']
+    :return: [str] modified sources.list content.
+    """
+    file_content = None
+    with open(sources_list, 'r') as file_obj:
+        file_content = file_obj.read()
+
+    sources_updated = []
+    for line in file_content.split('\n'):
+        if not line.startswith('deb'):
+            sources_updated.append(line)
+            continue
+        mirror = line.split(' ')[:3]
+        mirror.extend(['main', 'contrib', 'non-free'])
+        sources_updated.append(' '.join(mirror))
+
+    return '\n'.join(sources_updated)
+
+#===============================================================================
 
 def set_hostname(sys_img, hostname):
     """
@@ -357,32 +387,40 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
 
 def install_packages(sys_img, pkg_list):
     """
-        TODO
+        Install list of packages into the filesystem image.
+    Function will generate a bash script with a lines of "apt-get install" in it
+    that will perform an installation of the packages. Meanwhile, this function
+    will execute this script under the chrooted to "sys_img" operation. Also,
+    every action performed by generated install.sh script is logged into the
+    'sys_img + "/manifesting.log"' file.
+
+    :param 'sys_img': [str] path to filesystem image location to install packages to.
+    :param 'pkg_list': [list] of packages to be installed.
     """
+    if _verbose:
+        print(' - Preparing to install packages"... ')
+
     script_header = """#!/bin/bash
 set -ue
 exec > /manifesting.log 2>&1  # /tmp/ is cleaned out of boot
 apt-get update
     """
-
-    #install_script = sys_img + '/install.sh'
-    #to_copy = os.path.normpath(os.path.dirname(__file__) + '/install_packages.sh')
-    #copy_target_into(to_copy, install_script)
-    #os.chmod(install_script, 0o744)
     script_file = sys_img + '/install.sh'
     with open(script_file, 'w') as file_obj:
         file_obj.write(script_header)
         for pkg in pkg_list:
             cmd = 'apt-get install --assume-yes ' + pkg
-            #cmd = 'touch /pkg.log'
             file_obj.write(cmd)
+
     os.chmod(script_file, 0o744)
+
     try:
         cmd = 'chroot %s %s ' % (sys_img, '/install.sh')
         cmd = shlex.split(cmd)
         subprocess.call(cmd)
     except CalledProcessError as err:
         raise RuntimeError('Couldn\'t install packages! Error: %s' % err)
+
 
 #===============================================================================
 
