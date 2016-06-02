@@ -74,7 +74,7 @@ def webpage_upload():
         return render_all(errmsg='Upload("%s") failed: %s' %
             (file.filename, str(e)))
 
-    load_data()
+    _load_data()
     return render_all(okmsg='Upload %s complete' % file.filename)
 
 
@@ -126,6 +126,7 @@ def api_upload(manname=None):
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
 
+    _load_data()
     return response
 
 
