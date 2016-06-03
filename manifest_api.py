@@ -154,7 +154,6 @@ mainapp.config['rules'] = sorted('%s %s' % (rule.rule, rule.methods) for
 
 
 if __name__ == '__main__':
-    print('---------------_> I am main!')
     for rule in mainapp.config['rules']:
         print(rule)
 
