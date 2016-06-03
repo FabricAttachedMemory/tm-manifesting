@@ -126,6 +126,7 @@ def api_upload(manname=None):
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
 
+    _load_data()
     return response
 
 

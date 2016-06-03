@@ -8,16 +8,20 @@ import os
 import subprocess
 import shlex
 
+from configs import manifest_config as CFG
+
 
 def main(args):
     """
-        TODO: Docstr.
+        Generate golden image into the manifesting work directory using vmdebootstrap.
     """
     if os.getuid() != 0:
-        raise RuntimeError('This script requires root permissions! (forgot sudo?)')
+        raise RuntimeError('This script requires root permissions!')
 
-    if not os.path.isdir('/var/lib/tm-manifesting/sys-images/golden/'):
-        raise RuntimeError('"tm-manifesting/sys-images/golden/" does not exist!')
+    golden_dir = CFG.MANIFESTING_ROOT + '/sys-images/golden/'
+
+    if not os.path.isdir(golden_dir):
+        raise RuntimeError('"%s" does not exist!' % (golden_dir))
 
     cmd = "python ./configs/vmdebootstrap \
             --owner=$LOGNAME --no-default-configs \
