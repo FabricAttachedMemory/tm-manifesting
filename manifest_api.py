@@ -23,7 +23,7 @@ def parse_args():
                         action='store_true')
     return vars(PARSER.parse_known_args()[0])
 
-sys_args = parse_args()
+cmdline_args = parse_args()
 
 ###########################################################################
 # Everything is global until I figure out decorators on class methods
@@ -40,8 +40,8 @@ mainapp = Flask('tm_manifesting', static_url_path='/static')
 mainapp.config.from_object('configs.manifest_config')
 mainapp.config['url_prefix'] = '/manifesting'
 
-mainapp.config['VERBOSE'] = sys_args['verbose']
-mainapp.config['DRYRUN'] = sys_args['dry_run']
+mainapp.config['VERBOSE'] = cmdline_args['verbose']
+mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 
 # Moved from config file
 mainapp.config['API_VERSION'] = 1.0
