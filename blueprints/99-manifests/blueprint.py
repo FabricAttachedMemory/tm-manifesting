@@ -76,7 +76,7 @@ def webpage_upload():
         return render_all(errmsg='Upload("%s") failed: %s' %
             (file.filename, str(e)))
 
-    load_data()
+    _load_data()
     return render_all(okmsg='Upload %s complete' % file.filename)
 
 
@@ -153,6 +153,7 @@ def api_upload(manname=None):
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
 
+    _load_data()
     return response
 
 
@@ -208,7 +209,7 @@ class ManifestDestiny(object):
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
 
             if self._dry_run:
-                print('Dry mode: skipping manifest creation.')       # keep 'print', until Log to file is implemented
+                print('Dry run: skipping manifest creation.')       # keep 'print', until Log to file is implemented
                 return
 
             os.makedirs(self.dirpath, exist_ok=True)

@@ -103,6 +103,7 @@ def api_node_coord(node_coord=None):
 
 ###########################################################################
 
+
 def build_node(manifest, node_coord):
     """
         Generate a custom filesystem image based of the provided manifset.
@@ -116,7 +117,6 @@ def build_node(manifest, node_coord):
     if not os.path.exists(golden_tar):
         return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
 
-    img_name = manifest.basename.split('.json')[0]
     node_dir = os.path.join(sys_imgs, node_coord)
 
     try:
@@ -130,18 +130,22 @@ def build_node(manifest, node_coord):
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
+    tftp_arm = os.path.normpath(BP.config['TFTP'] + '/arm64/')
     # customization magic (not so much though).
+    node_hostname = BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
 
-    node_hostname=BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
     status = customize_node.execute(
-        custom_tar, hostname=node_hostname,
-        verbose=BP.config['VERBOSE'])
+        custom_tar, hostname=node_hostname, tftp=tftp_arm,
+        package_list=manifest.thedict['packages'],
+        verbose=BP.VERBOSE, debug=BP.DEBUG
+        )
 
     if status['status'] == 'success':
         return { 'success' : 'Manifest [%s] is set to node [%s]' %
                 (os.path.basename(manifest.basename), node_coord) }
     else:
         return { status['status'] : status['message'] }
+
 
 ###########################################################################
 _data = None    # node <-> manifest bindings
