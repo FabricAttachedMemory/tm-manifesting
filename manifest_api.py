@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -tt
-
+import argparse
 import glob
 import os
 import sys
@@ -13,6 +13,19 @@ from jinja2.environment import create_cache
 from tm_librarian.tmconfig import TMConfig
 
 ###########################################################################
+
+def parse_args():
+    """ Parse system arguments set from command line."""
+    PARSER = argparse.ArgumentParser(description='Manifesting server run settings')
+    PARSER.add_argument('--verbose', help='Make it talk.',
+                        type=int, default=0)
+    PARSER.add_argument('--dry-run', help='No action run; simulation of events.',
+                        action='store_true')
+    return vars(PARSER.parse_known_args()[0])
+
+cmdline_args = parse_args()
+
+###########################################################################
 # Everything is global until I figure out decorators on class methods
 # Flask sets mainapp.root_path to cwd.  Fix that, because I also need
 # it changed for other things.
@@ -20,8 +33,15 @@ from tm_librarian.tmconfig import TMConfig
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 mainapp = Flask('tm_manifesting', static_url_path='/static')
+
+###########################################################################
+# Set config variables for future use across the blueprints.
+
 mainapp.config.from_object('configs.manifest_config')
 mainapp.config['url_prefix'] = '/manifesting'
+
+mainapp.config['VERBOSE'] = cmdline_args['verbose']
+mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 
 # Moved from config file
 mainapp.config['API_VERSION'] = 1.0
@@ -131,6 +151,7 @@ def root():
 
 mainapp.config['rules'] = sorted('%s %s' % (rule.rule, rule.methods) for
     rule in mainapp.url_map.iter_rules())
+
 
 if __name__ == '__main__':
     for rule in mainapp.config['rules']:
