@@ -121,7 +121,11 @@ def api_upload(manname=None):
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
-        ManifestDestiny(manname, '', contentstr)
+        if BP.config['DRYRUN']:
+            _data[manname] = 'dry-run'
+            return response
+        else:
+            ManifestDestiny(manname, '', contentstr)
     except Exception as e:
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
