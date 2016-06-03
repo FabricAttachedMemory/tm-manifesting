@@ -118,7 +118,7 @@ def build_node(manifest, node_coord):
         return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
 
     if BP.config['DRYRUN']:
-        return { 'success' : 'Manifest [%s] is set to node [%s] (Dry run!)' %
+        return { 'success' : 'Manifest [%s] is set to node [%s]' %
                 (os.path.basename(manifest.basename), node_coord) }
 
     node_dir = os.path.join(sys_imgs, node_coord)

@@ -1,9 +1,7 @@
 '''TM Manifests'''
 import json
 import os
-import re
 import sys
-from shutil import copyfile
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify, g
@@ -83,31 +81,6 @@ def webpage_upload():
 ###########################################################################
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
-@BP.route('/api/%s/<manname>' % _ERS_element, methods=('DELETE',))
-def deletemanifest(manname=None):
-    """
-        Deletes an existing manifest from the service. Note that this simply deletes the
-    manifest itself and that any nodes configured to use the manifest will continue to
-    boot using the constructed kernel and root file system.
-    """
-    _load_data()
-    if not manname.endswith('.json'):
-        manname = manname + '.json'
-    manifest = BP.lookup(manname)
-    if not manifest:
-        response = jsonify( {'error' : 'Manifest "%s" was not found!' % manname} )
-        response.status_code = 404
-        return response
-
-    if not delete_manifest(manname):
-        response = jsonify ( {'error' : 'Error occured while removing "%s"!' % manname } )
-        response.status_code = 500
-        return response
-
-    response = jsonify({'success' : 'Manifest "%s" was removed!' % manname })
-    response.status_code = 200
-    return response
-
 
 @BP.route('/api/%s/' % _ERS_element)
 def listall():
@@ -116,6 +89,7 @@ def listall():
     to the server.
     """
     _load_data()
+
     all_manifests = { 'manifest' : [], 'directory' : [] }
     for manname, man_obj in _data.items():
         all_manifests['manifest'].append(manname)
@@ -135,7 +109,6 @@ def api(name=None):
 
 @BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
 def api_upload(manname=None):
-    _load_data()
     manname = manname.rstrip('/')
     response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
     response.status_code = 201  # but not always
@@ -148,7 +121,11 @@ def api_upload(manname=None):
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
-        ManifestDestiny(manname, '', contentstr, dry_run=BP.config['DRYRUN'])
+        if BP.config['DRYRUN']:
+            _data[manname] = 'dry-run'
+            return response
+        else:
+            ManifestDestiny(manname, '', contentstr)
     except Exception as e:
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
@@ -158,6 +135,7 @@ def api_upload(manname=None):
 
 
 ###########################################################################
+
 
 class ManifestDestiny(object):
 
@@ -188,10 +166,8 @@ class ManifestDestiny(object):
         return m
 
 
-    def __init__(self, dirpath, basename, contentstr=None, **kwargs):
+    def __init__(self, dirpath, basename, contentstr=None):
         '''If contentstr is given, it is an upload, else read a file.'''
-        self._dry_run = kwargs.get('dry_run', False)
-
         if contentstr is not None:
             # some kind of upload, basename not used
             self.thedict = self.validate_manifest(contentstr)
@@ -207,16 +183,9 @@ class ManifestDestiny(object):
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
-
-            if self._dry_run:
-                print('Dry run: skipping manifest creation.')       # keep 'print', until Log to file is implemented
-                return
-
             os.makedirs(self.dirpath, exist_ok=True)
-
             with open(os.path.join(self.dirpath, fname), 'w') as f:
                 f.write(contentstr)
-
             return
 
         assert '/' not in basename, 'basename is not a leaf element'
@@ -256,51 +225,6 @@ def _lookup(manifest_name):    # Can be sub/path/name
 
 def is_file_allowed(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in BP.allowed_files
-
-
-def delete_manifest(manname):
-    """
-        Move an existed uploaded manifest into a trashbin.
-
-    :param 'manname': [str] manifest to delete (move to trashbin)
-    :return: True - on success. False - on fail.
-    """
-    trashbin = BP.config['MANIFESTING_ROOT'] + '/trashbin/'
-    cp_from = BP.config['MANIFEST_UPLOADS'] + '/' + manname
-    cp_into = trashbin + '/' + manname
-
-    if not os.path.isdir(trashbin):
-        os.makedirs(trashbin)
-
-    while os.path.exists(cp_into):                  # increment file's copy index
-        cp_into = increment_copy_name(cp_into)      # until a 'non existing copy in the folder' is found.
-
-    try:
-        copyfile(cp_from, cp_into)
-        os.remove(BP.config['MANIFEST_UPLOADS'] + '/' + manname)
-    except EnvironmentError as err:
-        return False # Don't care about error. It failed doing "move" operating. That all I need.
-    return True
-
-
-def increment_copy_name(filename):
-    """
-        Add a '(number)' string to the end of filename. If pattern already in
-    the string - increment 'number' and return a new filename with an incremented
-    copy number, e.g. filename = manifest.json  ---> manifest.json(1)
-                      filename = manifest.json(1) ---> manifest.json(2)
-    """
-    pttrn_found = re.search(r'\(\d+\)', filename)
-    if pttrn_found is None:
-        return filename + '(1)'
-
-    if not filename.endswith(pttrn_found.group(0)):
-        return filename + '(1)'
-
-    curr_copy_index = re.search('\d+', pttrn_found.group(0)).group(0)
-    new_copy_index = int(curr_copy_index) + 1
-    return filename.replace(pttrn_found.group(0), '(%s)' % new_copy_index)
-
 
 ###########################################################################
 
