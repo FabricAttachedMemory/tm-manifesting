@@ -138,7 +138,7 @@
 							{
 								"coordinate": "soc_board/1/soc/1",
 								"id": "<public key from Key Manager>",
-								"socMacAddress": "02:02:02:02:02:02"
+								"socMacAddress": "00:15:17:a7:fd:fc"
 							},
 
 							"nodeMp": 
