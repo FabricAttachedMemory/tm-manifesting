@@ -134,7 +134,8 @@ def build_node(manifest, node_coord):
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
-    tftp_arm = os.path.normpath(BP.config['TFTP'] + '/arm64/')
+    tftp_arm = os.path.normpath(BP.config['TFTP'] + '/arm64/' + BP.nodes[node_coord][0].soc.socMacAddress)
+
     # customization magic (not so much though).
     node_hostname = BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
 
