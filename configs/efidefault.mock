@@ -1,7 +1,0 @@
-{set_opt}
-
-menuentry 'L4TM Catapult ARM64(Node: {mac})' {{
-  linux (tftp)/{filesystem_dir}/{mac}/l4tm.vmlinuz --append root=/dev/ram0 console=ttyAMA0 acpi=force rw
-  initrd (tftp)/{filesystem_dir}/{mac}/l4tm.cpio
-}}
-fi
