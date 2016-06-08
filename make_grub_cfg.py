@@ -65,7 +65,7 @@ class TMtftp(object):
                 file_obj.write(str(grub_menu_content))
 
         grub_cfg_file = self.root + '/' + self.grub_dir + '/grub.cfg'
-        grub_cfg_content = self.grub_cfg_tplt()
+        grub_cfg_content = self.grub_cfg_template()
 
         with open(grub_cfg_file, 'w') as file_obj:
             file_obj.write(grub_cfg_content)
@@ -81,7 +81,7 @@ class TMtftp(object):
         """
         env = {}
         for node in self.nodes:
-            efi_cfg = '%s/grub.%s' % (self.grub_dir, node.hostname)
+            efi_cfg = '%s/menu.%s' % (self.grub_dir, node.hostname)
             node_dir = '%s/%s/' % (self.filesystem_dir, node.hostname)
             env[os.path.normpath(efi_cfg)] = os.path.normpath(node_dir)
         return env
@@ -107,8 +107,11 @@ fi
         return template.format(node_fs=node_fs)
 
 
-    def grub_cfg_tplt(self):
+    def grub_cfg_template(self):
         """
+            Template string for a grub.cfg that is responsible for grub menu on
+        PXE boot. This code looks at each Node information and establish relationship
+        between its MAC address and a grub.{hostname} config file generated for it.
         """
         header_tplt = """set gfxmode=auto
 insmod efi_gop
@@ -127,7 +130,7 @@ fi
 
         for node in self.nodes:
             node_mac = node.soc.socMacAddress
-            menu_cfg = '%s/grub.%s' % (self.grub_dir, node.hostname)
+            menu_cfg = '%s/menu.%s' % (self.grub_dir, node.hostname)
             lines.append(menu_tplt.format(mac=node_mac, menu_cfg=menu_cfg))
 
         return '\n'.join(lines)
@@ -135,6 +138,11 @@ fi
 
 def make_dir(target):
     """
+        Create a directory tree at requested location. Don't do anything if folder
+    already exists.
+
+    :param 'target': [str] folder tree to create.
+    :return: False - folde laready exists. True - folders created. RuntimeError - couldn't create.
     """
     if os.path.isdir(target):
         return False
