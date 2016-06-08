@@ -81,8 +81,8 @@ class TMtftp(object):
         """
         env = {}
         for node in self.nodes:
-            efi_cfg = '%s/enc%s/grub.node%s' % (self.grub_dir, node.enc, node.node)
-            node_dir = '%s/enc%s/node%s/' % (self.filesystem_dir, node.enc, node.node)
+            efi_cfg = '%s/grub.%s' % (self.grub_dir, node.hostname)
+            node_dir = '%s/%s/' % (self.filesystem_dir, node.hostname)
             env[os.path.normpath(efi_cfg)] = os.path.normpath(node_dir)
         return env
 
@@ -127,7 +127,7 @@ fi
 
         for node in self.nodes:
             node_mac = node.soc.socMacAddress
-            menu_cfg = '%s/enc%s/grub.node%s' % (self.grub_dir, node.enc, node.node)
+            menu_cfg = '%s/grub.%s' % (self.grub_dir, node.hostname)
             lines.append(menu_tplt.format(mac=node_mac, menu_cfg=menu_cfg))
 
         return '\n'.join(lines)
