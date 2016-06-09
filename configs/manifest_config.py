@@ -18,3 +18,7 @@ L4TM_RELEASE = 'catapult'
 #L4TM_AREAS = ( 'main' )
 L4TM_AREAS = ( 'contrib', 'non-free' )
 #L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
+
+TFTP_ROOT = '/var/lib/tm-manifesting/tftp/'
+TFTP_IMAGES = 'images/'
+TFTP_GRUB = 'boot/grub/'

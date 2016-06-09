@@ -121,7 +121,7 @@ def build_node(manifest, node_coord):
         return { 'success' : 'Manifest [%s] is set to node [%s]' %
                 (os.path.basename(manifest.basename), node_coord) }
 
-    node_dir = os.path.join(sys_imgs, node_coord)
+    node_dir = os.path.join(sys_imgs, BP.nodes[node_coord][0].hostname)
 
     try:
         if not os.path.isdir(node_dir): # directory to save generated img into.
@@ -134,12 +134,14 @@ def build_node(manifest, node_coord):
     # prepare the environment to mess with - untar into node's coord folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
-    tftp_arm = os.path.normpath(BP.config['TFTP'] + '/arm64/')
+    #tftp_arm = BP.config['TFTP'] + '/arm64/enc%s/node%s/' % (BP.nodes[node_coord][0].enc, BP.nodes[node_coord][0].node)
+    tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
+
     # customization magic (not so much though).
     node_hostname = BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
 
     status = customize_node.execute(
-        custom_tar, hostname=node_hostname, tftp=tftp_arm,
+        custom_tar, hostname=node_hostname, tftp=tftp_node_dir,
         package_list=manifest.thedict['packages'],
         verbose=BP.VERBOSE, debug=BP.DEBUG
         )

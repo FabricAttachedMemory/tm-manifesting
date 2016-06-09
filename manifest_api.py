@@ -52,7 +52,8 @@ mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifest_uploads
 mainapp.config['GOLDEN_IMAGE'] = \
     os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
                                     '/golden/golden.arm.tar')
-mainapp.config['TFTP'] = os.path.normpath(mroot + '/tftp/')
+mainapp.config['TFTP_IMAGES'] = mainapp.config['TFTP_ROOT'] + mainapp.config['TFTP_IMAGES']
+
 
 # Move to cmdline processing
 mainapp.config['DEBUG'] = \
