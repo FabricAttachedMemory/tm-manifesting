@@ -29,7 +29,7 @@ class TmTask(tm_base.TmCmd):
         List all tasks present in the service in json string format.
         """
         super().listall(arg_list, **options)
-        url = "%s%s" % (self.url, 'task/')
+        url = "%s%s" % (self.url, 'tasks/')
         data = self.http_request(url)
         return self.to_json(data)
 

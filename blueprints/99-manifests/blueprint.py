@@ -110,22 +110,18 @@ def api(name=None):
 @BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
 def api_upload(manname=None):
     manname = manname.rstrip('/')
-    response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
-    response.status_code = 201  # but not always
-
-    if os.path.exists(BP.UPLOADS + '/' + manname):
-        response = jsonify({ 'warning' :
-            'An existed manifest "%s" has been replaced with new contents.' % manname })
-        response.status_code = 200
 
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
+
         if BP.config['DRYRUN']:
             _data[manname] = 'dry-run'
             return response
         else:
-            ManifestDestiny(manname, '', contentstr)
+            manifest = ManifestDestiny(manname, '', contentstr)
+        response = manifest.response
+
     except Exception as e:
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
@@ -182,10 +178,23 @@ class ManifestDestiny(object):
 
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
+
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
+            self.manifest_file = os.path.join(self.dirpath, fname)
+
+            if os.path.exists(self.manifest_file):
+                self.response = jsonify({ 'OK' :
+                            'An existing manifest has been replaced with the provided contents.' })
+                self.response.status_code = 200
+            else:
+                self.response = jsonify({ 'Created' :
+                            'A new manifest has been created with the provided contetnts!' })
+                self.response.status_code = 201
+
             os.makedirs(self.dirpath, exist_ok=True)
-            with open(os.path.join(self.dirpath, fname), 'w') as f:
+            with open(self.manifest_file, 'w') as f:
                 f.write(contentstr)
+
             return
 
         assert '/' not in basename, 'basename is not a leaf element'

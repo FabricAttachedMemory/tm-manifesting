@@ -17,8 +17,8 @@ BP = Blueprint(_ERS_element, __name__)
 # See blueprint registration in manifest_api.py, these are relative paths
 
 
-@BP.route('/%s/' % _ERS_element)
-@BP.route('/%s/<name>' % _ERS_element)
+@BP.route('/%ss/' % _ERS_element)       # Plural form of element name to query all tasks
+@BP.route('/%s/<name>' % _ERS_element)  # Singular - to get one task.
 def webpage(name=None):
 
     if name is None:
@@ -39,8 +39,8 @@ def webpage(name=None):
 # See blueprint registration in manifest_api.py, these are relative paths
 
 
-@BP.route('/api/%s/' % _ERS_element)
-@BP.route('/api/%s/<name>' % _ERS_element)
+@BP.route('/api/%ss/' % _ERS_element)       # Plural form of element name to query all tasks
+@BP.route('/api/%s/<name>' % _ERS_element)  # Singular - to get one task.
 def api(name=None):
     if name is None:
         tasks = [ ]
