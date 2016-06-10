@@ -17,6 +17,16 @@ BP = Blueprint(_ERS_element, __name__)
 
 _UPFROM = 'uploaded_from'
 
+
+@BP.before_request
+def before_reques():
+    """
+        Update _data variable before each request so that it's values are in sync
+    with the server's manifest files.
+    """
+    _load_data()
+
+
 ###########################################################################
 # HTML
 # See blueprint registration in manifest_api.py, these are relative paths
@@ -50,10 +60,6 @@ def webpage(name=None):
 
 @BP.route('/%s/' % _ERS_element, methods=('POST', ))
 def webpage_upload():
-    # files = request.files.getlist('file[]')
-    # for file in files:
-        # if not file: #
-            # continue
     try:
         assert int(request['Content-Length']) < 20000, 'Too big'
         file = request.files['file[]']
@@ -88,22 +94,67 @@ def listall():
         GET request that returns a json string response of all the manifests uploaded
     to the server.
     """
-    _load_data()
-
-    all_manifests = { 'manifest' : [], 'directory' : [] }
-    for manname, man_obj in _data.items():
-        all_manifests['manifest'].append(manname)
-        all_manifests['directory'].append(man_obj.dirpath)
-
-    response = jsonify(all_manifests)
+    response = jsonify({ 'manifests' : sorted(list(_data.keys())) })
     response.status_code = 200
     return response
 
 
-@BP.route('/api/%s/<path:name>/' % _ERS_element)
-def api(name=None):
-    response = jsonify({ 'error': 'API GET not implemented' })
-    response.status_code = 501
+@BP.route('/api/%s/<path:prefix>/' % _ERS_element)
+def manifests_by_prefix(prefix=None):
+    """
+        This function loops throw _data.items() and for each element in it, finds
+    match with the provided <prefix>. Note: the comparison is happening between
+    _data's known manifests and provided <prefix> with a .startswith() function.
+
+    :param <prefix>: [str] full path to user's manifesting folder e.g. "funutarama/" or "my/futurama/manifests/"
+
+    :return: json string of { 'manifests' : ['prefix/manifest_name']
+                Example: if there is a "futurama/" folder on the server that has
+                'bender' and 'fry' manifests, then request to ../manifest/futurama/
+                will reesult a respons of "{ 'manifests' : ['futurama/bender', 'futurama/fry'] }".
+    """
+    result = { 'manifests' : [] }
+
+    for known_prefix, man_obj in _data.items():
+        prefix = os.path.normpath(prefix)
+        if known_prefix.startswith(prefix):
+            man_output = os.path.join(prefix, man_obj.basename)
+            result['manifests'].append(man_output)
+
+    if not result['manifests']:
+        response = jsonify({ 'No Content' :         # FIXME: this message string is ignored for 204 status code
+                            'No Manifests are available under the provided path.'})
+        response.status_code = 204
+    else:
+        response = jsonify(result)
+        response.status_code = 200
+
+    return response
+
+
+@BP.route('/api/%s/<path:prefix>/<path:manname>' % _ERS_element)
+def show_manifest_json(prefix=None, manname=None):
+    """
+        Find a specifiec manifest with respect to <prefix> and a <manifest name>.
+
+    :param <prefix>: [str] full path to a user's manifesting folder.
+    :return: json string with the full contents of the manifest,
+            404 status code if manifest was not found.
+    """
+    prefix_manname = prefix + '/' + manname
+
+    found_manifest = _lookup(prefix_manname)
+
+    if not found_manifest:
+        response = jsonify({'Not Found' :
+                            'The specified manifest does not exist.' })
+        response.status_code = 404
+        return response
+
+    manifest_result = found_manifest.thedict
+    response = jsonify(manifest_result)
+    response.status_code = 200
+
     return response
 
 
@@ -130,7 +181,6 @@ def api_upload(manname=None):
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
 
-    _load_data()
     return response
 
 
@@ -218,7 +268,6 @@ class ManifestDestiny(object):
 
 ###########################################################################
 
-
 def _lookup(manifest_name):    # Can be sub/path/name
     return _data.get(manifest_name, None)
 
@@ -242,7 +291,12 @@ def _load_data():
         ]
         for dirpath, basename in manfiles:
             this = ManifestDestiny(dirpath, basename)
-            _data[basename] = this # search is expected by manifest name, (e.g. manifest.json, not path/manifest.json)
+
+            manname = os.path.join(dirpath, basename)                   # Build a manifest full path
+            manname = manname.split(BP.config['MANIFEST_UPLOADS'])[-1]  # relative to Manifest Uploads
+            manname = os.path.normpath(manname).strip('/')              # folder. e.g. user_folder/my_manifest
+
+            _data[manname] = this # search is expected by manifest name, (e.g. manifest.json, not path/manifest.json)
     except Exception as e:
         pass
 
