@@ -14,7 +14,8 @@ class TmManifest(tm_base.TmCmd):
         self.args = {
             'list' : self.listall,
             'get' : self.show,
-            'put' : self.upload
+            'put' : self.upload,
+            'delete' : self.delete
         }
 
 
@@ -81,3 +82,15 @@ class TmManifest(tm_base.TmCmd):
 
         data = self.http_upload(api_url, payload=payload)
         return self.to_json(data)
+
+
+    def delete(self, target, **options):
+        """
+            Not implemented
+        """
+        super().show(target, **options)
+        api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name)
+        data = self.http_delete(api_url)
+        return self.to_json(data)
+
+
