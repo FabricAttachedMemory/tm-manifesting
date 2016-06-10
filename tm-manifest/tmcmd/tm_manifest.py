@@ -86,7 +86,12 @@ class TmManifest(tm_base.TmCmd):
 
     def delete(self, target, **options):
         """
-            Not implemented
+    SYNOPSIS
+        delete <manifest name>
+    DESCRIPTION
+            Deletes an existing manifest from the service. Note that this simply deletes the
+        manifest itself and that any nodes configured to use the manifest will continue to
+        boot using the constructed kernel and root file system.
         """
         super().show(target, **options)
         api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name)
