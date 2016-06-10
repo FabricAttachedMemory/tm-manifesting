@@ -18,19 +18,9 @@ BP = Blueprint(_ERS_element, __name__)
 _UPFROM = 'uploaded_from'
 
 
-@BP.before_request
-def before_reques():
-    """
-        Update _data variable before each request so that it's values are in sync
-    with the server's manifest files.
-    """
-    _load_data()
-
-
 ###########################################################################
 # HTML
 # See blueprint registration in manifest_api.py, these are relative paths
-
 
 def render_all(okmsg='', errmsg=''):
     return render_template(
@@ -177,6 +167,7 @@ def api_upload(manname=None):
         response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
         response.status_code = 422
 
+    _load_data()
     return response
 
 
