@@ -93,6 +93,21 @@ class TmCmd():
         return upload
 
 
+    def http_delete(self, url, **kwargs):
+        """
+            Make an HTTP Delete request to delte a target on the server.
+
+        :param 'url': [str] url link to a destination to upload a file.
+        :param 'file_path': [str] path to a file to upload on the local system.
+        :param 'kwargs': [dict] additional parameters:
+                        :header: [str] HTTP request header string.
+        """
+        headers = kwargs.get('headers', self.header)
+        payload = kwargs.get('payload', {})
+        delete = HTTP_REQUESTS.delete(url, headers=headers)
+        return delete
+
+
     def to_json(self, content):
         """
             Convert concent to json string with class parameters.
