@@ -21,13 +21,14 @@ class TmManifest(tm_base.TmCmd):
     def listall(self, arg_list=None, **options):
         """
     SYNOPSIS
-        listnodes
+        list
 
     DESCRIPTION
         List all available manifests uploaded to the server.
         """
         super().listall(arg_list, **options)
         url = "%s%s" % (self.url, 'manifest/')
+
         data = self.http_request(url)
         return self.to_json(data)
 
@@ -35,15 +36,22 @@ class TmManifest(tm_base.TmCmd):
     def show(self, target, **options):
         """
     SYNOPSIS
-        getnode <name>
+        get <prefix/manname> (file-to-save-into)
 
     DESCRIPTION
-         Show the manifest name that the specified node is currently directed to
-        use at next boot.
+            Download a manifest from the server with the specified name to the specified
+        file.
+        (file-to-save-into) is an optional second parameter if you want to save
+        manifest into a file. Otherwise, it will only display manifest contents
+        on the screen without saving.
         """
         super().show(target, **options)
-        api_url = "%s%s%s" % (self.url, 'node/', self.show_name)
+        api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name)
         data = self.http_request(api_url)
+        if len(target) == 2:
+            save_into = target[1]
+            with open(save_into, 'w') as file_obj:
+                file_obj.write(self.to_json(data))
         return self.to_json(data)
 
 
