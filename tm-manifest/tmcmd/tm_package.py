@@ -24,7 +24,7 @@ class TmPackage(tm_base.TmCmd):
     string format.
         """
         super().listall(arg_list, **options)
-        url = "%s%s" % (self.url, 'package/')
+        url = "%s%s" % (self.url, 'packages/')
         data = self.http_request(url)
         return self.to_json(data)
 
