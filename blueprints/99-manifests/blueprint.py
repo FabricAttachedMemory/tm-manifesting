@@ -194,6 +194,7 @@ def delete_manifest(prefix=None, manname=None):
         response = jsonify({ 'Server Error' : 'Couln\'t remove requested manifest.' })
         response.status_code = 500
 
+    _load_data()
     return response
 
 ###########################################################################
