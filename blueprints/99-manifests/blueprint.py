@@ -171,6 +171,32 @@ def api_upload(manname=None):
     return response
 
 
+@BP.route('/api/%s/<path:prefix>/<path:manname>' % _ERS_element, methods=(('DELETE', )))
+def delete_manifest(prefix=None, manname=None):
+    """
+    """
+    prefix_manname = prefix + '/' + manname
+    found_manifest = _lookup(prefix_manname)
+    response = jsonify({ 'No Content' : 'The specified manifest has been deleted.' })
+    if not found_manifest:
+        response = jsonify({'Not Found' :
+                            'The specified manifest does not exist.' })
+        response.status_code = 404
+        return response
+
+    manifest_path = BP.config['MANIFEST_UPLOADS'] + '/' + prefix + '/' + manname
+
+    try:
+        if not BP.config['DRYRUN']:
+            os.remove(manifest_path)
+        response.status_code = 204
+    except EnvironmentError:
+        response = jsonify({ 'Server Error' : 'Couln\'t remove requested manifest.' })
+        response.status_code = 500
+
+    _load_data()
+    return response
+
 ###########################################################################
 
 

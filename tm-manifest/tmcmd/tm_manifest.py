@@ -14,7 +14,8 @@ class TmManifest(tm_base.TmCmd):
         self.args = {
             'list' : self.listall,
             'get' : self.show,
-            'put' : self.upload
+            'put' : self.upload,
+            'delete' : self.delete
         }
 
 
@@ -81,3 +82,20 @@ class TmManifest(tm_base.TmCmd):
 
         data = self.http_upload(api_url, payload=payload)
         return self.to_json(data)
+
+
+    def delete(self, target, **options):
+        """
+    SYNOPSIS
+        delete <manifest name>
+    DESCRIPTION
+            Deletes an existing manifest from the service. Note that this simply deletes the
+        manifest itself and that any nodes configured to use the manifest will continue to
+        boot using the constructed kernel and root file system.
+        """
+        super().show(target, **options)
+        api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name)
+        data = self.http_delete(api_url)
+        return self.to_json(data)
+
+
