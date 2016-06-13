@@ -50,21 +50,64 @@ def node_name(name=None):
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
 
+@BP.route('/api/%ss/' % _ERS_element, methods=('GET', ))
+def get_all_nodes():
+    """
+        List all nodes coordinates known to the server.
+    """
+    response = jsonify( { 'nodes' : list(BP.node_coords) } )
+    response.status_code = 200
+    return response
+
 
 @BP.route('/api/%s/' % _ERS_element, methods=('GET', ))
-def get_all():
-    response = jsonify( { 'node' : list(BP.node_coords) } )
-    response.status_code = 404
+def get_all_bindings():
+    """
+        List all node binded to a manifest with its status (ready, building or error).
+    """
+    _load_data()
+    if len(_data) == 0:
+        response = jsonify( { 'No Content' : 'There are no manifests associated with any nodes.' } )
+        response.status_code = 204
+        return response
+
+    nodes_info = {}
+    for node_coord, manname in _data.items():
+        nodes_info[node_coord] = {}
+
+        nodes_info[node_coord]['manifest'] = manname
+        nodes_info[node_coord]['status'] = 'Unknown'
+        nodes_info[node_coord]['message'] = BP.manifest_lookup(manname).thedict['_comment']
+
+    response = jsonify( { 'mappings' : nodes_info } )
+    response.status_code = 200
     return response
 
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('GET', ))
-def api_node(node_coord=None):
-    if node_coord not in _data:
-        response = jsonify({ '%s' % BP.nodes[node_coord][0].soc.socMacAddress : 'No binding' })
+def get_node_bind_info(node_coord=None):
+    """
+        List status json of the manifest binded to the node.
+    """
+    _load_data()
+    if node_coord not in BP.node_coords:
+        response = jsonify({ 'Not Found' : 'The specified node does not exist.' })
         response.status_code = 404
         return response
-    response = jsonify({ 'manifest' : _data[node_coord] })
+
+    manname = _data.get(node_coord, None)
+    manifest = BP.manifest_lookup(manname)
+    if not manifest:
+        response = jsonify( { 'No Content' : 'There is no manifest associated with the specified node.' } )
+        response.status_code = 204
+        return response
+
+    result = {}
+    result['manifest'] = manifest.prefix
+    result['status'] = 'Unknown'
+    result['message'] = manifest.thedict['_comment']
+
+    response = jsonify( result )
     response.status_code = 200
     return response
 
@@ -87,7 +130,7 @@ def api_node_coord(node_coord=None):
         err_status = 404
         assert manifest is not None, 'no such manifest ' + manname
 
-        _data[node_coord] = manifest.basename
+        _data[node_coord] = manifest.prefix + '/' + manifest.basename
         save(_data, BP.binding)     # FIXME: ignoring return value?
 
         img_resp = build_node(manifest, node_coord)
