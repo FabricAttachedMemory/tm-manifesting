@@ -64,8 +64,6 @@ def get_all_bindings():
     """
         List all node binded to a manifest with its status (ready, building or error).
     """
-    #_load_data()        # Paranoia. Keep it up to date with server, just in case...
-
     if len(_data) == 0:
         response = jsonify( { 'No Content' : 'There are no manifests associated with any nodes.' } )
         response.status_code = 204
@@ -89,8 +87,6 @@ def get_node_bind_info(node_coord=None):
     """
         List status json of the manifest binded to the node.
     """
-    #_load_data()    # Paranoia. Can't be too careful, right?
-
     if node_coord not in BP.node_coords:
         response = jsonify({ 'Not Found' : 'The specified node does not exist.' })
         response.status_code = 404
@@ -125,7 +121,7 @@ def bind_node_to_manifest(node_coord=None):
     :param 'node_coord': full node's coordinate with it's rack number, enclouse and etc.
     """
     try:
-        err_status = 413
+        resp_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Too big'
 
         # Validate requested manifest exists.
@@ -135,11 +131,11 @@ def bind_node_to_manifest(node_coord=None):
         manname = req_body['manifest']  # can have path in it
 
         manifest = BP.manifest_lookup(manname)
-        err_status = 404
+        resp_status = 404
         assert manifest is not None, 'no such manifest ' + manname
 
         _data[node_coord] = manifest.prefix + '/' + manifest.basename
-        save(_data, BP.binding)     # FIXME: ignoring return value?
+        save(_data, BP.binding)
 
         img_resp = build_node(manifest, node_coord)
 
@@ -149,7 +145,7 @@ def bind_node_to_manifest(node_coord=None):
     except (AssertionError, ValueError) as e:
         response = jsonify({ 'error': str(e) })
 
-    response.status_code = err_status
+    response.status_code = resp_status
     return response
 
 ###########################################################################
@@ -226,8 +222,6 @@ def save(content, destination):
         os.rename(new_file, destination)
     except IOError as error:
         print('Couldn\'t save file into "%s"' % (destination), file=sys.stderr)
-        return False
-    return True
 
 
 def _load_data():
