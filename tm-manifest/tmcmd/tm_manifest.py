@@ -94,7 +94,7 @@ class TmManifest(tm_base.TmCmd):
         boot using the constructed kernel and root file system.
         """
         super().show(target, **options)
-        api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name)
+        api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name.strip('/'))
         data = self.http_delete(api_url)
         return self.to_json(data)
 
