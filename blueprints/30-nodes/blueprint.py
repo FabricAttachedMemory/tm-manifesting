@@ -33,7 +33,6 @@ def node():
 
 @BP.route('/%s/<path:name>' % _ERS_element)
 def node_name(name=None):
-    manifest = BP.manifest_lookup('ZHOPA')
     try:
         node = BP.nodes[name][0]
         MACaddress = node.soc.socMacAddress
@@ -65,7 +64,8 @@ def get_all_bindings():
     """
         List all node binded to a manifest with its status (ready, building or error).
     """
-    _load_data()
+    #_load_data()        # Paranoia. Keep it up to date with server, just in case...
+
     if len(_data) == 0:
         response = jsonify( { 'No Content' : 'There are no manifests associated with any nodes.' } )
         response.status_code = 204
@@ -89,7 +89,8 @@ def get_node_bind_info(node_coord=None):
     """
         List status json of the manifest binded to the node.
     """
-    _load_data()
+    #_load_data()    # Paranoia. Can't be too careful, right?
+
     if node_coord not in BP.node_coords:
         response = jsonify({ 'Not Found' : 'The specified node does not exist.' })
         response.status_code = 404
@@ -103,7 +104,7 @@ def get_node_bind_info(node_coord=None):
         return response
 
     result = {}
-    result['manifest'] = manifest.prefix
+    result['manifest'] = manname
     result['status'] = 'Unknown'
     result['message'] = manifest.thedict['_comment']
 
@@ -114,8 +115,15 @@ def get_node_bind_info(node_coord=None):
 ####################### API (PUT) ###############################
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('PUT', ))
-def api_node_coord(node_coord=None):
-    print ('Requesting customization of "%s"...' % node_coord)
+def bind_node_to_manifest(node_coord=None):
+    """
+        Generate a custom filesystem image for a provided node coordinate using
+    a manifest specified in the request's body. The resulting FS image will be
+    placed at the server's location for PXE to pickup. This location is determined
+    by the node's hostname, e.g. tftp/arm64/hostname1/
+
+    :param 'node_coord': full node's coordinate with it's rack number, enclouse and etc.
+    """
     try:
         err_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Too big'
@@ -135,12 +143,12 @@ def api_node_coord(node_coord=None):
 
         img_resp = build_node(manifest, node_coord)
 
-        return jsonify(img_resp)
-
+        response = jsonify(img_resp)
     except BadRequest as e:
         response = e.get_response()
     except (AssertionError, ValueError) as e:
         response = jsonify({ 'error': str(e) })
+
     response.status_code = err_status
     return response
 
@@ -236,11 +244,6 @@ def _load_data():
             _data = json.loads(file_obj.read())
     except IOError as err:
         print ('Couldn\'t load "%s"' % (BP.binding), file=sys.stderr)
-    #for node in _data.keys():
-    #    if node not in BP.node_coords:
-    #        _data.remove(node)
-
-    return _data
 
 
 def _manifest_lookup(name):
