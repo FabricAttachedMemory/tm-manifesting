@@ -426,15 +426,26 @@ apt-get update
 
 def execute(sys_img, **kwargs):
     """
-        TODO: docstr
+        Customize Filesystem image: set hostname, cleanup sources.list, install
+    requested packages, create .CPIO from customized FS, remove FS's untar folder.
+
+    :param 'sys_img': [str path] location to the directory of the filesyste image to customize.
+    :param 'hostname': [kwargs] hostname for the filesystem image to use.
+    :param 'tftp': [kwargs] absolute path of the tftp server located on the server.
+    :param 'verbose': [kwargs] Make it talk. Verbosety from 1-5.
+    :param 'debug': [kwargs] Debugging mode.
+
+    :return: [dict] response with 'status' and 'message' key. 'status' = 200 means
+            success. 505 - failure. 'message' - is a message string that briefly
+            explains the error\success status.
     """
     global _verbose, _debug
 
     _verbose = kwargs['verbose']
     _debug = kwargs['debug']
     response = {}
-    response['status'] = 'success'  # Nothing happened yet! Let's keep it this way...
-    response['message'] = 'System image was created!'
+    response['status'] = 200  # No errors occured yet! Let's keep it this way...
+    response['message'] = 'System image was created.'
 
     #  It is OK to have a big exception block, because individual exception handling
     # is done inside those functions that would through RuntimeError (most of the
@@ -454,7 +465,7 @@ def execute(sys_img, **kwargs):
         # Symlink /init
         fix_init(sys_img)
 
-        install_packages(sys_img, kwargs['package_list'])
+        #install_packages(sys_img, kwargs['package_list'])
 
         cpio_file = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
         # Create .cpio file from untar.
@@ -469,14 +480,10 @@ def execute(sys_img, **kwargs):
             copy_target_into(vmlinuz, kwargs['tftp'] + '/l4tm.vmlinuz')
 
     except RuntimeError as err:
-         response['status'] = 'error'
-         response['message'] = 'Ouch! Runtime error! We expected that...\n[%s]' % (err)
+         response['status'] = 505
+         response['message'] = 'Runtime error during filesystem image build process! [Error: %s] ' % (err)
     except Exception as err:    # Its OK. Don't want Flask to through any traceback at user.
-        exc_type, _, exc_tb = sys.exc_info()
-        response['status'] = 'error'
-        response['message'] = 'Aye! Did not expect that!\n\
-                                [Error: %s]\n\
-                                [Line: %s]\n\
-                                [File: %s]' % \
-                                (exc_type, exc_tb.tb_lineno, os.path.basename(__file__))
+        response['status'] = 505
+        response['message'] = 'Aye! Unexpected Server error! [Error: %s]' % err
+
     return response

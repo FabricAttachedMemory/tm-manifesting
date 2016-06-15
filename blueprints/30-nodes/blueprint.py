@@ -132,18 +132,21 @@ def bind_node_to_manifest(node_coord=None):
 
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
-        assert manifest is not None, 'no such manifest ' + manname
+
+        if (manifest is None) or (node_coord not in BP.node_coords):
+            raise NameError('The specified node or manifest does not exist.')
 
         _data[node_coord] = manifest.prefix + '/' + manifest.basename
         save(_data, BP.binding)
 
-        img_resp = build_node(manifest, node_coord)
+        response = build_node(manifest, node_coord)
 
-        response = jsonify(img_resp)
-    except BadRequest as e:
-        response = e.get_response()
-    except (AssertionError, ValueError) as e:
-        response = jsonify({ 'error': str(e) })
+    except BadRequest as err:
+        response = err.get_response()
+    except (AssertionError, ValueError) as err:
+        response = jsonify({ 'error': str(err) })
+    except NameError as err:
+        response = jsonify({'Not Found' : str(err)})
 
     response.status_code = resp_status
     return response
@@ -153,39 +156,49 @@ def bind_node_to_manifest(node_coord=None):
 
 def build_node(manifest, node_coord):
     """
-        Generate a custom filesystem image based of the provided manifset.
+        Build Process to Generate a custom filesystem image based of the provided manifset.
 
     :param 'manifest': [str] absolute path to manifest.json file.
     :param 'node_coord': [int\str] node number or name to generate filesystem image for.
-    :return: [json str] success or error status.
+    :return: flask's response data.
     """
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     golden_tar = BP.config['GOLDEN_IMAGE']
+
     if not os.path.exists(golden_tar):
         return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
 
-    if BP.config['DRYRUN']:
-        return { 'success' : 'Manifest [%s] is set to node [%s]' %
-                (os.path.basename(manifest.basename), node_coord) }
+    node_dir = os.path.join(sys_imgs,
+                    BP.nodes[node_coord][0].hostname)   # place to build FS image at.
+    tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' +\
+                    BP.nodes[node_coord][0].hostname    # place for PXE to pickup FS img from.
+    node_hostname = BP.nodes[node_coord][0].hostname    # we except to find only one occurance of node_coord.
+    custom_tar = os.path.normpath(node_dir + '/untar/') # path for FS img 'untar' folder to mess with.
 
-    node_dir = os.path.join(sys_imgs, BP.nodes[node_coord][0].hostname)
+    response = jsonify( { 'Created' : 'The manifest for the specified node has been set. ' +
+                        'This means the build process for a fresh filesystem image has been started.' } )
+    response.status_code = 201
+
+    if glob(tftp_node_dir + '/*.cpio'):
+        response = jsonify( { 'OK' : 'The manifest for the specified node has been changed. ' +
+                        'This means the build process for a fresh filesystem image has been started.' } )
+        response.status_code = 200
+
+    # ------------------------- DRY RUN
+    if BP.config['DRYRUN']:
+        return response
+    # ---------------------------------
 
     try:
-        if not os.path.isdir(node_dir): # directory to save generated img into.
+        if not os.path.isdir(node_dir): # create directory to save generated img into.
             os.makedirs(node_dir)
     except (EnvironmentError):
-        return { 'error' : 'Couldn\'t create destination folder for the image at: %s' % (node_dir) }
+        response = jsonify ( {'Internal Server Error' : 'Failed to create "%s" folder! ' % (node_dir) } )
+        response.status_code = 505
+        return response
 
-    # absolute path (with a file name) to where Golden image .tar file will be coppied to
-    custom_tar = os.path.normpath(node_dir + '/untar/')
-    # prepare the environment to mess with - untar into node's coord folder of manifesting server.
+    # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
-
-    #tftp_arm = BP.config['TFTP'] + '/arm64/enc%s/node%s/' % (BP.nodes[node_coord][0].enc, BP.nodes[node_coord][0].node)
-    tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
-
-    # customization magic (not so much though).
-    node_hostname = BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
 
     status = customize_node.execute(
         custom_tar, hostname=node_hostname, tftp=tftp_node_dir,
@@ -193,12 +206,11 @@ def build_node(manifest, node_coord):
         verbose=BP.VERBOSE, debug=BP.DEBUG
         )
 
-    if status['status'] == 'success':
-        return { 'success' : 'Manifest [%s] is set to node [%s]' %
-                (os.path.basename(manifest.basename), node_coord) }
-    else:
-        return { status['status'] : status['message'] }
+    if status['status'] == 505:
+        response = jsonify ( { 'Internal Server Error' : status['message'] } )
+        response.status_code = 505
 
+    return response
 
 ###########################################################################
 _data = None    # node <-> manifest bindings
