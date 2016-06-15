@@ -231,6 +231,7 @@ class ManifestDestiny(object):
 
     def __init__(self, dirpath, basename, contentstr=None):
         '''If contentstr is given, it is an upload, else read a file.'''
+        self.prefix = dirpath.split(BP.UPLOADS)[-1].strip('/')
         if contentstr is not None:
             # some kind of upload, basename not used
             self.thedict = self.validate_manifest(contentstr)

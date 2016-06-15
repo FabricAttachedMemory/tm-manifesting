@@ -12,6 +12,7 @@ class TmNode(tm_base.TmCmd):
         super().__init__()
         self.args = {
             'listnodes' : self.listall,
+            'listbindings': self.listbindings,
             'getnode' : self.show,
             'setnode' : self.set_node
         }
@@ -26,7 +27,21 @@ class TmNode(tm_base.TmCmd):
         List all the available nodes in the network.
         """
         super().listall(arg_list, **options)
-        url = "%s%s" % (self.url, 'node/')
+        url = "%s%s" % (self.url, 'nodes')
+        data = self.http_request(url)
+        return self.to_json(data)
+
+
+    def listbindings(self, arg_list=None, **options):
+        """
+    SYNOPSIS
+        listbindings
+
+    DESCRIPTION
+        List all the manifests assigned to a specific node.
+        """
+        super().listall(arg_list, **options)
+        url = "%s%s" % (self.url, 'node')
         data = self.http_request(url)
         return self.to_json(data)
 
