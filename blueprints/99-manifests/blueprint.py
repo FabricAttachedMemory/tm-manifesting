@@ -1,7 +1,9 @@
 '''TM Manifests'''
 import json
 import os
+from glob import glob
 import sys
+from shutil import rmtree
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify, g
@@ -148,8 +150,9 @@ def show_manifest_json(prefix=None, manname=None):
     return response
 
 
-@BP.route('/api/%s/' % _ERS_element, methods=(('PUT', )))
-@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
+@BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))
+@BP.route('/api/%s/<manname>' % _ERS_element, methods=(('POST', )))
+@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('POST', )))
 def api_upload(manname='/'):
     manname = manname.rstrip('/')   # when prefix is provided, get rid of preceding '/'
 
@@ -173,7 +176,6 @@ def api_upload(manname='/'):
 
 
 @BP.route('/api/%s/<manname>' % _ERS_element, methods=(('DELETE', )))
-@BP.route('/api/%s/<manname>/' % _ERS_element, methods=(('DELETE', )))
 @BP.route('/api/%s/<path:prefix>/<path:manname>' % _ERS_element, methods=(('DELETE', )))
 def delete_manifest(prefix=None, manname=None):
     """
@@ -202,6 +204,7 @@ def delete_manifest(prefix=None, manname=None):
     try:
         if not BP.config['DRYRUN']:
             os.remove(manifest_server_path)
+            # TODO: cleanout prefix folders of the manifests if it is empty!
         response.status_code = 204
     except EnvironmentError:
         response = jsonify({ 'Server Error' : 'Couln\'t remove requested manifest.' })
@@ -209,6 +212,7 @@ def delete_manifest(prefix=None, manname=None):
 
     _load_data()
     return response
+
 
 ###########################################################################
 
