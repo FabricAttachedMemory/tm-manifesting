@@ -4,6 +4,8 @@ from glob import glob
 import json
 import os
 import sys
+import shlex
+import subprocess
 from shutil import copyfile
 from pdb import set_trace
 
@@ -74,8 +76,11 @@ def get_all_bindings():
         nodes_info[node_coord] = {}
 
         nodes_info[node_coord]['manifest'] = manname
-        nodes_info[node_coord]['status'] = 'Unknown'
-        nodes_info[node_coord]['message'] = BP.manifest_lookup(manname).thedict['_comment']
+        if node_coord in BP.node_status:
+            nodes_info[node_coord]['status'] = BP.node_status[node_coord].poll()
+        else:
+            nodes_info[node_coord]['status'] = 'Unknown'
+        nodes_info[node_coord]['message'] = 'Life is good.'
 
     response = jsonify( { 'mappings' : nodes_info } )
     response.status_code = 200
@@ -197,19 +202,34 @@ def build_node(manifest, node_coord):
         response.status_code = 505
         return response
 
+    set_trace()
     # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
-    status = customize_node.execute(
-        custom_tar, hostname=node_hostname, tftp=tftp_node_dir,
-        package_list=manifest.thedict['packages'],
-        verbose=BP.VERBOSE, debug=BP.DEBUG
-        )
+    build_args = {}
+    build_args['fs_image'] = custom_tar
+    build_args['hostname'] = node_hostname
+    build_args['tftp'] = tftp_node_dir
+    build_args['verbose'] = BP.VERBOSE
+    build_args['debug'] = BP.DEBUG
+    build_args['packages'] = manifest.thedict['packages']
 
+    cmd_args = []
+    for key, val in build_args.items():
+        cmd_args.append('--%s %s' % (key, val))
+    cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
+    cmd = shlex.split(cmd)
+
+    status = subprocess.Popen(cmd)
+
+    BP.node_status[node_coord] = status
+
+    #status = customize_node.execute(build_args)
+    """
     if status['status'] == 505:
         response = jsonify ( { 'Internal Server Error' : status['message'] } )
         response.status_code = 505
-
+    """
     return response
 
 ###########################################################################
@@ -262,6 +282,7 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
+    BP.node_status = {}
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
