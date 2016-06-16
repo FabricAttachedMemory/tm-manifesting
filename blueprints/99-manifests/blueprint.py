@@ -1,7 +1,9 @@
 '''TM Manifests'''
 import json
 import os
+from glob import glob
 import sys
+from shutil import rmtree
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify, g
@@ -148,9 +150,11 @@ def show_manifest_json(prefix=None, manname=None):
     return response
 
 
-@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
-def api_upload(manname=None):
-    manname = manname.rstrip('/')
+@BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))
+@BP.route('/api/%s/<manname>' % _ERS_element, methods=(('POST', )))
+@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('POST', )))
+def api_upload(manname='/'):
+    manname = manname.rstrip('/')   # when prefix is provided, get rid of preceding '/'
 
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
@@ -171,11 +175,22 @@ def api_upload(manname=None):
     return response
 
 
+@BP.route('/api/%s/<manname>' % _ERS_element, methods=(('DELETE', )))
 @BP.route('/api/%s/<path:prefix>/<path:manname>' % _ERS_element, methods=(('DELETE', )))
 def delete_manifest(prefix=None, manname=None):
     """
+        Deletes an existing manifest from the service. Note that this simply deletes the
+    manifest itself and that any nodes configured to use the manifest will continue to
+    boot using the constructed kernel and root file system.
+
+    :param 'prefix': manifest path used to create PUT manifest to a server
+    :param 'manname': manifest file name
     """
-    prefix_manname = prefix + '/' + manname
+    if prefix:      # is prefix path provided?
+        prefix_manname = (prefix + '/' + manname).strip('/')
+    else:
+        prefix_manname = manname
+
     found_manifest = _lookup(prefix_manname)
     response = jsonify({ 'No Content' : 'The specified manifest has been deleted.' })
     if not found_manifest:
@@ -184,11 +199,12 @@ def delete_manifest(prefix=None, manname=None):
         response.status_code = 404
         return response
 
-    manifest_path = BP.config['MANIFEST_UPLOADS'] + '/' + prefix + '/' + manname
+    manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + prefix_manname
 
     try:
         if not BP.config['DRYRUN']:
-            os.remove(manifest_path)
+            os.remove(manifest_server_path)
+            # TODO: cleanout prefix folders of the manifests if it is empty!
         response.status_code = 204
     except EnvironmentError:
         response = jsonify({ 'Server Error' : 'Couln\'t remove requested manifest.' })
@@ -196,6 +212,7 @@ def delete_manifest(prefix=None, manname=None):
 
     _load_data()
     return response
+
 
 ###########################################################################
 
