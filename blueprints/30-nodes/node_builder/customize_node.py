@@ -480,3 +480,23 @@ def execute(sys_img, **kwargs):
                                 [File: %s]' % \
                                 (exc_type, exc_tb.tb_lineno, os.path.basename(__file__))
     return response
+
+
+if __name__ == '__main__':
+    """ Parse commind line arguments and pass it directly into execute() function. """
+    parser = argparse.ArgumentParser(description='Options to customize FS image.')
+
+    parser.add_argument('--fs-image', help='Path to the filesystem image untar folder.')
+    parser.add_argument('--hostname', help='Hostname to use for the FS image.')
+    parser.add_argument('--tftp', help='Absolute path to the TFTP folder on the server.')
+
+    parser.add_argument('-v', '--verbose', help='Make it talk. Verbosity levels from 1 to 5',
+                        nargs='?', action=VAction, dest='verbose')
+    parser.add_argument('--debug', help='Matrix has you. Enter the debugging mode.',
+                        action='store_true')
+
+    args, _ = parser.parse_known_args()
+    execute(args)
+
+    raise SystemExit(0)
+
