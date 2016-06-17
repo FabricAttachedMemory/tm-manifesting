@@ -120,6 +120,7 @@ def bind_node_to_manifest(node_coord=None):
 
     :param 'node_coord': full node's coordinate with it's rack number, enclouse and etc.
     """
+    set_trace()
     try:
         resp_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Too big'
@@ -166,8 +167,12 @@ def build_node(manifest, node_coord):
     golden_tar = BP.config['GOLDEN_IMAGE']
 
     if not os.path.exists(golden_tar):
-        return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
+        response = jsonify({ 'Internal Server Error' :
+                            'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord })
+        response.status_code = 505
+        return response
 
+    # ----------------------- Variables
     node_dir = os.path.join(sys_imgs,
                     BP.nodes[node_coord][0].hostname)   # place to build FS image at.
     tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' +\

@@ -91,7 +91,6 @@ def listall():
     return response
 
 
-@BP.route('/api/%s/<path:prefix>/' % _ERS_element)
 def manifests_by_prefix(prefix=None):
     """
         This function loops throw _data.items() and for each element in it, finds
@@ -124,18 +123,21 @@ def manifests_by_prefix(prefix=None):
     return response
 
 
-@BP.route('/api/%s/<path:prefix>/<path:manname>' % _ERS_element)
+@BP.route('/api/%s/<path:manname>' % _ERS_element)
 def show_manifest_json(prefix=None, manname=None):
     """
-        Find a specifiec manifest with respect to <prefix> and a <manifest name>.
+        Find a specifiec manifest with respect to <prefix> and a <manifest name>
+    and return a manifest contents in the response body.
 
     :param <prefix>: [str] full path to a user's manifesting folder.
     :return: json string with the full contents of the manifest,
             404 status code if manifest was not found.
     """
-    prefix_manname = prefix + '/' + manname
+    set_trace()
+    if manname.endswith('/'):
+        return manifests_by_prefix(manname)
 
-    found_manifest = _lookup(prefix_manname)
+    found_manifest = _lookup(manname)
 
     if not found_manifest:
         response = jsonify({'Not Found' :

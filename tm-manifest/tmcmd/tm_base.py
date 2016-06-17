@@ -55,7 +55,7 @@ class TmCmd():
         """
         headers = options.get('headers', self.header)
         if options.get('payload', False):
-            http_resp = HTTP_REQUESTS.post(url, options['payload'], headers=headers)
+            http_resp = HTTP_REQUESTS.put(url, options['payload'], headers=headers)
         else:
             http_resp = HTTP_REQUESTS.get(url, headers=headers)
         jsondata = self.to_json(http_resp)

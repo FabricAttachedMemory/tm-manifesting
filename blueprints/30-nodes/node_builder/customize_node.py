@@ -465,7 +465,7 @@ def execute(sys_img, **kwargs):
         # Symlink /init
         fix_init(sys_img)
 
-        #install_packages(sys_img, kwargs['package_list'])
+        ##install_packages(sys_img, kwargs['package_list'])
 
         cpio_file = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
         # Create .cpio file from untar.
