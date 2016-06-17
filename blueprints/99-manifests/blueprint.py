@@ -6,7 +6,7 @@ import sys
 from shutil import rmtree
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, g
+from flask import Blueprint, render_template, request, jsonify, g, abort
 from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
@@ -80,7 +80,7 @@ def webpage_upload():
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
 
-@BP.route('/api/%s/' % _ERS_element)
+@BP.route('/apii/%s/' % _ERS_element)
 def listall():
     """
         GET request that returns a json string response of all the manifests uploaded
@@ -91,7 +91,7 @@ def listall():
     return response
 
 
-@BP.route('/api/%s/<path:manname>' % _ERS_element, strict_slashes=True)
+@BP.route('/api/%s/<path:manname>' % _ERS_element)
 def show_manifest_json(prefix=None, manname=None):
     """
         Find a specifiec manifest with respect to <prefix> and a <manifest name>
@@ -150,6 +150,9 @@ def list_manifests_by_prefix(prefix=None):
     return response
 
 
+# Must have a string greater or equal to 1. Thats the RULE for Flask's rules (<path:str>).
+# Reference: http://werkzeug.pocoo.org/docs/0.11/routing/
+# Thus, to upload to root folder, we have to have a separate rule.
 @BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))                  # Upload to the Root
 @BP.route('/api/%s/<path:prefix>' % _ERS_element, methods=(('POST', )))    # Upload with prefix/
 def api_upload(prefix=''):
@@ -163,6 +166,8 @@ def api_upload(prefix=''):
                         when prefix = '' (no prefix passed), then manifest will
                         be uploaded into root of the server's manifest uploads location.
     """
+    if not prefix.endswith('/'):    # No trailing slash? Not a good request!
+        abort(404)
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
@@ -182,7 +187,7 @@ def api_upload(prefix=''):
     return response
 
 
-@BP.route('/api/%s/<path:manname>' % _ERS_element, methods=(('DELETE', )))
+@BP.route('/apii/%s/<path:manname>' % _ERS_element, methods=(('DELETE', )))
 def delete_manifest(manname=None):
     """
         Deletes an existing manifest from the service. Note that this simply deletes the
