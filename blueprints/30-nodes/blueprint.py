@@ -120,7 +120,6 @@ def bind_node_to_manifest(node_coord=None):
 
     :param 'node_coord': full node's coordinate with it's rack number, enclouse and etc.
     """
-    set_trace()
     try:
         resp_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Too big'
