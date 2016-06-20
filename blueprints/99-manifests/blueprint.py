@@ -6,7 +6,7 @@ import sys
 from shutil import rmtree
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, g
+from flask import Blueprint, render_template, request, jsonify, g, abort
 from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
@@ -80,7 +80,7 @@ def webpage_upload():
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
 
-@BP.route('/api/%s/' % _ERS_element)
+@BP.route('/apii/%s/' % _ERS_element)
 def listall():
     """
         GET request that returns a json string response of all the manifests uploaded
@@ -91,8 +91,35 @@ def listall():
     return response
 
 
-@BP.route('/api/%s/<path:prefix>/' % _ERS_element)
-def manifests_by_prefix(prefix=None):
+@BP.route('/api/%s/<path:manname>' % _ERS_element)
+def show_manifest_json(prefix=None, manname=None):
+    """
+        Find a specifiec manifest with respect to <prefix> and a <manifest name>
+    and return a manifest contents in the response body.
+
+    :param <prefix>: [str] full path to a user's manifesting folder.
+    :return: json string with the full contents of the manifest,
+            404 status code if manifest was not found.
+    """
+    if manname.endswith('/'):
+        return list_manifests_by_prefix(manname)
+
+    found_manifest = _lookup(manname)
+
+    if not found_manifest:
+        response = jsonify({'Not Found' :
+                            'The specified manifest does not exist.' })
+        response.status_code = 404
+        return response
+
+    manifest_result = found_manifest.thedict
+    response = jsonify(manifest_result)
+    response.status_code = 200
+
+    return response
+
+
+def list_manifests_by_prefix(prefix=None):
     """
         This function loops throw _data.items() and for each element in it, finds
     match with the provided <prefix>. Note: the comparison is happening between
@@ -108,13 +135,12 @@ def manifests_by_prefix(prefix=None):
     result = { 'manifests' : [] }
 
     for known_prefix, man_obj in _data.items():
-        prefix = os.path.normpath(prefix)
         if known_prefix.startswith(prefix):
             man_output = os.path.join(prefix, man_obj.basename)
             result['manifests'].append(man_output)
 
     if not result['manifests']:
-        response = jsonify({ 'No Content' :         # FIXME: this message string is ignored for 204 status code
+        response = jsonify({ 'No Content' : # Message will not be returned due to 204!
                             'No Manifests are available under the provided path.'})
         response.status_code = 204
     else:
@@ -124,47 +150,33 @@ def manifests_by_prefix(prefix=None):
     return response
 
 
-@BP.route('/api/%s/<path:prefix>/<path:manname>' % _ERS_element)
-def show_manifest_json(prefix=None, manname=None):
+# Must have a string greater or equal to 1. Thats the RULE for Flask's rules (<path:str>).
+# Reference: http://werkzeug.pocoo.org/docs/0.11/routing/
+# Thus, to upload to root folder, we have to have a separate rule.
+@BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))                  # Upload to the Root
+@BP.route('/api/%s/<path:prefix>' % _ERS_element, methods=(('POST', )))    # Upload with prefix/
+def api_upload(prefix=''):
     """
-        Find a specifiec manifest with respect to <prefix> and a <manifest name>.
+        Upload a manifest to the server using json string body content provided
+    in the Request.
 
-    :param <prefix>: [str] full path to a user's manifesting folder.
-    :return: json string with the full contents of the manifest,
-            404 status code if manifest was not found.
+    :param 'prefix': (optional) namespace path for the manifest to upload to.
+                    e.g: when prefix = futurama/world/, manifest will be uploaded
+                        into that provided folder on the server.
+                        when prefix = '' (no prefix passed), then manifest will
+                        be uploaded into root of the server's manifest uploads location.
     """
-    prefix_manname = prefix + '/' + manname
-
-    found_manifest = _lookup(prefix_manname)
-
-    if not found_manifest:
-        response = jsonify({'Not Found' :
-                            'The specified manifest does not exist.' })
-        response.status_code = 404
-        return response
-
-    manifest_result = found_manifest.thedict
-    response = jsonify(manifest_result)
-    response.status_code = 200
-
-    return response
-
-
-@BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))
-@BP.route('/api/%s/<manname>' % _ERS_element, methods=(('POST', )))
-@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('POST', )))
-def api_upload(manname='/'):
-    manname = manname.rstrip('/')   # when prefix is provided, get rid of preceding '/'
-
+    if not prefix.endswith('/'):    # No trailing slash? Not a good request!
+        abort(404)
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
 
         if BP.config['DRYRUN']:
-            _data[manname] = 'dry-run'
+            _data[prefix] = 'dry-run'
             return response
         else:
-            manifest = ManifestDestiny(manname, '', contentstr)
+            manifest = ManifestDestiny(prefix, '', contentstr)
         response = manifest.response
 
     except Exception as e:
@@ -175,9 +187,8 @@ def api_upload(manname='/'):
     return response
 
 
-@BP.route('/api/%s/<manname>' % _ERS_element, methods=(('DELETE', )))
-@BP.route('/api/%s/<path:prefix>/<path:manname>' % _ERS_element, methods=(('DELETE', )))
-def delete_manifest(prefix=None, manname=None):
+@BP.route('/apii/%s/<path:manname>' % _ERS_element, methods=(('DELETE', )))
+def delete_manifest(manname=None):
     """
         Deletes an existing manifest from the service. Note that this simply deletes the
     manifest itself and that any nodes configured to use the manifest will continue to
@@ -186,12 +197,7 @@ def delete_manifest(prefix=None, manname=None):
     :param 'prefix': manifest path used to create PUT manifest to a server
     :param 'manname': manifest file name
     """
-    if prefix:      # is prefix path provided?
-        prefix_manname = (prefix + '/' + manname).strip('/')
-    else:
-        prefix_manname = manname
-
-    found_manifest = _lookup(prefix_manname)
+    found_manifest = _lookup(manname)
     response = jsonify({ 'No Content' : 'The specified manifest has been deleted.' })
     if not found_manifest:
         response = jsonify({'Not Found' :
@@ -199,7 +205,7 @@ def delete_manifest(prefix=None, manname=None):
         response.status_code = 404
         return response
 
-    manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + prefix_manname
+    manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + manname
 
     try:
         if not BP.config['DRYRUN']:
