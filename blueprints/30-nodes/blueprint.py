@@ -75,7 +75,7 @@ def get_all_bindings():
 
         nodes_info[node_coord]['manifest'] = manname
         nodes_info[node_coord]['status'] = 'Unknown'
-        nodes_info[node_coord]['message'] = BP.manifest_lookup(manname).thedict['_comment']
+        nodes_info[node_coord]['message'] = 'Status not implemented.'
 
     response = jsonify( { 'mappings' : nodes_info } )
     response.status_code = 200
@@ -102,7 +102,7 @@ def get_node_bind_info(node_coord=None):
     result = {}
     result['manifest'] = manname
     result['status'] = 'Unknown'
-    result['message'] = manifest.thedict['_comment']
+    result['message'] = 'Status not implemented.'
 
     response = jsonify( result )
     response.status_code = 200
@@ -122,7 +122,7 @@ def bind_node_to_manifest(node_coord=None):
     """
     try:
         resp_status = 413
-        assert int(request.headers['Content-Length']) < 200, 'Too big'
+        assert int(request.headers['Content-Length']) < 200, 'Content is too long! Max size is 200 characters.'
 
         # Validate requested manifest exists.
         contentstr = request.get_data().decode()
@@ -132,7 +132,7 @@ def bind_node_to_manifest(node_coord=None):
 
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
-        assert manifest is not None, 'no such manifest ' + manname
+        assert (manifest is not None) and node_coord in BP.node_coords, "The specified node or manifest does not exist."
 
         _data[node_coord] = manifest.prefix + '/' + manifest.basename
         save(_data, BP.binding)
@@ -141,9 +141,10 @@ def bind_node_to_manifest(node_coord=None):
 
         response = jsonify(img_resp)
     except BadRequest as e:
+        resp_status = 500
         response = e.get_response()
-    except (AssertionError, ValueError) as e:
-        response = jsonify({ 'error': str(e) })
+    except (AssertionError, ValueError) as err:
+        response = jsonify( { 'error' : str(err) } )
 
     response.status_code = resp_status
     return response
