@@ -293,13 +293,19 @@ def set_hosts(sys_img, hostname):
                             %s' % (err))
 
 
-def untar(target, destination=None):
+def untar(target, destination=None, overwrite=True):
     """
         Untar target file into the same folder of the tarball.
+    Note: When untaring into the existing folder to overwrite files, extractAall
+    function of the 'tar' module will throw a FileExistsError if it can not overwrite
+    broken symlinks of the tar'ed file.
 
     :param 'target': [str] path to a .tar file to untar.
+    :param 'destination': [str] path to where to extract target into.
+    :param 'overwrite': [bool] Flag to overwrite destination if it is already exists.
     :return: [str] path to untared content.
     """
+    set_trace()
     if destination is None:
         destination = os.path.dirname(target)
         destination = os.path.normpath('%s/untar/' % destination)
@@ -311,6 +317,11 @@ def untar(target, destination=None):
             tar_obj.extractall(path=destination)
     except (tarfile.ReadError, tarfile.ExtractError) as err:
         raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
+    except (FileExistsError) as err:
+        if not overwrite:
+            raise RuntimeError('Couldn\'t untar into existed folder! Destination: ' % (destination))
+        remove_target(destination)                  # Removing destination to safly untar target.
+        untar(target, destination, overwrite=False) # 'overwrite' works as a base case for the recursion.
 
     return destination
 
