@@ -75,7 +75,7 @@ def get_all_bindings():
 
         nodes_info[node_coord]['manifest'] = manname
         nodes_info[node_coord]['status'] = 'Unknown'
-        nodes_info[node_coord]['message'] = BP.manifest_lookup(manname).thedict['_comment']
+        nodes_info[node_coord]['message'] = 'Status not implemented.'
 
     response = jsonify( { 'mappings' : nodes_info } )
     response.status_code = 200
@@ -102,7 +102,7 @@ def get_node_bind_info(node_coord=None):
     result = {}
     result['manifest'] = manname
     result['status'] = 'Unknown'
-    result['message'] = manifest.thedict['_comment']
+    result['message'] = 'Status not implemented.'
 
     response = jsonify( result )
     response.status_code = 200
