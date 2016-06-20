@@ -304,7 +304,6 @@ def untar(target, destination=None):
 
     :param 'target': [str] path to a .tar file to untar.
     :param 'destination': [str] path to where to extract target into.
-    :param 'overwrite': [bool] Flag to overwrite destination if it is already exists.
     :return: [str] path to untared content.
     """
     if destination is None:
@@ -318,7 +317,7 @@ def untar(target, destination=None):
         with tarfile.open(target) as tar_obj:
             tar_obj.extractall(path=destination)
     except (tarfile.ReadError, tarfile.ExtractError) as err:
-        raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
+        raise RuntimeError ('Error occured while untaring "%s"! [Error: %s]' % (target,err))
 
     return destination
 
@@ -462,7 +461,7 @@ def execute(sys_img, **kwargs):
         # Symlink /init
         fix_init(sys_img)
 
-        #install_packages(sys_img, kwargs['package_list'])
+        install_packages(sys_img, kwargs['package_list'])
 
         cpio_file = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
         # Create .cpio file from untar.

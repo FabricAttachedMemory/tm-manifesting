@@ -143,8 +143,8 @@ def bind_node_to_manifest(node_coord=None):
     except BadRequest as e:
         resp_status = 500
         response = e.get_response()
-    except (ValueError,AssertionError) as err:
-        response = jsonify( { 'Error' : str(err) } )
+    except (AssertionError, ValueError) as err:
+        response = jsonify( { 'error' : str(err) } )
 
     response.status_code = resp_status
     return response
