@@ -138,15 +138,11 @@ def bind_node_to_manifest(node_coord=None):
         save(_data, BP.binding)
 
         response = build_node(manifest, node_coord)
-
-        response = jsonify(img_resp)
     except BadRequest as e:
-        resp_status = 500
-        response = e.get_response()
+        response = make_response(e.get_response(), 500)
     except (AssertionError, ValueError) as err:
-        response = jsonify( { 'error' : str(err) } )
+        response = make_response(str(err), resp_status)
 
-    response.status_code = resp_status
     return response
 
 ###########################################################################
@@ -177,14 +173,10 @@ def build_node(manifest, node_coord):
     node_hostname = BP.nodes[node_coord][0].hostname    # we except to find only one occurance of node_coord.
     custom_tar = os.path.normpath(node_dir + '/untar/') # path for FS img 'untar' folder to mess with.
 
-    response = jsonify( { 'Created' : 'The manifest for the specified node has been set. ' +
-                        'This means the build process for a fresh filesystem image has been started.' } )
-    response.status_code = 201
+    response = make_response('The manifest for the specified node has been set.', 201)
 
     if glob(tftp_node_dir + '/*.cpio'):
-        response = jsonify( { 'OK' : 'The manifest for the specified node has been changed. ' +
-                        'This means the build process for a fresh filesystem image has been started.' } )
-        response.status_code = 200
+        response = make_response('The manifest for the specified node has been changed.', 200)
 
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
@@ -195,9 +187,7 @@ def build_node(manifest, node_coord):
         if not os.path.isdir(node_dir): # create directory to save generated img into.
             os.makedirs(node_dir)
     except (EnvironmentError):
-        response = jsonify ( {'Internal Server Error' : 'Failed to create "%s" folder! ' % (node_dir) } )
-        response.status_code = 505
-        return response
+        return make_response('Failed to create "%s"!' % node_dir, 505)
 
     # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
@@ -209,8 +199,7 @@ def build_node(manifest, node_coord):
         )
 
     if status['status'] == 505:
-        response = jsonify ( { 'Internal Server Error' : status['message'] } )
-        response.status_code = 505
+        response = make_response(status['message'], 505)
 
     return response
 
