@@ -82,8 +82,10 @@ def remove_target(target):
             print(' - Removing "%s"...' % (filename))
         if os.path.isdir(target):
             rmtree(target)      # remove directory tree
-        else:
+        elif os.path.exists(target):
             os.remove(target)   # remove single file
+        else:
+            return None         # Nothing to remove: 'target' does not exist.
     except EnvironmentError as e:
         raise RuntimeError ('Couldn\'t remove "%s"!' % (filename))
 
@@ -293,7 +295,7 @@ def set_hosts(sys_img, hostname):
                             %s' % (err))
 
 
-def untar(target, destination=None, overwrite=True):
+def untar(target, destination=None):
     """
         Untar target file into the same folder of the tarball.
     Note: When untaring into the existing folder to overwrite files, extractAall
@@ -302,10 +304,8 @@ def untar(target, destination=None, overwrite=True):
 
     :param 'target': [str] path to a .tar file to untar.
     :param 'destination': [str] path to where to extract target into.
-    :param 'overwrite': [bool] Flag to overwrite destination if it is already exists.
     :return: [str] path to untared content.
     """
-    set_trace()
     if destination is None:
         destination = os.path.dirname(target)
         destination = os.path.normpath('%s/untar/' % destination)
@@ -313,15 +313,11 @@ def untar(target, destination=None, overwrite=True):
     try:
         if _verbose:
             print(' - Uncompressing "%s" into "%s"...' % (target, destination))
+        remove_target(destination)  # remove_target will handle destination if it exists or not
         with tarfile.open(target) as tar_obj:
             tar_obj.extractall(path=destination)
     except (tarfile.ReadError, tarfile.ExtractError) as err:
-        raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
-    except (FileExistsError) as err:
-        if not overwrite:
-            raise RuntimeError('Couldn\'t untar into existed folder! Destination: ' % (destination))
-        remove_target(destination)                  # Removing destination to safly untar target.
-        untar(target, destination, overwrite=False) # 'overwrite' works as a base case for the recursion.
+        raise RuntimeError ('Error occured while untaring "%s"! [Error: %s]' % (target,err))
 
     return destination
 
