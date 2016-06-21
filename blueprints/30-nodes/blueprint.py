@@ -88,25 +88,19 @@ def get_node_bind_info(node_coord=None):
         List status json of the manifest binded to the node.
     """
     if node_coord not in BP.node_coords:
-        response = jsonify({ 'Not Found' : 'The specified node does not exist.' })
-        response.status_code = 404
-        return response
+        return make_response('The specified node does not exist.' ,404)
 
     manname = _data.get(node_coord, None)
     manifest = BP.manifest_lookup(manname)
     if not manifest:
-        response = jsonify( { 'No Content' : 'There is no manifest associated with the specified node.' } )
-        response.status_code = 204
-        return response
+        return make_response('There is no manifest associated with the specified node.', 204)
 
     result = {}
     result['manifest'] = manname
     result['status'] = 'Unknown'
     result['message'] = 'Status not implemented.'
 
-    response = jsonify( result )
-    response.status_code = 200
-    return response
+    return make_response(jsonify(result), 200)
 
 ####################### API (PUT) ###############################
 
@@ -160,10 +154,7 @@ def build_node(manifest, node_coord):
     golden_tar = BP.config['GOLDEN_IMAGE']
 
     if not os.path.exists(golden_tar):
-        response = jsonify({ 'Internal Server Error' :
-                            'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord })
-        response.status_code = 505
-        return response
+        return make_response('Can not generate image! No "Golden Image" found!' % node_coord, 505)
 
     # ----------------------- Variables
     node_dir = os.path.join(sys_imgs,
@@ -198,8 +189,8 @@ def build_node(manifest, node_coord):
         verbose=BP.VERBOSE, debug=BP.DEBUG
         )
 
-    if status['status'] == 505:
-        response = make_response(status['message'], 505)
+    if status['status'] >= 500:
+        response = make_response(status['message'], status['status'])
 
     return response
 
