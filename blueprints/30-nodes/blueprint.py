@@ -88,25 +88,19 @@ def get_node_bind_info(node_coord=None):
         List status json of the manifest binded to the node.
     """
     if node_coord not in BP.node_coords:
-        response = jsonify({ 'Not Found' : 'The specified node does not exist.' })
-        response.status_code = 404
-        return response
+        return make_response('The specified node does not exist.' ,404)
 
     manname = _data.get(node_coord, None)
     manifest = BP.manifest_lookup(manname)
     if not manifest:
-        response = jsonify( { 'No Content' : 'There is no manifest associated with the specified node.' } )
-        response.status_code = 204
-        return response
+        return make_response('There is no manifest associated with the specified node.', 204)
 
     result = {}
     result['manifest'] = manname
     result['status'] = 'Unknown'
     result['message'] = 'Status not implemented.'
 
-    response = jsonify( result )
-    response.status_code = 200
-    return response
+    return make_response(jsonify(result), 200)
 
 ####################### API (PUT) ###############################
 
@@ -137,16 +131,12 @@ def bind_node_to_manifest(node_coord=None):
         _data[node_coord] = manifest.prefix + '/' + manifest.basename
         save(_data, BP.binding)
 
-        img_resp = build_node(manifest, node_coord)
-
-        response = jsonify(img_resp)
+        response = build_node(manifest, node_coord)
     except BadRequest as e:
-        resp_status = 500
-        response = e.get_response()
+        response = make_response(e.get_response(), 500)
     except (AssertionError, ValueError) as err:
-        response = jsonify( { 'error' : str(err) } )
+        response = make_response(str(err), resp_status)
 
-    response.status_code = resp_status
     return response
 
 ###########################################################################
@@ -154,39 +144,44 @@ def bind_node_to_manifest(node_coord=None):
 
 def build_node(manifest, node_coord):
     """
-        Generate a custom filesystem image based of the provided manifset.
+        Build Process to Generate a custom filesystem image based of the provided manifset.
 
     :param 'manifest': [str] absolute path to manifest.json file.
     :param 'node_coord': [int\str] node number or name to generate filesystem image for.
-    :return: [json str] success or error status.
+    :return: flask's response data.
     """
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     golden_tar = BP.config['GOLDEN_IMAGE']
+
     if not os.path.exists(golden_tar):
-        return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
+        return make_response('Can not generate image! No "Golden Image" found!' % node_coord, 505)
 
+    # ----------------------- Variables
+    node_dir = os.path.join(sys_imgs,
+                    BP.nodes[node_coord][0].hostname)   # place to build FS image at.
+    tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' +\
+                    BP.nodes[node_coord][0].hostname    # place for PXE to pickup FS img from.
+    node_hostname = BP.nodes[node_coord][0].hostname    # we except to find only one occurance of node_coord.
+    custom_tar = os.path.normpath(node_dir + '/untar/') # path for FS img 'untar' folder to mess with.
+
+    response = make_response('The manifest for the specified node has been set.', 201)
+
+    if glob(tftp_node_dir + '/*.cpio'):
+        response = make_response('The manifest for the specified node has been changed.', 200)
+
+    # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
-        return { 'success' : 'Manifest [%s] is set to node [%s]' %
-                (os.path.basename(manifest.basename), node_coord) }
-
-    node_dir = os.path.join(sys_imgs, BP.nodes[node_coord][0].hostname)
+        return response
+    # ---------------------------------
 
     try:
-        if not os.path.isdir(node_dir): # directory to save generated img into.
+        if not os.path.isdir(node_dir): # create directory to save generated img into.
             os.makedirs(node_dir)
     except (EnvironmentError):
-        return { 'error' : 'Couldn\'t create destination folder for the image at: %s' % (node_dir) }
+        return make_response('Failed to create "%s"!' % node_dir, 505)
 
-    # absolute path (with a file name) to where Golden image .tar file will be coppied to
-    custom_tar = os.path.normpath(node_dir + '/untar/')
-    # prepare the environment to mess with - untar into node's coord folder of manifesting server.
+    # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
-
-    #tftp_arm = BP.config['TFTP'] + '/arm64/enc%s/node%s/' % (BP.nodes[node_coord][0].enc, BP.nodes[node_coord][0].node)
-    tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
-
-    # customization magic (not so much though).
-    node_hostname = BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
 
     status = customize_node.execute(
         custom_tar, hostname=node_hostname, tftp=tftp_node_dir,
@@ -194,12 +189,10 @@ def build_node(manifest, node_coord):
         verbose=BP.VERBOSE, debug=BP.DEBUG
         )
 
-    if status['status'] == 'success':
-        return { 'success' : 'Manifest [%s] is set to node [%s]' %
-                (os.path.basename(manifest.basename), node_coord) }
-    else:
-        return { status['status'] : status['message'] }
+    if status['status'] >= 500:
+        response = make_response(status['message'], status['status'])
 
+    return response
 
 ###########################################################################
 _data = None    # node <-> manifest bindings
