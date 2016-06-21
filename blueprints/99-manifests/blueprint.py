@@ -91,8 +91,9 @@ def listall():
     return response
 
 
+@BP.route('/api/%s/' % _ERS_element)
 @BP.route('/api/%s/<path:manname>' % _ERS_element)
-def show_manifest_json(prefix=None, manname=None):
+def show_manifest_json(manname='/'):
     """
         Find a specifiec manifest with respect to <prefix> and a <manifest name>
     and return a manifest contents in the response body.
@@ -102,7 +103,7 @@ def show_manifest_json(prefix=None, manname=None):
             404 status code if manifest was not found.
     """
     if manname.endswith('/'):
-        return list_manifests_by_prefix(manname)
+        return list_manifests_by_prefix(manname.lstrip('/'))
 
     found_manifest = _lookup(manname)
 
@@ -134,10 +135,9 @@ def list_manifests_by_prefix(prefix=None):
     """
     result = { 'manifests' : [] }
 
-    for known_prefix, man_obj in _data.items():
-        if known_prefix.startswith(prefix):
-            man_output = os.path.join(prefix, man_obj.basename)
-            result['manifests'].append(man_output)
+    for man_path, man_obj in _data.items():
+        if man_path.startswith(prefix) or not prefix:
+            result['manifests'].append(man_path)
 
     if not result['manifests']:
         response = jsonify({ 'No Content' : # Message will not be returned due to 204!
@@ -187,7 +187,7 @@ def api_upload(prefix=''):
     return response
 
 
-@BP.route('/apii/%s/<path:manname>' % _ERS_element, methods=(('DELETE', )))
+@BP.route('/api/%s/<path:manname>' % _ERS_element, methods=(('DELETE', )))
 def delete_manifest(manname=None):
     """
         Deletes an existing manifest from the service. Note that this simply deletes the
