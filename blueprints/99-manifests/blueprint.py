@@ -6,7 +6,7 @@ import sys
 from shutil import rmtree
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, g, abort
+from flask import Blueprint, render_template, request, jsonify, g, abort, make_response
 from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
@@ -86,9 +86,12 @@ def listall():
         GET request that returns a json string response of all the manifests uploaded
     to the server.
     """
-    response = jsonify({ 'manifests' : sorted(list(_data.keys())) })
-    response.status_code = 200
-    return response
+    all_manifests = sorted(list(_data.keys()))
+    msg = jsonify({ 'manifests' : all_manifests })
+    status_code = 200
+    if not all_manifests:
+        status_code = 204
+    return make_response(msg, 204)
 
 
 @BP.route('/api/%s/' % _ERS_element)
@@ -108,16 +111,9 @@ def show_manifest_json(manname='/'):
     found_manifest = _lookup(manname)
 
     if not found_manifest:
-        response = jsonify({'Not Found' :
-                            'The specified manifest does not exist.' })
-        response.status_code = 404
-        return response
+        return make_response('The specified manifest does not exist.', 404)
 
-    manifest_result = found_manifest.thedict
-    response = jsonify(manifest_result)
-    response.status_code = 200
-
-    return response
+    return make_response(jsonify(found_manifest.thedict), 200)
 
 
 def list_manifests_by_prefix(prefix=None):
@@ -140,12 +136,9 @@ def list_manifests_by_prefix(prefix=None):
             result['manifests'].append(man_path)
 
     if not result['manifests']:
-        response = jsonify({ 'No Content' : # Message will not be returned due to 204!
-                            'No Manifests are available under the provided path.'})
-        response.status_code = 204
+        response = make_response('No Manifests are available under the provided path.', 204)
     else:
-        response = jsonify(result)
-        response.status_code = 200
+        response = make_response(jsonify(result), 200)
 
     return response
 
@@ -166,7 +159,7 @@ def api_upload(prefix=''):
                         when prefix = '' (no prefix passed), then manifest will
                         be uploaded into root of the server's manifest uploads location.
     """
-    if not prefix.endswith('/'):    # No trailing slash? Not a good request!
+    if prefix and not prefix.endswith('/'):    # No trailing slash? Not a good request!
         abort(404)
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
@@ -180,8 +173,7 @@ def api_upload(prefix=''):
         response = manifest.response
 
     except Exception as e:
-        response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
-        response.status_code = 422
+        response = make_response('Failed to upload manifest! [Error: %s]' % str(e), 422)
 
     _load_data()
     return response
@@ -198,12 +190,10 @@ def delete_manifest(manname=None):
     :param 'manname': manifest file name
     """
     found_manifest = _lookup(manname)
-    response = jsonify({ 'No Content' : 'The specified manifest has been deleted.' })
+    response = make_response('The specified manifest has been deleted.', 204)
+
     if not found_manifest:
-        response = jsonify({'Not Found' :
-                            'The specified manifest does not exist.' })
-        response.status_code = 404
-        return response
+        return make_response('The specified manifest does not exist.', 404)
 
     manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + manname
 
@@ -211,10 +201,8 @@ def delete_manifest(manname=None):
         if not BP.config['DRYRUN']:
             os.remove(manifest_server_path)
             # TODO: cleanout prefix folders of the manifests if it is empty!
-        response.status_code = 204
     except EnvironmentError:
-        response = jsonify({ 'Server Error' : 'Couln\'t remove requested manifest.' })
-        response.status_code = 500
+        response = make_response('Failed to remove requested manifest!', 500)
 
     _load_data()
     return response
@@ -274,13 +262,9 @@ class ManifestDestiny(object):
             self.manifest_file = os.path.join(self.dirpath, fname)
 
             if os.path.exists(self.manifest_file):
-                self.response = jsonify({ 'OK' :
-                            'An existing manifest has been replaced with the provided contents.' })
-                self.response.status_code = 200
+                self.response = make_response('An existing manifest has been replaced with the provided contents.', 200)
             else:
-                self.response = jsonify({ 'Created' :
-                            'A new manifest has been created with the provided contetnts!' })
-                self.response.status_code = 201
+                self.response = make_response('A new manifest has been created with the provided contetnts!', 201)
 
             os.makedirs(self.dirpath, exist_ok=True)
             with open(self.manifest_file, 'w') as f:
