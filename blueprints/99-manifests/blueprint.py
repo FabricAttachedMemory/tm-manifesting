@@ -80,7 +80,7 @@ def webpage_upload():
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
 
-@BP.route('/apii/%s/' % _ERS_element)
+@BP.route('/api/%s/' % _ERS_element)
 def listall():
     """
         GET request that returns a json string response of all the manifests uploaded
@@ -91,7 +91,7 @@ def listall():
     status_code = 200
     if not all_manifests:
         status_code = 204
-    return make_response(msg, 204)
+    return make_response(msg, status_code)
 
 
 @BP.route('/api/%s/' % _ERS_element)
