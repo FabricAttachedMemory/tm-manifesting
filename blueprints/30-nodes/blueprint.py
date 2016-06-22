@@ -185,7 +185,6 @@ def build_node(manifest, node_coord):
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % node_dir, 505)
 
-    set_trace()
     # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
@@ -203,12 +202,13 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
     cmd = shlex.split(cmd)
 
+    set_trace()
     status = subprocess.Popen(cmd)
 
     BP.node_status[node_coord] = status
 
-    if status['status'] >= 500:
-        response = make_response(status['message'], status['status'])
+    #if status['status'] >= 500:
+    #    response = make_response(status['message'], status['status'])
 
     return response
 
