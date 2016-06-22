@@ -93,25 +93,19 @@ def get_node_bind_info(node_coord=None):
         List status json of the manifest binded to the node.
     """
     if node_coord not in BP.node_coords:
-        response = jsonify({ 'Not Found' : 'The specified node does not exist.' })
-        response.status_code = 404
-        return response
+        return make_response('The specified node does not exist.' ,404)
 
     manname = _data.get(node_coord, None)
     manifest = BP.manifest_lookup(manname)
     if not manifest:
-        response = jsonify( { 'No Content' : 'There is no manifest associated with the specified node.' } )
-        response.status_code = 204
-        return response
+        return make_response('There is no manifest associated with the specified node.', 204)
 
     result = {}
     result['manifest'] = manname
     result['status'] = 'Unknown'
-    result['message'] = manifest.thedict['_comment']
+    result['message'] = 'Status not implemented.'
 
-    response = jsonify( result )
-    response.status_code = 200
-    return response
+    return make_response(jsonify(result), 200)
 
 ####################### API (PUT) ###############################
 
@@ -127,7 +121,7 @@ def bind_node_to_manifest(node_coord=None):
     """
     try:
         resp_status = 413
-        assert int(request.headers['Content-Length']) < 200, 'Too big'
+        assert int(request.headers['Content-Length']) < 200, 'Content is too long! Max size is 200 characters.'
 
         # Validate requested manifest exists.
         contentstr = request.get_data().decode()
@@ -137,23 +131,17 @@ def bind_node_to_manifest(node_coord=None):
 
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
-
-        if (manifest is None) or (node_coord not in BP.node_coords):
-            raise NameError('The specified node or manifest does not exist.')
+        assert (manifest is not None) and node_coord in BP.node_coords, "The specified node or manifest does not exist."
 
         _data[node_coord] = manifest.prefix + '/' + manifest.basename
         save(_data, BP.binding)
 
         response = build_node(manifest, node_coord)
-
-    except BadRequest as err:
-        response = err.get_response()
+    except BadRequest as e:
+        response = make_response(e.get_response(), 500)
     except (AssertionError, ValueError) as err:
-        response = jsonify({ 'error': str(err) })
-    except NameError as err:
-        response = jsonify({'Not Found' : str(err)})
+        response = make_response(str(err), resp_status)
 
-    response.status_code = resp_status
     return response
 
 ###########################################################################
@@ -171,8 +159,9 @@ def build_node(manifest, node_coord):
     golden_tar = BP.config['GOLDEN_IMAGE']
 
     if not os.path.exists(golden_tar):
-        return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
+        return make_response('Can not generate image! No "Golden Image" found!' % node_coord, 505)
 
+    # ----------------------- Variables
     node_dir = os.path.join(sys_imgs,
                     BP.nodes[node_coord][0].hostname)   # place to build FS image at.
     tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' +\
@@ -180,14 +169,10 @@ def build_node(manifest, node_coord):
     node_hostname = BP.nodes[node_coord][0].hostname    # we except to find only one occurance of node_coord.
     custom_tar = os.path.normpath(node_dir + '/untar/') # path for FS img 'untar' folder to mess with.
 
-    response = jsonify( { 'Created' : 'The manifest for the specified node has been set. ' +
-                        'This means the build process for a fresh filesystem image has been started.' } )
-    response.status_code = 201
+    response = make_response('The manifest for the specified node has been set.', 201)
 
     if glob(tftp_node_dir + '/*.cpio'):
-        response = jsonify( { 'OK' : 'The manifest for the specified node has been changed. ' +
-                        'This means the build process for a fresh filesystem image has been started.' } )
-        response.status_code = 200
+        response = make_response('The manifest for the specified node has been changed.', 200)
 
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
@@ -198,9 +183,7 @@ def build_node(manifest, node_coord):
         if not os.path.isdir(node_dir): # create directory to save generated img into.
             os.makedirs(node_dir)
     except (EnvironmentError):
-        response = jsonify ( {'Internal Server Error' : 'Failed to create "%s" folder! ' % (node_dir) } )
-        response.status_code = 505
-        return response
+        return make_response('Failed to create "%s"!' % node_dir, 505)
 
     set_trace()
     # prepare FS environment to customize - untar into node's folder of manifesting server.
@@ -224,12 +207,9 @@ def build_node(manifest, node_coord):
 
     BP.node_status[node_coord] = status
 
-    #status = customize_node.execute(build_args)
-    """
-    if status['status'] == 505:
-        response = jsonify ( { 'Internal Server Error' : status['message'] } )
-        response.status_code = 505
-    """
+    if status['status'] >= 500:
+        response = make_response(status['message'], status['status'])
+
     return response
 
 ###########################################################################

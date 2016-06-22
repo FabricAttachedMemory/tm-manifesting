@@ -82,8 +82,10 @@ def remove_target(target):
             print(' - Removing "%s"...' % (filename))
         if os.path.isdir(target):
             rmtree(target)      # remove directory tree
-        else:
+        elif os.path.exists(target):
             os.remove(target)   # remove single file
+        else:
+            return None         # Nothing to remove: 'target' does not exist.
     except EnvironmentError as e:
         raise RuntimeError ('Couldn\'t remove "%s"!' % (filename))
 
@@ -296,8 +298,12 @@ def set_hosts(sys_img, hostname):
 def untar(target, destination=None):
     """
         Untar target file into the same folder of the tarball.
+    Note: When untaring into the existing folder to overwrite files, extractAall
+    function of the 'tar' module will throw a FileExistsError if it can not overwrite
+    broken symlinks of the tar'ed file.
 
     :param 'target': [str] path to a .tar file to untar.
+    :param 'destination': [str] path to where to extract target into.
     :return: [str] path to untared content.
     """
     if destination is None:
@@ -307,10 +313,11 @@ def untar(target, destination=None):
     try:
         if _verbose:
             print(' - Uncompressing "%s" into "%s"...' % (target, destination))
-        with tarfile.open(target, 'r:') as tar_obj:
+        remove_target(destination)  # remove_target will handle destination if it exists or not
+        with tarfile.open(target) as tar_obj:
             tar_obj.extractall(path=destination)
     except (tarfile.ReadError, tarfile.ExtractError) as err:
-        raise RuntimeError ('Error occured while untaring "%s"! [%s]' % (target,err))
+        raise RuntimeError ('Error occured while untaring "%s"! [Error: %s]' % (target,err))
 
     return destination
 
