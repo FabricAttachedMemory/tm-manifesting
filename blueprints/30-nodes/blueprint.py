@@ -97,13 +97,22 @@ def get_node_bind_info(node_coord=None):
 
     manname = _data.get(node_coord, None)
     manifest = BP.manifest_lookup(manname)
-    if not manifest:
+    if not manifest and node_coord not in BP.node_status:
         return make_response('There is no manifest associated with the specified node.', 204)
 
+    status = BP.node_status[node_coord].poll()
     result = {}
     result['manifest'] = manname
-    result['status'] = 'Unknown'
     result['message'] = 'Status not implemented.'
+    if status is None:
+        result['status'] = 'building'
+    elif status != 0:
+        result['status'] = 'error'
+        set_trace()
+        out, err = BP.node_status[node_coord].communicate()
+        result['message'] = str(err)
+    else:
+        result['status'] = 'done'
 
     return make_response(jsonify(result), 200)
 
@@ -189,7 +198,7 @@ def build_node(manifest, node_coord):
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
     build_args = {}
-    build_args['fs_image'] = custom_tar
+    build_args['fs-image'] = custom_tar
     build_args['hostname'] = node_hostname
     build_args['tftp'] = tftp_node_dir
     build_args['verbose'] = BP.VERBOSE
@@ -202,8 +211,7 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
     cmd = shlex.split(cmd)
 
-    set_trace()
-    status = subprocess.Popen(cmd)
+    status = subprocess.Popen(cmd, stderr=subprocess.PIPE)
 
     BP.node_status[node_coord] = status
 

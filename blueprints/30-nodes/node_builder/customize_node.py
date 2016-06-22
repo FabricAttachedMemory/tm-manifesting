@@ -448,6 +448,7 @@ def execute(args):
             explains the error\success status.
     """
     global _verbose, _debug
+    raise RuntimeError('TESTING')
 
     _verbose = args['verbose']
     _debug = args['debug']
@@ -472,7 +473,7 @@ def execute(args):
         # Symlink /init
         fix_init(args['fs_image'])
 
-        #install_packages(args['fs_image'], args['packages'])
+        install_packages(args['fs_image'], args['packages'])
 
         cpio_file = '%s/%s.cpio' % (os.path.dirname(args['fs_image']), args['hostname'])
         # Create .cpio file from untar.
