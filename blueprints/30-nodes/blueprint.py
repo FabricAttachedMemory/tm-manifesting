@@ -1,6 +1,5 @@
 '''TM Nodes'''
 
-from collections import namedtuple
 from glob import glob
 import json
 import os
@@ -67,21 +66,17 @@ def get_all_bindings():
     """
         List all node binded to a manifest with its status (ready, building or error).
     """
-    if len(_data) == 0:
+    nodes_info = {}
+    for node_coord, manname in _data.items():
+        node_status = get_node_status(node_coord)
+        if node_status:
+            nodes_info[node_coord] = {}
+            nodes_info[node_coord] = node_status
+
+    if not nodes_info:              # FIXME: This is not a correct indentification of the node binding
         response = jsonify( { 'No Content' : 'There are no manifests associated with any nodes.' } )
         response.status_code = 204
         return response
-
-    nodes_info = {}
-    for node_coord, manname in _data.items():
-        nodes_info[node_coord] = {}
-
-        nodes_info[node_coord]['manifest'] = manname
-        if node_coord in BP.node_status:
-            nodes_info[node_coord]['status'] = BP.node_status[node_coord].poll()
-        else:
-            nodes_info[node_coord]['status'] = 'Unknown'
-        nodes_info[node_coord]['message'] = 'Life is good.'
 
     response = jsonify( { 'mappings' : nodes_info } )
     response.status_code = 200
@@ -102,13 +97,24 @@ def get_node_bind_info(node_coord=None):
     if not manifest:
         return make_response('There is no manifest associated with the specified node.', 204)
 
-    result = node_status(node_coord)
+    result = get_node_status(node_coord)
 
     return make_response(jsonify(result), 200)
 
 
-def node_status(node_coord):
+def get_node_status(node_coord):
+    """
+        Analyze and Organize node binding status. Using NodeBinging class and
+    its data, construct a dictionary that complies with ERS to return as status
+    message.
+
+    :param 'node_coord': [str] noode full coordinate string.
+    :return: [dict] values that describes node's state (status, message, manifest).
+             (ERS document section 8.6)
+    """
     nbind = NodeBinding.process(node_coord)
+    if not nbind:
+        return None
 
     result = {}
     result['manifest'] = nbind.manname
@@ -204,7 +210,7 @@ def build_node(manifest, node_coord):
     # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
-    build_args = {}
+    build_args = {}                         # TODO: redundant. no need to reasign values.
     build_args['fs-image'] = custom_tar
     build_args['hostname'] = node_hostname
     build_args['tftp'] = tftp_node_dir
@@ -219,13 +225,9 @@ def build_node(manifest, node_coord):
     cmd = shlex.split(cmd)
 
     _ = NodeBinding(node_coord, os.path.join(manifest.prefix, manifest.basename).lstrip('/'), cmd)
-    #process = subprocess.Popen(cmd, stderr=subprocess.PIPE)
 
-    #BP.node_status[node_coord] = namedtuple('NodeProcess', 'process status err')
-    #BP.node_status[node_coord].process = process
-
-    #if status['status'] >= 500:
-    #    response = make_response(status['message'], status['status'])
+    if status['status'] >= 500:
+        response = make_response(status['message'], status['status'])
 
     return response
 
@@ -336,7 +338,6 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
-    BP.node_status = {}
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
