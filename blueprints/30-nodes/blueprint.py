@@ -1,5 +1,6 @@
 '''TM Nodes'''
 
+from collections import namedtuple
 from glob import glob
 import json
 import os
@@ -95,26 +96,32 @@ def get_node_bind_info(node_coord=None):
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.' ,404)
 
-    manname = _data.get(node_coord, None)
+    manname = _data.get(node_coord, None).lstrip('/')
+
     manifest = BP.manifest_lookup(manname)
-    if not manifest and node_coord not in BP.node_status:
+    if not manifest:
         return make_response('There is no manifest associated with the specified node.', 204)
 
-    status = BP.node_status[node_coord].poll()
-    result = {}
-    result['manifest'] = manname
-    result['message'] = 'Status not implemented.'
-    if status is None:
-        result['status'] = 'building'
-    elif status != 0:
-        result['status'] = 'error'
-        set_trace()
-        out, err = BP.node_status[node_coord].communicate()
-        result['message'] = str(err)
-    else:
-        result['status'] = 'done'
+    result = node_status(node_coord)
 
     return make_response(jsonify(result), 200)
+
+
+def node_status(node_coord):
+    nbind = NodeBinding.process(node_coord)
+
+    result = {}
+    result['manifest'] = nbind.manname
+    result['status'] = nbind.status
+
+    if result['status'] == 'error':
+        result['message'] = nbind.error
+    elif result['status'] == 'building':
+        result['message'] = 'Binding to the Node is in progress'
+    else:
+        result['message'] = 'Finished without errors.'
+
+    return result
 
 ####################### API (PUT) ###############################
 
@@ -160,7 +167,7 @@ def build_node(manifest, node_coord):
     """
         Build Process to Generate a custom filesystem image based of the provided manifset.
 
-    :param 'manifest': [str] absolute path to manifest.json file.
+    :param 'manifest': [cls] manifest class of the 99-manifest/blueprint.py
     :param 'node_coord': [int\str] node number or name to generate filesystem image for.
     :return: flask's response data.
     """
@@ -211,9 +218,11 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
     cmd = shlex.split(cmd)
 
-    status = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+    _ = NodeBinding(node_coord, os.path.join(manifest.prefix, manifest.basename).lstrip('/'), cmd)
+    #process = subprocess.Popen(cmd, stderr=subprocess.PIPE)
 
-    BP.node_status[node_coord] = status
+    #BP.node_status[node_coord] = namedtuple('NodeProcess', 'process status err')
+    #BP.node_status[node_coord].process = process
 
     #if status['status'] >= 500:
     #    response = make_response(status['message'], status['status'])
@@ -221,6 +230,63 @@ def build_node(manifest, node_coord):
     return response
 
 ###########################################################################
+
+class NodeBinding(object):
+
+    _binding = {}       # { noode_coord : NodeBinding class }
+                        # Stores all the node binding requests.
+
+    def __init__(self, coord, manname, cmd):
+        self.coord = coord
+        self.manname = manname
+        self._cmd = cmd         # save cmd for debugging
+        self.error = None
+        self.returncode = None
+
+        if coord in self._binding:
+            if self.status == 'busy':
+                raise RuntimeError('Node is busy!')
+
+        self._popen = subprocess.Popen(self._cmd, stderr=subprocess.PIPE)
+        self._binding[self.coord] = self
+
+
+    @classmethod
+    def process(cls, coord):
+        node_binding = cls._binding.get(coord, None)
+        if node_binding is None:
+            return None
+        else:
+            return node_binding
+
+
+    @property
+    def status(self):
+        """
+        :return: False - No process has been lauched for a node.
+                'error' - There was an error during the Node building (observe
+                        self.error for an error message)
+                'building' - Node is busy waiting for a custom filesystem image.
+                'ready' - Node is ready to boot. No process is running.
+        """
+        if self.error:
+            return 'error'
+        if self.process(self.coord) is None:
+            return False
+
+        poll_status = self.process(self.coord)._popen.poll()
+        if poll_status is None:
+            return 'building'
+        elif(poll_status != 0):
+            _, err = self._binding[self.coord]._popen.communicate()
+            self.returncode = poll_status               # Save returncode for debugging.
+            self.error = err.decode().split('\n')[-2]   # get exception message TODO: better parsing
+            return 'error'
+
+        return 'ready'
+
+###########################################################################
+
 _data = None    # node <-> manifest bindings
 
 

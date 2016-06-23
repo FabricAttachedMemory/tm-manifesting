@@ -448,7 +448,6 @@ def execute(args):
             explains the error\success status.
     """
     global _verbose, _debug
-    raise RuntimeError('TESTING')
 
     _verbose = args['verbose']
     _debug = args['debug']
