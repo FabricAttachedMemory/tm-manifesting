@@ -120,9 +120,9 @@ class TmCmd():
         except (ValueError, TypeError) as err:
             if self.verbose:
                 return '{ "error" : %s }' % (err)
-            else:
-                return '{ "error" : "couldn \'t parse server\'s response"}'
 
+        response = { content.status_code : content.text }
+        return json.dumps(response)
 
     def update_cmd(self, arg_dict):
         """

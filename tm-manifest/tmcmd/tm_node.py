@@ -14,7 +14,8 @@ class TmNode(tm_base.TmCmd):
             'listnodes' : self.listall,
             'listbindings': self.listbindings,
             'getnode' : self.show,
-            'setnode' : self.set_node
+            'setnode' : self.set_node,
+            'unsetnode' : self.delete_binding
         }
 
 
@@ -76,4 +77,22 @@ class TmNode(tm_base.TmCmd):
         clean_url = os.path.normpath(api_url.split('http://')[1])
         api_url = 'http://' + clean_url
         data = self.http_request(api_url, payload=payload)
+        return self.to_json(data)
+
+
+    def delete_binding(self, target, **options):
+        """
+    SYNOPSIS
+        unsetnode <node coord>
+
+    DESCRIPTION
+            Remove the node configuration from the manifesting service. When the node
+        is rebooted, there will not be an operating system or root file system made
+        available to it.
+        """
+        super().show(target, **options)
+        node_coord = target[0]
+        api_url = '%s%s/%s' % (self.url, 'node', node_coord)
+        set_trace()
+        data = self.http_delete(api_url)
         return self.to_json(data)
