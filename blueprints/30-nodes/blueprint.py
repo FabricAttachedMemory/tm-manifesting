@@ -110,6 +110,7 @@ def delete_node_binding(node_coord=None):
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.', 404)
 
+    return make_response('Stay put. It will be implemented soon.', 501)
 
 ####################### API (PUT) ###############################
 

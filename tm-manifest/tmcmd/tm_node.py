@@ -15,7 +15,7 @@ class TmNode(tm_base.TmCmd):
             'listbindings': self.listbindings,
             'getnode' : self.show,
             'setnode' : self.set_node,
-            'unsetnode' : self.delete_binding
+            'unsetnode' : self.delete
         }
 
 
@@ -80,7 +80,7 @@ class TmNode(tm_base.TmCmd):
         return self.to_json(data)
 
 
-    def delete_binding(self, target, **options):
+    def delete(self, target, **options):
         """
     SYNOPSIS
         unsetnode <node coord>
@@ -93,6 +93,5 @@ class TmNode(tm_base.TmCmd):
         super().show(target, **options)
         node_coord = target[0]
         api_url = '%s%s/%s' % (self.url, 'node', node_coord)
-        set_trace()
         data = self.http_delete(api_url)
         return self.to_json(data)
