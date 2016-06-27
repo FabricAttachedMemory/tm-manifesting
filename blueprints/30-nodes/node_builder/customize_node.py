@@ -472,7 +472,7 @@ def execute(args):
         # Symlink /init
         fix_init(args['fs_image'])
 
-        install_packages(args['fs_image'], args['packages'])
+        #install_packages(args['fs_image'], args['packages'])
 
         cpio_file = '%s/%s.cpio' % (os.path.dirname(args['fs_image']), args['hostname'])
         # Create .cpio file from untar.
@@ -482,9 +482,9 @@ def execute(args):
         remove_target(args['fs_image'])
 
         if 'tftp' in args:
-            vmlinuz = os.path.dirname(cpio_file) + '/vmlinuz-4.3.0-3-arm64-l4tm'
-            copy_target_into(cpio_file, args['tftp'] + '/l4tm.cpio')
-            copy_target_into(vmlinuz, args['tftp'] + '/l4tm.vmlinuz')
+            vmlinuz_path = glob(os.path.dirname(cpio_file) + '/vmlinuz*')[0]
+            copy_target_into(cpio_file, args['tftp'] + '/' + os.path.basename(cpio_file))
+            copy_target_into(vmlinuz_path, args['tftp'] + '/' + args['hostname'] + '.vmlinuz')
 
     except RuntimeError as err:
          response['status'] = 505
@@ -501,8 +501,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Options to customize FS image.')
 
     parser.add_argument('--fs-image', help='Path to the filesystem image untar folder.')
-    parser.add_argument('--hostname', help='Hostname to use for the FS image.',
-                        nargs='+', type=str)                    # DANGEROUS! How big of a list can I pass??
+    parser.add_argument('--hostname', help='Hostname to use for the FS image.')
+    parser.add_argument('--cpio-name', help='Name for the cpio file that will be generated.',
+                        default='l4tm.cpio')
     parser.add_argument('--packages', help='List of packages to install on the node')
     parser.add_argument('--tftp', help='Absolute path to the TFTP folder on the server.')
 
