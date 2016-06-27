@@ -11,7 +11,7 @@
 log = /var/lib/tm-manifesting/sys-images/golden/golden.arm.log
 image = /var/lib/tm-manifesting/sys-images/golden/golden.arm.img
 tarball = /var/lib/tm-manifesting/sys-images/golden/golden.arm.tar
-mirror = http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm
+mirror = 
 
 arch = arm64
 distribution = catapult
@@ -35,7 +35,7 @@ owner =
 
 # minbase only does "Required", keyrings are only "Important".
 # debian-archive-keyring is handled manually by debootstrap.
-package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,ca-certificates,dialog,git,ifupdown,iputils-ping,isc-dhcp-client,locales,pciutils,psmisc,psutils,ssh,vim
+package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,ca-certificates,dialog,ifupdown,iputils-ping,isc-dhcp-client,locales,pciutils,psmisc,psutils,ssh,vim
 custom-package =
 
 # L4TM doesn't follow simple name generation, must do this manually (above)
