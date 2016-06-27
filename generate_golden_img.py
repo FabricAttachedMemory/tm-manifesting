@@ -7,36 +7,40 @@ import argparse
 import os
 import subprocess
 import shlex
+from pdb import set_trace
 
 from configs import manifest_config as CFG
 
 
 def main(args):
     """
-        Generate golden image into the manifesting work directory using vmdebootstrap.
+        Generate golden image into the manifesting work directory using
+        vmdebootstrap.  Return None or raise error.
     """
-    if os.getuid() != 0:
-        raise RuntimeError('This script requires root permissions!')
+    assert os.geteuid() == 0, 'This script requires root permissions'
 
     golden_dir = CFG.MANIFESTING_ROOT + '/sys-images/golden/'
 
-    if not os.path.isdir(golden_dir):
-        raise RuntimeError('"%s" does not exist!' % (golden_dir))
+    assert os.path.isdir(golden_dir), '"%s" does not exist' % (golden_dir)
+    statvfs = os.statvfs(golden_dir)
+    assert statvfs.f_bsize * statvfs.f_bavail > (4 * (1 << 30)), \
+        'Need at least 4G on "%s"' % (golden_dir)
 
-    cmd = "python ./configs/vmdebootstrap \
-            --owner=$LOGNAME --no-default-configs \
-            --config=%s --hostname=pxe02" % (args['img_cfg'])
+    cmd = '''./configs/vmdebootstrap --no-default-configs --hostname=GOLDEN
+             --config=%s
+             --mirror=%s''' % (
+                args['img_cfg'],
+                CFG.L4TM_MIRROR
+             )
     cmd = shlex.split(cmd)
     status = subprocess.call(cmd)
-
-    print('Done')
-    return 0
+    assert not status, 'vmdebootstrap failed: return status %s' % status
 
 if __name__ == '__main__':
     """
         TODO: Docstr
     """
-    PARSER = argparse.ArgumentParser(description='Generate golden image on demand.')
+    PARSER = argparse.ArgumentParser(description='Generate golden image for nodes of The Machine.')
 
     PARSER.add_argument('-i', '--img-cfg',
                         help='A config file for your golden filesystem image that\
@@ -50,4 +54,10 @@ if __name__ == '__main__':
                         help='Turn on debugging tool.',
                         action='store_true')
     ARGS, _ = PARSER.parse_known_args()
-    main(vars(ARGS))
+
+    errmsg = ''
+    try:
+        main(vars(ARGS))
+    except AssertionError as e:
+        errmsg = str(e)
+    raise SystemExit(errmsg)
