@@ -1,7 +1,14 @@
-#! /usr/bin/python
+#!/usr/bin/python2
 # Copyright 2011-2013  Lars Wirzenius
 # Copyright 2012  Codethink Limited
 # Copyright 2014 Neil Williams <codehelp@debian.org>
+#
+# Modified for use in generating ARM64 images for The Machine:
+# 0. Line 1: force Python 2
+# 1. Line 187: Retain the "foreign" code assistant to allow
+#    post-customization via "chroot / apt-get"
+# 2. Line 329: args.append('--keep-debootstrap-dir')
+# 3. Line 330: keep "necessary_packages" in the foreign environment
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
