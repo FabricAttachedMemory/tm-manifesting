@@ -223,7 +223,6 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
     cmd = shlex.split(cmd)
 
-    #_ = NodeBinding(node_coord, os.path.join(manifest.prefix, manifest.basename).lstrip('/'), cmd)
     NB = NodeBinding(node_coord, manifest, cmd)
     _data[node_coord] = NB
 
