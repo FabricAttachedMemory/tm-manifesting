@@ -99,7 +99,17 @@ def delete_node_binding(node_coord=None):
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.', 404)
 
-    return make_response('Stay put. It will be implemented soon.', 501)
+    node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
+    if not os.path.isdir(node_location):        # Paranoia. That should never happened.
+        return make_response('TFT doesn\'t serve requested node.', 500)
+
+    try:
+        for node_file in glob(node_location + '/*'):
+            os.remove(node_file)
+    except OSError as err:
+        return make_response('Failed to delete binding due to OSError:\n%s' % err, 500)
+
+    return make_response('Successful cleanup.', 204)
 
 ####################### API (PUT) ###############################
 
