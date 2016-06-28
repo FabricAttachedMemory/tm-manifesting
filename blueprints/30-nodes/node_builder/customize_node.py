@@ -431,7 +431,18 @@ apt-get update
 
 #===============================================================================
 
-#def execute(sys_img, **args):
+def update_status(destination, manifest, status, message='Brace yourself.'):
+    """
+        TODO: docstr
+    """
+    response = {}
+    response['manifest'] = manifest
+    response['status'] = status
+    response['message'] = message
+    write_to_file(destination, json.dumps(response, indent=4))
+    return
+
+#===============================================================================
 def execute(args):
     """
         Customize Filesystem image: set hostname, cleanup sources.list, install
@@ -454,11 +465,15 @@ def execute(args):
     response = {}
     response['status'] = 200  # No errors occured yet! Let's keep it this way...
     response['message'] = 'System image was created.'
+    cpio_file = '%s/%s.cpio' % (os.path.dirname(args['fs_image']), args['hostname'])
+    status_file = args['tftp'] + '/' + 'status.json'
 
     #  It is OK to have a big exception block, because individual exception handling
     # is done inside those functions that would through RuntimeError (most of the
     # time).
     try:
+        update_status(status_file, args['manifest'], 'building', 'Work in progress')
+
         # Setting hostname and hosts...  set_hostname(sys_img, args['hostname'])
         set_hosts(args['fs_image'], args['hostname'])
 
@@ -472,9 +487,8 @@ def execute(args):
         # Symlink /init
         fix_init(args['fs_image'])
 
-        install_packages(args['fs_image'], args['packages'])
+        #install_packages(args['fs_image'], args['packages'])
 
-        cpio_file = '%s/%s.cpio' % (os.path.dirname(args['fs_image']), args['hostname'])
         # Create .cpio file from untar.
         create_cpio(args['fs_image'], cpio_file)
 
@@ -482,16 +496,20 @@ def execute(args):
         remove_target(args['fs_image'])
 
         if 'tftp' in args:
-            vmlinuz = os.path.dirname(cpio_file) + '/vmlinuz-4.3.0-3-arm64-l4tm'
-            copy_target_into(cpio_file, args['tftp'] + '/l4tm.cpio')
-            copy_target_into(vmlinuz, args['tftp'] + '/l4tm.vmlinuz')
+            vmlinuz_path = glob(os.path.dirname(cpio_file) + '/vmlinuz*')[0]
+            copy_target_into(cpio_file, args['tftp'] + '/' + os.path.basename(cpio_file))
+            copy_target_into(vmlinuz_path, args['tftp'] + '/' + args['hostname'] + '.vmlinuz')
 
+        update_status(status_file, args['manifest'], 'done')
     except RuntimeError as err:
          response['status'] = 505
          response['message'] = 'Runtime error during filesystem image build process! [Error: %s] ' % (err)
     except Exception as err:    # Its OK. Don't want Flask to through any traceback at user.
         response['status'] = 505
         response['message'] = 'Aye! Unexpected Server error! [Error: %s]' % err
+
+    if response['status'] > 500:
+        update_status(status_file, args['manifest'], 'error', response['message'])
 
     return response
 
@@ -501,10 +519,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Options to customize FS image.')
 
     parser.add_argument('--fs-image', help='Path to the filesystem image untar folder.')
-    parser.add_argument('--hostname', help='Hostname to use for the FS image.',
-                        nargs='+', type=str)                    # DANGEROUS! How big of a list can I pass??
+    parser.add_argument('--hostname', help='Hostname to use for the FS image.')
+    parser.add_argument('--cpio-name', help='Name for the cpio file that will be generated.',
+                        default='l4tm.cpio')
     parser.add_argument('--packages', help='List of packages to install on the node')
     parser.add_argument('--tftp', help='Absolute path to the TFTP folder on the server.')
+    parser.add_argument('--manifest', help='Manifest namespace.')
 
     parser.add_argument('-v', '--verbose', help='Make it talk. Verbosity levels from 1 to 5',
                         action='store_true')
