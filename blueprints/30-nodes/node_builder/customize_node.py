@@ -431,16 +431,17 @@ apt-get update
 
 #===============================================================================
 
-def execute(sys_img, **kwargs):
+#def execute(sys_img, **args):
+def execute(args):
     """
         Customize Filesystem image: set hostname, cleanup sources.list, install
     requested packages, create .CPIO from customized FS, remove FS's untar folder.
 
     :param 'sys_img': [str path] location to the directory of the filesyste image to customize.
-    :param 'hostname': [kwargs] hostname for the filesystem image to use.
-    :param 'tftp': [kwargs] absolute path of the tftp server located on the server.
-    :param 'verbose': [kwargs] Make it talk. Verbosety from 1-5.
-    :param 'debug': [kwargs] Debugging mode.
+    :param 'hostname': [args] hostname for the filesystem image to use.
+    :param 'tftp': [args] absolute path of the tftp server located on the server.
+    :param 'verbose': [args] Make it talk. Verbosety from 1-5.
+    :param 'debug': [args] Debugging mode.
 
     :return: [dict] response with 'status' and 'message' key. 'status' = 200 means
             success. 505 - failure. 'message' - is a message string that briefly
@@ -448,8 +449,8 @@ def execute(sys_img, **kwargs):
     """
     global _verbose, _debug
 
-    _verbose = kwargs['verbose']
-    _debug = kwargs['debug']
+    _verbose = args['verbose']
+    _debug = args['debug']
     response = {}
     response['status'] = 200  # No errors occured yet! Let's keep it this way...
     response['message'] = 'System image was created.'
@@ -458,33 +459,32 @@ def execute(sys_img, **kwargs):
     # is done inside those functions that would through RuntimeError (most of the
     # time).
     try:
-        # Setting hostname and hosts...
-        set_hostname(sys_img, kwargs['hostname'])
-        set_hosts(sys_img, kwargs['hostname'])
+        # Setting hostname and hosts...  set_hostname(sys_img, args['hostname'])
+        set_hosts(args['fs_image'], args['hostname'])
 
         # Fixing sources.list
-        cleanup_sources_list(sys_img)
+        cleanup_sources_list(args['fs_image'])
         # Cleaning up kernel
-        kernel_dest = sys_img.split('/')
+        kernel_dest = args['fs_image'].split('/')
         kernel_dest = '/'.join(kernel_dest[:len(kernel_dest)-1])
         kernel_dest = '%s/' % (kernel_dest)
-        cleanout_kernel(sys_img, kernel_dest)
+        cleanout_kernel(args['fs_image'], kernel_dest)
         # Symlink /init
-        fix_init(sys_img)
+        fix_init(args['fs_image'])
 
-        install_packages(sys_img, kwargs['package_list'])
+        install_packages(args['fs_image'], args['packages'])
 
-        cpio_file = '%s/%s.cpio' % (os.path.dirname(sys_img), kwargs['hostname'])
+        cpio_file = '%s/%s.cpio' % (os.path.dirname(args['fs_image']), args['hostname'])
         # Create .cpio file from untar.
-        create_cpio(sys_img, cpio_file)
+        create_cpio(args['fs_image'], cpio_file)
 
         # Remove untar'ed, modified fileimage folder
-        remove_target(sys_img)
+        remove_target(args['fs_image'])
 
-        if 'tftp' in kwargs:
+        if 'tftp' in args:
             vmlinuz = os.path.dirname(cpio_file) + '/vmlinuz-4.3.0-3-arm64-l4tm'
-            copy_target_into(cpio_file, kwargs['tftp'] + '/l4tm.cpio')
-            copy_target_into(vmlinuz, kwargs['tftp'] + '/l4tm.vmlinuz')
+            copy_target_into(cpio_file, args['tftp'] + '/l4tm.cpio')
+            copy_target_into(vmlinuz, args['tftp'] + '/l4tm.vmlinuz')
 
     except RuntimeError as err:
          response['status'] = 505
@@ -494,3 +494,24 @@ def execute(sys_img, **kwargs):
         response['message'] = 'Aye! Unexpected Server error! [Error: %s]' % err
 
     return response
+
+
+if __name__ == '__main__':
+    """ Parse commind line arguments and pass it directly into execute() function. """
+    parser = argparse.ArgumentParser(description='Options to customize FS image.')
+
+    parser.add_argument('--fs-image', help='Path to the filesystem image untar folder.')
+    parser.add_argument('--hostname', help='Hostname to use for the FS image.',
+                        nargs='+', type=str)                    # DANGEROUS! How big of a list can I pass??
+    parser.add_argument('--packages', help='List of packages to install on the node')
+    parser.add_argument('--tftp', help='Absolute path to the TFTP folder on the server.')
+
+    parser.add_argument('-v', '--verbose', help='Make it talk. Verbosity levels from 1 to 5',
+                        action='store_true')
+    parser.add_argument('--debug', help='Matrix has you. Enter the debugging mode.',
+                        action='store_true')
+
+    args, _ = parser.parse_known_args()
+    execute(vars(args))
+
+    raise SystemExit(0)
