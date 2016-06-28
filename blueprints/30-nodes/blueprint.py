@@ -66,13 +66,7 @@ def get_all_bindings():
     """
         List all node binded to a manifest with its status (ready, building or error).
     """
-    nodes_info = {}
-    for node_coord, manname in _data.items():
-        node_status = get_node_status(node_coord)
-        if node_status:
-            nodes_info[node_coord] = {}
-            nodes_info[node_coord] = node_status
-
+    nodes_info = _load_data()
     if not nodes_info:              # FIXME: This is not a correct indentification of the node binding
         response = jsonify( { 'No Content' : 'There are no manifests associated with any nodes.' } )
         response.status_code = 204
@@ -88,46 +82,14 @@ def get_node_bind_info(node_coord=None):
     """
         List status json of the manifest binded to the node.
     """
-    if node_coord not in BP.node_coords:
-        return make_response('The specified node does not exist.' ,404)
-
-    manname = _data.get(node_coord, None).lstrip('/')
-
-    manifest = BP.manifest_lookup(manname)
-    if not manifest:
-        return make_response('There is no manifest associated with the specified node.', 204)
+    if not BP.nodes[node_coord]:
+        return make_response('The specified node does not exist.', 404)
 
     result = get_node_status(node_coord)
+    if result is None:
+        return make_response('No Content', 204)
 
     return make_response(jsonify(result), 200)
-
-
-def get_node_status(node_coord):
-    """
-        Analyze and Organize node binding status. Using NodeBinging class and
-    its data, construct a dictionary that complies with ERS to return as status
-    message.
-
-    :param 'node_coord': [str] noode full coordinate string.
-    :return: [dict] values that describes node's state (status, message, manifest).
-             (ERS document section 8.6)
-    """
-    nbind = NodeBinding.process(node_coord)
-    if not nbind:
-        return None
-
-    result = {}
-    result['manifest'] = nbind.manname
-    result['status'] = nbind.status
-
-    if result['status'] == 'error':
-        result['message'] = nbind.error
-    elif result['status'] == 'building':
-        result['message'] = 'Binding to the Node is in progress'
-    else:
-        result['message'] = 'Finished without errors.'
-
-    return result
 
 ####################### API (PUT) ###############################
 
@@ -142,9 +104,13 @@ def bind_node_to_manifest(node_coord=None):
     :param 'node_coord': full node's coordinate with it's rack number, enclouse and etc.
     """
     try:
+        resp_status = 409   # Conflict
+        assert get_node_status(node_coord) is None, 'Node is occupied. Remove binding before assigning a new one.'
+
         resp_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Content is too long! Max size is 200 characters.'
 
+        resp_status = 400       # if failed at this point, then it is a server error.
         # Validate requested manifest exists.
         contentstr = request.get_data().decode()
         req_body = request.get_json(contentstr)
@@ -155,12 +121,9 @@ def bind_node_to_manifest(node_coord=None):
         resp_status = 404
         assert (manifest is not None) and node_coord in BP.node_coords, "The specified node or manifest does not exist."
 
-        _data[node_coord] = manifest.prefix + '/' + manifest.basename
-        save(_data, BP.binding)
-
         response = build_node(manifest, node_coord)
     except BadRequest as e:
-        response = make_response(e.get_response(), 500)
+        response = make_response(e.get_response(), resp_status)
     except (AssertionError, ValueError) as err:
         response = make_response(str(err), resp_status)
 
@@ -210,13 +173,15 @@ def build_node(manifest, node_coord):
     # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
-    build_args = {}                         # TODO: redundant. no need to reasign values.
-    build_args['fs-image'] = custom_tar
-    build_args['hostname'] = node_hostname
-    build_args['tftp'] = tftp_node_dir
-    build_args['verbose'] = BP.VERBOSE
-    build_args['debug'] = BP.DEBUG
-    build_args['packages'] = manifest.thedict['packages']
+    build_args = {
+            'fs-image' : custom_tar,
+            'hostname' : node_hostname,
+            'tftp' : tftp_node_dir,
+            'verbose' : BP.VERBOSE,
+            'debug' : BP.DEBUG,
+            'packages' : manifest.thedict['packages'],
+            'manifest' : manifest.namespace
+    }
 
     cmd_args = []
     for key, val in build_args.items():
@@ -224,117 +189,77 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
     cmd = shlex.split(cmd)
 
-    _ = NodeBinding(node_coord, os.path.join(manifest.prefix, manifest.basename).lstrip('/'), cmd)
+    try:
+        _ = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+    except subprocess.SubprocessError as err:       # TSNH =)
+        return make_response('Failed to start node binding process.', 418)
 
-    if status['status'] >= 500:
-        response = make_response(status['message'], status['status'])
+    manifest_tftp_file = manifest.namespace.replace('/', '.')
+    customize_node.copy_target_into(manifest.fullpath, tftp_node_dir + '/' + manifest_tftp_file)
 
     return response
 
 ###########################################################################
+_data = None # node <-> manifest bindings
 
-class NodeBinding(object):
-
-    _binding = {}       # { noode_coord : NodeBinding class }
-                        # Stores all the node binding requests.
-
-    def __init__(self, coord, manname, cmd):
-        self.coord = coord
-        self.manname = manname
-        self._cmd = cmd         # save cmd for debugging
-        self.error = None
-        self.returncode = None
-
-        if coord in self._binding:
-            if self.status == 'busy':
-                raise RuntimeError('Node is busy!')
-
-        self._popen = subprocess.Popen(self._cmd, stderr=subprocess.PIPE)
-        self._binding[self.coord] = self
-
-
-    @classmethod
-    def process(cls, coord):
-        node_binding = cls._binding.get(coord, None)
-        if node_binding is None:
-            return None
-        else:
-            return node_binding
-
-
-    @property
-    def status(self):
-        """
-        :return: False - No process has been lauched for a node.
-                'error' - There was an error during the Node building (observe
-                        self.error for an error message)
-                'building' - Node is busy waiting for a custom filesystem image.
-                'ready' - Node is ready to boot. No process is running.
-        """
-        if self.error:
-            return 'error'
-        if self.process(self.coord) is None:
-            return False
-
-        poll_status = self.process(self.coord)._popen.poll()
-        if poll_status is None:
-            return 'building'
-        elif(poll_status != 0):
-            _, err = self._binding[self.coord]._popen.communicate()
-            self.returncode = poll_status               # Save returncode for debugging.
-            self.error = err.decode().split('\n')[-2]   # get exception message TODO: better parsing
-            return 'error'
-
-        return 'ready'
-
-###########################################################################
-
-_data = None    # node <-> manifest bindings
-
-
-def save(content, destination):
+def get_node_status(node_coord):
     """
-        Save json content into destination file.
-    Note: file will be removed before saving into it - e.g. overwritten with a new data.
+        Scan tftp/images/{hostname} folder for "status.json" that is generated
+    by node_builder/customize_node.py script. This file contatins information
+    about the Node binding status that Comply with ERS specs (Section 8.6)
 
-    :param 'content': [str or dict] data to be saved.
-    :param 'destination': [str] file to save into.
+    :param 'node_coord': [str] noode full coordinate string.
+    :return: [dict] values that describes node's state (status, message, manifest).
+             (ERS document section 8.6)
     """
-    if isinstance(content, dict):
-        content = json.dumps(content, indent=4)
+    node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
+    status_file = node_location + '/' + 'status.json'
+    if not os.path.isdir(node_location):
+        return None
 
-    new_file = '%s.new' % (destination)
+    if not os.path.exists(status_file):
+        return None
+
+    status = {}
     try:
-        with open(new_file, 'w+') as file_obj: # if that fails, shouldn't bother to rename then.
-            file_obj.write(content)
-        os.rename(new_file, destination)
-    except IOError as error:
-        print('Couldn\'t save file into "%s"' % (destination), file=sys.stderr)
+        with open(status_file, 'r') as file_obj:
+            status = json.loads(file_obj.read())
+    except ValueError as err:       # TCNH =)
+        status['message'] = 'Failed to parse status file. Exception Error: %s ' % str(err)
+        status['manifest'] = 'unknown'
+        status['status'] = 'error'
+
+    return status
 
 
 def _load_data():
     """
-        Load json data from file and return a dictionary.
+        Scan tftp/images folder for known hostnames and read its status.json
+    file. Save this data into a dictionary and return it to the user.
 
-    :param 'target_file': [str] path to a file to load data from.
-    :return: [dict] data parsed from a json string of the 'target_file'
+    :return: [dict] node_coordinate - node_status key value pair of the current
+            status of the nodes.
     """
-    global _data
-    _data = {}
-    try:
-        with open(BP.binding, 'r+') as file_obj:
-            _data = json.loads(file_obj.read())
-    except IOError as err:
-        print ('Couldn\'t load "%s"' % (BP.binding), file=sys.stderr)
+    result = {}
+    for node in BP.nodes:
+        node_status = get_node_status(node.coordinate)
+        if node_status:
+            result[node.coordinate] = node_status
+    return result
 
 
 def _manifest_lookup(name):
     # blueprints lookup has to be deferred until all are registered
+    if name:
+        name = name.strip('/')
     return BP.blueprints['manifest'].lookup(name)
+
+###########################################################################
 
 
 def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
+    global _data
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
@@ -342,4 +267,4 @@ def register(mainapp):  # take what you like and leave the rest
     BP.manifest_lookup = _manifest_lookup
     BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    _load_data()
+    _data = _load_data()
