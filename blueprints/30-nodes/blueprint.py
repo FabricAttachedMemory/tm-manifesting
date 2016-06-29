@@ -93,7 +93,7 @@ def get_node_bind_info(node_coord=None):
 
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
-def delete_node_binding(node_coord=None):
+def delete_node_binding(node_coord):
     """
     """
     if node_coord not in BP.node_coords:
