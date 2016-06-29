@@ -45,6 +45,15 @@ class TmCmd():
             print(' - Sending request to "%s"...' % self.url)
 
 
+    def delete(self, target, **options):
+        """
+            Base class to handle delete routines.
+        """
+        assert len(target) >= 1, 'Missing argument: delete <name>!'
+        if options.get('verbose', False):
+            print(' - Sending request to delete %s' % (self.url, target[0]))
+
+
     def http_request(self, url, **options):
         """
             Do a http request on the provided url and return a response
@@ -123,6 +132,7 @@ class TmCmd():
 
         response = { content.status_code : content.text }
         return json.dumps(response)
+
 
     def update_cmd(self, arg_dict):
         """

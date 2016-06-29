@@ -90,7 +90,7 @@ class TmNode(tm_base.TmCmd):
         is rebooted, there will not be an operating system or root file system made
         available to it.
         """
-        super().show(target, **options)
+        super().delete(target, **options)
         node_coord = target[0]
         api_url = '%s%s/%s' % (self.url, 'node', node_coord)
         data = self.http_delete(api_url)
