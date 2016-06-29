@@ -154,7 +154,7 @@ def build_node(manifest, node_coord):
     golden_tar = BP.config['GOLDEN_IMAGE']
 
     if not os.path.exists(golden_tar):
-        return make_response('Can not generate image! No "Golden Image" found!' % node_coord, 505)
+        return make_response('Can not generate image! No "Golden Image" found!', 505)
 
     # ----------------------- Variables
     node_dir = os.path.join(sys_imgs,
