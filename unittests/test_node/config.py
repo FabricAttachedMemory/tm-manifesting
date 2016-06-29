@@ -6,3 +6,5 @@ tmconfig_path = os.path.dirname(tmconfig_path)
 TMCONFIG = '%s/hpetmconfig.json' % tmconfig_path
 
 MANIFESTING_SERVER = 'http://zachv.americas.hpqcorp.net:31178/manifesting/api/'
+TFTP = '/var/lib/tm-manifest/tftp/'
+IMAGES = TFTP + 'images/'

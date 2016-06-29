@@ -67,6 +67,7 @@ class TmManifest(tm_base.TmCmd):
         """
         assert len(target) >= 2, 'Missing argument: put <manifest name> <manifest file>!'
         file_real_path = os.path.realpath(target[1])
+        set_trace()
 
         with open(file_real_path, 'r') as file_obj:
             manifest_content = file_obj.read()

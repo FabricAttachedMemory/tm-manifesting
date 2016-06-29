@@ -2,11 +2,13 @@
 """
     Test fix_init function of customize_node.py script.
 """
+import os
 import json
+import shutil
 import unittest
-import tmcmd
 
 import config
+import tmcmd
 from tm_librarian.tmconfig import TMConfig
 from pdb import set_trace
 
@@ -22,17 +24,18 @@ class UnbindNodeTest(unittest.TestCase):
         """
         """
         manifest_for_test = os.path.dirname(__file__) + '/manifest.test'
-        tmcmd.tmmanifest.upload(['', manifest_for_test])
 
         cls.tm_cmd = tmcmd.tmnode
         cls.tmconfig = TMConfig(config.TMCONFIG)
         cls.node = cls.tmconfig.nodes[1].coordinate
+
+        shutil.copyfile(manifest_for_test, config.IMAGES + '/node02')
         return None
 
 
     @classmethod
     def tearDown(cls):
-        tmcmd.tmmanifest.delete([''])
+        tmcmd.tmmanifest.delete(['manifest.test'])
         return None
 
 
@@ -54,11 +57,9 @@ class UnbindNodeTest(unittest.TestCase):
         """
         expected_code = 204
 
-        output = 
+        #output = self.tm_cmd.set_node([self.node, self.manifest_for_test])
 
-        output = self.tm_cmd.set_node([self.node, self.manifest_for_test])
-
-        output = self.tm_cmd.delete(self.node])
+        #output = self.tm_cmd.delete(self.node])
         self.assertTrue(False, 'Not Implemented')
 
 
