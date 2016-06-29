@@ -95,6 +95,11 @@ def get_node_bind_info(node_coord=None):
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
 def delete_node_binding(node_coord=None):
     """
+        Remove Node to Manifest binding. Find node's folder in the TFTP directory
+    by its hostname and clean out the content. Thus, on the next node reboot, it
+    will be not served by the TFTP.
+
+    :param 'node_coord': full node's coordinate to unbinde Manifest from.
     """
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.', 404)

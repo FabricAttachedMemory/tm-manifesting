@@ -487,7 +487,7 @@ def execute(args):
         # Symlink /init
         fix_init(args['fs_image'])
 
-        install_packages(args['fs_image'], args['packages'])
+        #install_packages(args['fs_image'], args['packages'])
 
         # Create .cpio file from untar.
         create_cpio(args['fs_image'], cpio_file)
