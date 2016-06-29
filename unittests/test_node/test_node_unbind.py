@@ -17,25 +17,31 @@ class UnbindNodeTest(unittest.TestCase):
     tm_cmd = None
     tmconfig = None
     node = None
-    manifest_for_test = None
+    manifest = None
+    manifest_tftp = None
+    cpio_path = None
 
     @classmethod
     def setUp(cls):
         """
         """
-        manifest_for_test = os.path.dirname(__file__) + '/manifest.test'
+        cls.manifest = os.path.dirname(__file__) + '/manifest.test'
 
         cls.tm_cmd = tmcmd.tmnode
         cls.tmconfig = TMConfig(config.TMCONFIG)
         cls.node = cls.tmconfig.nodes[1].coordinate
-
-        shutil.copyfile(manifest_for_test, config.IMAGES + '/node02')
+        cls.manifest_tftp = config.IMAGES + '/node02/' + os.path.basename(cls.manifest)
+        set_trace()
+        shutil.copyfile(cls.manifest, cls.manifest_tftp)
         return None
 
 
     @classmethod
     def tearDown(cls):
         tmcmd.tmmanifest.delete(['manifest.test'])
+        if os.path.exists(cls.manifest_for_test_path):
+            os.remove(cls.manifest_for_test_path)
+
         return None
 
 
