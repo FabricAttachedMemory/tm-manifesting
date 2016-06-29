@@ -81,7 +81,6 @@ class TmManifest(tm_base.TmCmd):
         api_url = 'http://' + clean_url + '/'
 
         data = self.http_upload(api_url, payload=payload)
-        set_trace()
         return self.to_json(data)
 
 
