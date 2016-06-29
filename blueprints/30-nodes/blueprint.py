@@ -130,6 +130,7 @@ def bind_node_to_manifest(node_coord=None):
         resp_status = 413
         assert int(request.headers['Content-Length']) < 200, 'Content is too long! Max size is 200 characters.'
 
+        resp_status = 400       # if failed at this point, then it is a server error.
         # Validate requested manifest exists.
         contentstr = request.get_data().decode()
         req_body = request.get_json(contentstr)
@@ -142,7 +143,7 @@ def bind_node_to_manifest(node_coord=None):
 
         response = build_node(manifest, node_coord)
     except BadRequest as e:
-        response = make_response(e.get_response(), 500)
+        response = make_response(e.get_response(), resp_status)
     except (AssertionError, ValueError) as err:
         response = make_response(str(err), resp_status)
 
@@ -192,14 +193,15 @@ def build_node(manifest, node_coord):
     # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
-    build_args = {}                         # TODO: redundant. no need to reasign values.
-    build_args['fs-image'] = custom_tar
-    build_args['hostname'] = node_hostname
-    build_args['tftp'] = tftp_node_dir
-    build_args['verbose'] = BP.VERBOSE
-    build_args['debug'] = BP.DEBUG
-    build_args['packages'] = manifest.thedict['packages']
-    build_args['manifest'] = manifest.namespace
+    build_args = {
+            'fs-image' : custom_tar,
+            'hostname' : node_hostname,
+            'tftp' : tftp_node_dir,
+            'verbose' : BP.VERBOSE,
+            'debug' : BP.DEBUG,
+            'packages' : manifest.thedict['packages'],
+            'manifest' : manifest.namespace
+    }
 
     cmd_args = []
     for key, val in build_args.items():
@@ -207,7 +209,10 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
     cmd = shlex.split(cmd)
 
-    _ = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+    try:
+        _ = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+    except subprocess.SubprocessError as err:       # TSNH =)
+        return make_response('Failed to start node binding process.', 418)
 
     manifest_tftp_file = manifest.namespace.replace('/', '.')
     customize_node.copy_target_into(manifest.fullpath, tftp_node_dir + '/' + manifest_tftp_file)
@@ -236,8 +241,13 @@ def get_node_status(node_coord):
         return None
 
     status = {}
-    with open(status_file, 'r') as file_obj:
-        status = json.loads(file_obj.read())
+    try:
+        with open(status_file, 'r') as file_obj:
+            status = json.loads(file_obj.read())
+    except ValueError as err:       # TCNH =)
+        status['message'] = 'Failed to parse status file. Exception Error: %s ' % str(err)
+        status['manifest'] = 'unknown'
+        status['status'] = 'error'
 
     return status
 
