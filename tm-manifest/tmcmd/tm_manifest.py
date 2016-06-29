@@ -67,7 +67,6 @@ class TmManifest(tm_base.TmCmd):
         """
         assert len(target) >= 2, 'Missing argument: put <manifest name> <manifest file>!'
         file_real_path = os.path.realpath(target[1])
-        set_trace()
 
         with open(file_real_path, 'r') as file_obj:
             manifest_content = file_obj.read()
@@ -82,6 +81,7 @@ class TmManifest(tm_base.TmCmd):
         api_url = 'http://' + clean_url + '/'
 
         data = self.http_upload(api_url, payload=payload)
+        set_trace()
         return self.to_json(data)
 
 

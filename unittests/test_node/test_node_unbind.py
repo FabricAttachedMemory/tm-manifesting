@@ -6,11 +6,10 @@ import os
 import json
 import shutil
 import unittest
+from pdb import set_trace
 
 import config
-import tmcmd
 from tm_librarian.tmconfig import TMConfig
-from pdb import set_trace
 
 class UnbindNodeTest(unittest.TestCase):
 
@@ -27,21 +26,20 @@ class UnbindNodeTest(unittest.TestCase):
         """
         cls.manifest = os.path.dirname(__file__) + '/manifest.test'
 
-        cls.tm_cmd = tmcmd.tmnode
+        cls.tm_cmd = config.tmnode
+        set_trace()
+        config.tmmanifest.upload(['', cls.manifest])
+
         cls.tmconfig = TMConfig(config.TMCONFIG)
         cls.node = cls.tmconfig.nodes[1].coordinate
         cls.manifest_tftp = config.IMAGES + '/node02/' + os.path.basename(cls.manifest)
-        set_trace()
-        shutil.copyfile(cls.manifest, cls.manifest_tftp)
+
         return None
 
 
     @classmethod
     def tearDown(cls):
         tmcmd.tmmanifest.delete(['manifest.test'])
-        if os.path.exists(cls.manifest_for_test_path):
-            os.remove(cls.manifest_for_test_path)
-
         return None
 
 
