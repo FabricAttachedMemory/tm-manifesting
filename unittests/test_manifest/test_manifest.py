@@ -22,7 +22,6 @@ class ManifestTest(unittest.TestCase):
     @classmethod
     def setUp(cls):
         cls.tmcmd = config.tmcmd.tmmanifest
-        set_trace()
         return
 
 
@@ -31,9 +30,10 @@ class ManifestTest(unittest.TestCase):
         return
 
 
-    def test_list(self):
+    def testUploadNoPrefix(self):
         """
         """
+        self.tmcmd.upload(['', './mock-data/manifest.test'])
         self.assertTrue(False, 'Not Implemented')
 
 
