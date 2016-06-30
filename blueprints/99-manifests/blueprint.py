@@ -87,7 +87,7 @@ def listall():
     to the server.
     """
     all_manifests = sorted(list(_data.keys()))
-    msg = jsonify({ 'manifests' : all_manifests })
+    msg = json.dumps({ 'manifests' : all_manifests }, indent=4)
     status_code = 200
     if not all_manifests:
         status_code = 204
@@ -259,7 +259,7 @@ class ManifestDestiny(object):
             assert fname == self.thedict['name'], 'Illegal (file) name'
 
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
-            self.manifest_file = self.dirpath + '/' + self.namespace
+            self.manifest_file = BP.UPLOADS + '/' + self.namespace
 
             if os.path.exists(self.manifest_file):
                 self.response = make_response('An existing manifest has been replaced with the provided contents.', 200)
