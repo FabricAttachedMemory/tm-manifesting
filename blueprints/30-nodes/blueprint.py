@@ -93,7 +93,7 @@ def get_node_bind_info(node_coord=None):
 
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
-def delete_node_binding(node_coord=None):
+def delete_node_binding(node_coord):
     """
         Remove Node to Manifest binding. Find node's folder in the TFTP directory
     by its hostname and clean out the content. Thus, on the next node reboot, it
@@ -169,7 +169,7 @@ def build_node(manifest, node_coord):
     golden_tar = BP.config['GOLDEN_IMAGE']
 
     if not os.path.exists(golden_tar):
-        return make_response('Can not generate image! No "Golden Image" found!' % node_coord, 505)
+        return make_response('Can not generate image! No "Golden Image" found!', 505)
 
     # ----------------------- Variables
     node_dir = os.path.join(sys_imgs,

@@ -259,6 +259,7 @@ class ManifestDestiny(object):
             assert fname == self.thedict['name'], 'Illegal (file) name'
 
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
+            self.manifest_file = self.dirpath + '/' + self.namespace
 
             if os.path.exists(self.manifest_file):
                 self.response = make_response('An existing manifest has been replaced with the provided contents.', 200)
@@ -268,7 +269,6 @@ class ManifestDestiny(object):
             os.makedirs(self.dirpath, exist_ok=True)
             with open(self.manifest_file, 'w') as f:
                 f.write(contentstr)
-
             return
 
         assert '/' not in basename, 'basename is not a leaf element'
@@ -286,20 +286,14 @@ class ManifestDestiny(object):
     def fullpath(self):
         return '%s/%s' % (self.dirpath, self.basename)
 
+
     @property
     def namespace(self):
         namespace = self.prefix + '/' + self.thedict['name']
         namespace = os.path.normpath(namespace)
         namespace = namespace.strip('/')
         return namespace
-        """
-        if self.dirpath.startswith(BP.UPLOADS):
-            tmp = self.dirpath.split(BP.UPLOADS)[-1][1:]    # chomp leading /
-            return tmp
-        # Some kind of relative path, just send it all back
-        tmp = os.path.join(self.dirpath.split(self.basename)[0])
-        return tmp
-        """
+
 
     @property
     def key(self):
