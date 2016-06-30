@@ -91,6 +91,16 @@ def get_node_bind_info(node_coord=None):
 
     return make_response(jsonify(result), 200)
 
+
+@BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
+def delete_node_binding(node_coord):
+    """
+    """
+    if node_coord not in BP.node_coords:
+        return make_response('The specified node does not exist.', 404)
+
+    return make_response('Stay put. It will be implemented soon.', 501)
+
 ####################### API (PUT) ###############################
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('PUT', ))
@@ -144,7 +154,7 @@ def build_node(manifest, node_coord):
     golden_tar = BP.config['GOLDEN_IMAGE']
 
     if not os.path.exists(golden_tar):
-        return make_response('Can not generate image! No "Golden Image" found!' % node_coord, 505)
+        return make_response('Can not generate image! No "Golden Image" found!', 505)
 
     # ----------------------- Variables
     node_dir = os.path.join(sys_imgs,
