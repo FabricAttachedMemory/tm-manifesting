@@ -87,7 +87,7 @@ def listall():
     to the server.
     """
     all_manifests = sorted(list(_data.keys()))
-    msg = jsonify({ 'manifests' : all_manifests })
+    msg = json.dumps({ 'manifests' : all_manifests }, indent=4)
     status_code = 200
     if not all_manifests:
         status_code = 204
