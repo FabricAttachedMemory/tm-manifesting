@@ -106,7 +106,7 @@ def delete_node_binding(node_coord):
 
     node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
     if not os.path.isdir(node_location):        # Paranoia. That should never happened.
-        return make_response('TFT doesn\'t serve requested node.', 500)
+        return make_response('TFT doesn\'t serve requested node.', 404)
 
     try:
         for node_file in glob(node_location + '/*'):
