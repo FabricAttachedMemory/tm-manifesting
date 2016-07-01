@@ -22,27 +22,27 @@ To exercise the APIs, get a browser plugin like
 
 <!------------------------------------------------------------------------>
 
-<DT><a href="{{ base_url }}package" target='packages'>Packages</a>
+<DT><a href="{{ base_url }}packages" target='packages'>Packages</a>
 <DD>
 Read-only views of all available L4TM packages and their details.
 The source repo is <a href="{{ mirror }}" target='repo'>{{ mirror }}</a>.
 </DD>
 <p>
-<DD>{{ base_url }}api/package</DD>
+<DD>{{ base_url }}api/packages</DD>
 <DD>{{ base_url }}api/package/&lt;name&gt;</DD>
 </DT>
 <p>
 
 <!------------------------------------------------------------------------>
 
-<DT><a href="{{ base_url }}task" target='tasks'>Tasks</a>
+<DT><a href="{{ base_url }}tasks" target='tasks'>Tasks</a>
 <DD>
 Read-only views of all available "tasks" (predefined collections
 of packages).  Tasks may be included in a manifest, or post-installed on a node
 via the "tasksel" tool.
 </DD>
 <p>
-<DD>{{ base_url }}api/task</DD>
+<DD>{{ base_url }}api/tasks</DD>
 <DD>{{ base_url }}api/task/&lt;name&gt;</DD>
 </DT>
 <p>
