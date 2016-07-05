@@ -122,7 +122,7 @@ def check_version(*args, **kwargs):
             except Exception as e:
                 pass
     if version < 0:
-        return _response_bad('I see no version here. Did you forget "version=1.0" in request header?')
+        return _response_bad('I see no version here. Did you forget "version" in request header?')
     want = mainapp.config['API_VERSION']
     if version != want:
         return _response_bad('Bad version: %s != %s' % (version, want))
