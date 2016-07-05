@@ -25,12 +25,13 @@ BP = Blueprint(_ERS_element, __name__)
 @BP.route('/%s/<name>' % _ERS_element)  # Songular - to list one package.
 def _webpage(name=None):
 
-    if name is None:
+    if name is None:    # overloaded detection of singular rule
         return render_template(
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
-            url_base=request.url)
+            url_base='/manifesting/%s/' % _ERS_element) # singular
+            # FIXME: remove hardcoded "manifesting" from above
 
     return render_template(
         _ERS_element + '.tpl',
