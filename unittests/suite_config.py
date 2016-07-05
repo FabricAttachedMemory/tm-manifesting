@@ -26,12 +26,12 @@ import tmcmd as TMCMD
 
 server_config = manifest_config
 tmcmd = TMCMD
-
+"""
 tmconfig_path = os.path.realpath(__file__)
 tmconfig_path = os.path.dirname(tmconfig_path)
 tmconfig_path = '%s/hpetmconfig_test.json' % tmconfig_path
-
-hpetmconfig = TMConfig(tmconfig_path)
+"""
+hpetmconfig = TMConfig(manifest_config.TMCONFIG)
 
 sys.path.remove(configs)
 sys.path.remove(tmcmd_path)
