@@ -290,6 +290,5 @@ def register(mainapp):  # take what you like and leave the rest
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
-    BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _data = _load_data()

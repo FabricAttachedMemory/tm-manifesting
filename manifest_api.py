@@ -46,9 +46,8 @@ mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 # Moved from config file
 mainapp.config['API_VERSION'] = 1.0
 mroot = mainapp.config['MANIFESTING_ROOT']
-mainapp.config['NODE_BINDING'] = os.path.normpath(mroot + '/node_binding')
-mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/sys-images')
-mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifest_uploads')
+mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/node')
+mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifest')
 mainapp.config['GOLDEN_IMAGE'] = \
     os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
                                     '/golden/golden.arm.tar')
