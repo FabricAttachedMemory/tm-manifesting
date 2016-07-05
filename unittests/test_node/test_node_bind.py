@@ -59,7 +59,7 @@ class BindNodeTest(unittest.TestCase):
         self.assertTrue('200' in output,
                         'listall return status code does not comply with ERS.')
 
-
+    '''
     def testSetNodeAndStatus(self):
         """
         """
@@ -78,18 +78,7 @@ class BindNodeTest(unittest.TestCase):
             time.sleep(3)
 
         self.assertTrue(status['status'] == 'done', 'Node is not done?')
-
-
-    def testShowNodeExist(self):
-        """
-            Test api abbility to get a specifiec node status.
-        """
-        output = json.loads(self.tmcmd.show([self.coords[1]]))
-        fields_check = self.node_status_fiels(output)
-
-        self.assertTrue(output['mapping'], 'Node status does not comply. "mapping" key is not in the response.')
-        self.assertTrue(fields_check,
-                        'Node status does not comply with ERS. Not all fields presented.')
+    '''
 
 # =================================================================
 
