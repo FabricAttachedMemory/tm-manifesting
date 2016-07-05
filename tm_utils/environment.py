@@ -1,4 +1,5 @@
 #!/urs/bin/python3 -tt
+import os
 
 
 def ratify(path):
@@ -9,4 +10,15 @@ def ratify(path):
     :param 'path': [list or str] list of pathes to validate or a signle path.
     :return: [list] of non-existing pathes.
     """
-    raise NotImplemented('Developing...')
+    if not path:
+        return []
+
+    if not isinstance(path, list):
+        path = [path]
+
+    missing_path_list = []
+    for to_validate in path:
+        if not os.path.exists(to_validate):
+            missing_path_list.append(to_validate)
+
+    return missing_path_list

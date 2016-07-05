@@ -11,6 +11,7 @@ from jinja2.environment import create_cache
 
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
+from tm_utils import environment
 
 ###########################################################################
 
@@ -53,6 +54,9 @@ mainapp.config['GOLDEN_IMAGE'] = \
                                     '/golden/golden.arm.tar')
 mainapp.config['TFTP_IMAGES'] = mainapp.config['TFTP_ROOT'] + mainapp.config['TFTP_IMAGES']
 
+path_to_validate = [ mroot, mainapp.config['FILESYSTEM_IMAGES'],
+                     mainapp.config['MANIFEST_UPLOADS'], mainapp.config['GOLDEN_IMAGE'],
+                     mainapp.config['TFTP_IMAGES'], mainapp.config['TFTP_ROOT'] ]
 
 # Move to cmdline processing
 mainapp.config['DEBUG'] = \
