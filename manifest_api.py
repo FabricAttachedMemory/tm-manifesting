@@ -9,9 +9,15 @@ from pdb import set_trace
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
+this_file_path = os.path.realpath(__file__)
+this_file_path = os.path.dirname(this_file_path)
+if this_file_path not in sys.path:
+    sys.path.append(this_file_path)
+
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
-from tm_utils import environment
+import tm_utils
+set_trace()
 
 ###########################################################################
 
@@ -57,6 +63,11 @@ mainapp.config['TFTP_IMAGES'] = mainapp.config['TFTP_ROOT'] + mainapp.config['TF
 path_to_validate = [ mroot, mainapp.config['FILESYSTEM_IMAGES'],
                      mainapp.config['MANIFEST_UPLOADS'], mainapp.config['GOLDEN_IMAGE'],
                      mainapp.config['TFTP_IMAGES'], mainapp.config['TFTP_ROOT'] ]
+missing_env_path = tm_utils.environment.ratify(path_to_validate)
+if missing_env_path:
+    raise RuntimeError('Failed to run manifesting server. Following path missing: ' +\
+                        ', '.join(missing_env_path) )
+
 
 # Move to cmdline processing
 mainapp.config['DEBUG'] = \
