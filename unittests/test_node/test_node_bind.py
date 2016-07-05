@@ -4,6 +4,7 @@
 """
 import json
 import unittest
+import time
 import tmcmd as TMCMD
 
 import suite_config as config
@@ -25,13 +26,16 @@ class BindNodeTest(unittest.TestCase):
         cls.tmconfig = config.hpetmconfig
         cls.coords = sorted([node.coordinate for node in cls.tmconfig.nodes])
 
-        TMCMD.tmmanifest.upload([cls.manifest_file])
+        TMCMD.tmmanifest.upload(['', cls.manifest_file])
 
 
 
     @classmethod
     def tearDown(cls):
-        return None
+        TMCMD.tmmanifest.delete([cls.manifest])
+        status = cls.tmcmd.show([cls.coords[1]])
+        if '200' not in status:
+            cls.tmcmd.delete([cls.coords[1]])
 
 
     def testNodeList(self):
@@ -55,35 +59,44 @@ class BindNodeTest(unittest.TestCase):
         self.assertTrue('200' in output,
                         'listall return status code does not comply with ERS.')
 
-    def testShowNodeStatus(self):
+
+    def testSetNodeAndStatus(self):
         """
         """
-        output = json.loads(TMCMD.tmmanifest.upload([]))
+        args = [self.manifest, self.coords[1]]
+        output = json.loads( self.tmcmd.set_node(args) )
+        self.assertTrue('201' in output, 'WOW! Node was overwritten. Not good.')
+        time.sleep(1)
 
-        args = [self.coords[1], ]
-        output = self.tmcmd.set_node()
+        status = json.loads( self.tmcmd.show([self.coords[1]]) )
+        self.assertTrue(self.node_status_fields(status), 'Node status while building does not comply.')
+        self.assertTrue(status['status'] == 'building', 'Node is not building??')
 
-        output = json.loads(self.tmcmd.show([self.coords[1]])
+        while status['status'] == 'building':
+            status = json.loads( self.tmcmd.show([self.coords[1]]) )
+            self.assertTrue(self.node_status_fields(status), 'Node status while building does not comply.')
+            time.sleep(3)
+
+        self.assertTrue(status['status'] == 'done', 'Node is not done?')
 
 
     def testShowNodeExist(self):
         """
             Test api abbility to get a specifiec node status.
         """
-        output = json.loads(self.tmcmd.show([cls.coords[1]))
+        output = json.loads(self.tmcmd.show([self.coords[1]]))
         fields_check = self.node_status_fiels(output)
 
+        self.assertTrue(output['mapping'], 'Node status does not comply. "mapping" key is not in the response.')
         self.assertTrue(fields_check,
                         'Node status does not comply with ERS. Not all fields presented.')
 
+# =================================================================
 
     def node_status_fields(self, response):
         """
         """
-        if 'mappings' not in response:
-            return False
-
-        fields = ['mafniest', 'status', 'message']
+        fields = ['manifest', 'status', 'message']
         for expected in fields:
             if expected not in response:
                 return False
