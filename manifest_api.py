@@ -24,6 +24,8 @@ set_trace()
 def parse_args():
     """ Parse system arguments set from command line."""
     PARSER = argparse.ArgumentParser(description='Manifesting server run settings')
+    PARSER.add_argument('--config', help='Python config file to use for the server.',
+                        default='configs/manifest_config.py')
     PARSER.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
     PARSER.add_argument('--dry-run', help='No action run; simulation of events.',
@@ -44,7 +46,7 @@ mainapp = Flask('tm_manifesting', static_url_path='/static')
 ###########################################################################
 # Set config variables for future use across the blueprints.
 
-mainapp.config.from_object('configs.manifest_config')
+mainapp.config.from_pyfile(os.path.realpath(cmdline_args['config']))
 mainapp.config['url_prefix'] = '/manifesting'
 
 mainapp.config['VERBOSE'] = cmdline_args['verbose']
@@ -53,8 +55,8 @@ mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 # Moved from config file
 mainapp.config['API_VERSION'] = 1.0
 mroot = mainapp.config['MANIFESTING_ROOT']
-mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/node')
-mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifest')
+mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/nodes')
+mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifests')
 mainapp.config['GOLDEN_IMAGE'] = \
     os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
                                     '/golden/golden.arm.tar')
