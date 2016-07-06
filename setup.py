@@ -1,12 +1,15 @@
 #!/usr/bin/python3 -tt
 import argparse
 import os
+import json
 import shlex
+import shutil
 import subprocess
 import sys
 
 from pdb import set_trace
 
+from configs import manifest_config as CONFIG
 from tm_utils import wrappers
 
 
@@ -30,21 +33,50 @@ def set_python_path(cfg_hook, hook_dist):
     wrappers.symlink_target(cfg_hook, tmms_pth)
 
 
-def set_manifesting_env():
+def create_manifesting_env(config, ignore_list=['golden']):
     """
         Set manifesting environment in the right location (based of the config file),
     which follows ERS specs '8.3.1. OS Manifesting Data Storage'.
     """
-    raise NotImplemented('This is not the droid you are looking for. Not yet.. Not now...')
+    print(' ---- Creating manifest environment ---- ')
+    for name, path in config.items():
+        if name in ignore_list:
+            continue
+        print(' - ' + path)
+        create_folder(path)
 
 
-def set_tftp_env():
+def create_tftp_env(config, ignore_list=[]):
     """
         Set TFTP environment by creating uppropriate folders in the location
     of manifesting api and running make_grub_config.py script to generate grub config
     files. Comply with ERS specs '8.3.1. OS Manifesting Data Storage'.
     """
-    raise NotImplemented('Not now!')
+    print(' ---- Creating manifest environment ---- ')
+    for name, path in config.items():
+        if name in ignore_list:
+            continue
+        print(' - ' + path)
+        create_folder(path)
+
+
+def generate_grub():
+
+
+
+
+def create_folder(path):
+    """ A simple wrapper around os.makedirs that skip existed folders. """
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+
+def parse_config_file(path):
+    config = None
+    with open(path, 'r') as file_obj:
+        config_file_contents = file_obj.read()
+
+    return json.loads(config_file_contents)
 
 
 def main(args):
@@ -59,17 +91,32 @@ def main(args):
     assert os.geteuid() == 0, 'This script requires root permissions'
     set_python_path(args['python_hook'], args['python_hook_env'])
 
+    config_path = os.path.realpath(args['api_config'])
+    config = parse_config_file(config_path)
+
+    print()
+    create_manifesting_env(config['manifesting'])
+    print()
+    create_tftp_env(config['tftp'])
+    print()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Setup arguments that should not\
                                     be changed, unless you know what you doing.')
+    parser.add_argument('--api-config',
+                        help='A config.py file to be used by manifesting server.',
+                        default='configs/manifest_config.json')
+
     parser.add_argument('--python-hook-env',
                         help='dist-packages/ folder to use for the python environment.',
                         default='/usr/local/lib/python3.4/dist-packages/')
+
     parser.add_argument('--python-hook',
                         help='Path to a python\'s hook config file to use to put into' +\
                              '--python-hook-env',
                         default='configs/tmms.pth')
+
     args, _ = parser.parse_known_args()
     main(vars(args))
 
