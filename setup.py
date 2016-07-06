@@ -8,27 +8,26 @@ import sys
 from pdb import set_trace
 
 from tm_utils import wrappers
-import configs
 
 
-def set_python_path(path):
+def set_python_path(cfg_hook, hook_dist):
     """
         Set PYTHONPATH environment by creating a symlink fron tmms.pth file to the
     'path'/tmms.pth. Python interpreter then will pick it up and append path included
     in the tmmms.pth file.
 
-    :param 'path': path to the python's dist-packages (or site-packages) to set
+    :param 'cfg_hook': path to the python's dist-packages (or site-packages) to set
                   tmms.pth into.
+    :param 'hook_dit': path to where to place python config hook file. Usually,
+                    or by default in this function, it's: /usr/local/lib/python3.4/dist-packages/
     """
-    tmms_pth_file = os.path.basename(configs.PYTHONPATH_CFG)
-    tmms_pth = os.path.join(path, tmms_pth_file)
+    tmms_pth_file = os.path.basename(cfg_hook)        # name of the .pth file to
+    tmms_pth = os.path.join(hook_dist, tmms_pth_file) # create a simpling destination.
     if os.path.exists(tmms_pth):
         print('PYTHONPATH alread set. Overwritting...')
         os.remove(tmms_pth)
 
-    configs._verbose = True
-
-    wrappers.symlink_target(configs.PYTHONPATH_CFG, tmms_pth)
+    wrappers.symlink_target(cfg_hook, tmms_pth)
 
 
 def set_manifesting_env():
@@ -54,16 +53,23 @@ def main(args):
     - set PYTHONPATH using .pth file that have a path to the manifesting/ source code.
     -
     """
+    args['python_hook_env'] = os.path.realpath(args['python_hook_env'])
+    args['python_hook'] = os.path.realpath(args['python_hook'])
+
     assert os.geteuid() == 0, 'This script requires root permissions'
-    set_python_path(args['dist_packages'])
+    set_python_path(args['python_hook'], args['python_hook_env'])
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Setup arguments that should not\
                                     be changed, unless you know what you doing.')
-    parser.add_argument('--dist-packages',
+    parser.add_argument('--python-hook-env',
                         help='dist-packages/ folder to use for the python environment.',
                         default='/usr/local/lib/python3.4/dist-packages/')
+    parser.add_argument('--python-hook',
+                        help='Path to a python\'s hook config file to use to put into' +\
+                             '--python-hook-env',
+                        default='configs/tmms.pth')
     args, _ = parser.parse_known_args()
     main(vars(args))
 
