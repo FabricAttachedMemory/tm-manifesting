@@ -1,6 +1,8 @@
 #!/urs/bin/python3 -tt
 import os
 
+from . import wrappers
+
 
 def ratify(path):
     """
@@ -22,3 +24,22 @@ def ratify(path):
             missing_path_list.append(to_validate)
 
     return missing_path_list
+
+
+def ensure_pythonpath(cfg_hook, python_dest):
+    """
+        Validate the existance of the hook located in the python dist-packages
+    that is pointed to the expected .pth hook config file. If not - create one.
+
+    :param 'cfg_hook': full path to a .pth hook config file to use for a python
+                       environment path string.
+    :param 'python_dest': path to python/dist-packages/ to place hook into.
+    """
+    hook_name = os.path.basename(cfg_hook)
+    hooked_path = os.path.join(python_dest, cfg_hook)   # full path destination for
+                                                        # hook to place into.
+    if os.path.exists(hooked_path):
+        if os.readlink(hooked_path) == cfg_hook:    # check if symlink is correct
+            return
+
+    wrappers.symlink_target(cfg_hook, hooked_path)
