@@ -23,8 +23,8 @@ def set_python_path(path):
     tmms_pth_file = os.path.basename(configs.PYTHONPATH_CFG)
     tmms_pth = os.path.join(path, tmms_pth_file)
     if os.path.exists(tmms_pth):
-        print('PYTHONPATH alread set. Skipping...')
-        return
+        print('PYTHONPATH alread set. Overwritting...')
+        os.remove(tmms_pth)
 
     configs._verbose = True
 
