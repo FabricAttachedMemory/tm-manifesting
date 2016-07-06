@@ -17,7 +17,6 @@ if this_file_path not in sys.path:
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
 import tm_utils
-set_trace()
 
 ###########################################################################
 

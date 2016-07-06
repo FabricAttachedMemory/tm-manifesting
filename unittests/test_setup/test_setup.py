@@ -49,7 +49,6 @@ class EnvironmentScriptTest(unittest.TestCase):
         """
             Test if setup imports correct python path into environment.
         """
-        set_trace()
         setup.set_python_path(self.mock_hook, self.python_dist)
 
         self.assertTrue(os.path.exists(self.python_hooked))
