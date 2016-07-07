@@ -9,14 +9,11 @@ from pdb import set_trace
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
-this_file_path = os.path.realpath(__file__)
-this_file_path = os.path.dirname(this_file_path)
-if this_file_path not in sys.path:
-    sys.path.append(this_file_path)
-
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
 import tm_utils
+from configs import api_cfg
+set_trace()
 
 ###########################################################################
 
@@ -54,7 +51,7 @@ mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 # Moved from config file
 mainapp.config['API_VERSION'] = 1.0
 mroot = mainapp.config['MANIFESTING_ROOT']
-mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/nodes')
+mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/sys-images')
 mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifests')
 mainapp.config['GOLDEN_IMAGE'] = \
     os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
