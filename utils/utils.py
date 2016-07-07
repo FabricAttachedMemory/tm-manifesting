@@ -1,7 +1,6 @@
 #!/urs/bin/python3 -tt
 import os
-
-from . import wrappers
+import sys
 
 
 def ratify(path):
@@ -42,4 +41,4 @@ def ensure_pythonpath(cfg_hook, python_dest):
         if os.readlink(hooked_path) == cfg_hook:    # check if symlink is correct
             return
 
-    wrappers.symlink_target(cfg_hook, hooked_path)
+    os.symlink(cfg_hook, target)

@@ -1,12 +1,12 @@
 #!/usr/bin/python3 -tt
 """
-    Test tm_utils.environment.ratify() script.
+    Test utils/utils.py script.
 """
 import os
 import unittest
 from shutil import rmtree
 
-from tm_utils import environment
+from utils import utils
 from pdb import set_trace
 
 
@@ -43,10 +43,10 @@ class EnvironmentScriptTest(unittest.TestCase):
 
         os.mkdir(junk_dir)
 
-        output = environment.ratify(junk_dir)
+        output = utils.ratify(junk_dir)
         self.assertTrue(not output)
 
-        output = environment.ratify(junk_file)
+        output = utils.ratify(junk_file)
         self.assertTrue(not output)
 
 
@@ -63,7 +63,7 @@ class EnvironmentScriptTest(unittest.TestCase):
 
         os.mkdir(junk_dir)
 
-        output = environment.ratify([junk_dir, junk_file])
+        output = utils.ratify([junk_dir, junk_file])
         self.assertTrue(not output)
 
 
@@ -76,10 +76,10 @@ class EnvironmentScriptTest(unittest.TestCase):
         junk_dir = self.tmp + '/junk'
         junk_file = self.tmp + '/junk.file'
 
-        output = environment.ratify(junk_dir)
+        output = utils.ratify(junk_dir)
         self.assertTrue(junk_dir in output)
 
-        output = environment.ratify(junk_file)
+        output = utils.ratify(junk_file)
         self.assertTrue(junk_file in output)
 
 
@@ -92,7 +92,7 @@ class EnvironmentScriptTest(unittest.TestCase):
         junk_dir = self.tmp + '/junk'
         junk_file = self.tmp + '/junk.file'
 
-        output = environment.ratify([junk_dir, junk_file])
+        output = utils.ratify([junk_dir, junk_file])
         self.assertTrue(junk_dir in output)
         self.assertTrue(junk_file in output)
 

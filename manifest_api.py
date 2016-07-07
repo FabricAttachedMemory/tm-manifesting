@@ -12,7 +12,7 @@ from jinja2.environment import create_cache
 
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
-import tm_utils
+from utils import utils
 
 ###########################################################################
 
@@ -60,7 +60,7 @@ mainapp.config['TFTP_IMAGES'] = mainapp.config['TFTP_ROOT'] + mainapp.config['TF
 path_to_validate = [ mroot, mainapp.config['FILESYSTEM_IMAGES'],
                      mainapp.config['MANIFEST_UPLOADS'], mainapp.config['GOLDEN_IMAGE'],
                      mainapp.config['TFTP_IMAGES'], mainapp.config['TFTP_ROOT'] ]
-missing_env_path = tm_utils.environment.ratify(path_to_validate)
+missing_env_path = utils.ratify(path_to_validate)
 if missing_env_path:
     raise RuntimeError('Failed to run manifesting server. Following path missing: ' +\
                         ', '.join(missing_env_path) )
