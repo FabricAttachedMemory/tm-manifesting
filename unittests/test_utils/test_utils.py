@@ -3,6 +3,7 @@
     Test utils/utils.py script.
 """
 import os
+import tempfile
 import unittest
 from shutil import rmtree
 
@@ -12,19 +13,17 @@ from pdb import set_trace
 
 class EnvironmentScriptTest(unittest.TestCase):
 
-    tmp = '/tmp/tm_utils_unittest/'
+    #tmp = '/tmp/tm_utils_unittest/'
+    tmp = None
 
     @classmethod
     def setUp(cls):
         """
             Prepare testing environment for the unittest to use.
         """
-        if os.path.exists(cls.tmp):
-            rmtree(cls.tmp)
-        os.mkdir(cls.tmp)
+        cls.tmp = str(tempfile.mkdtemp())
 
 
-    @classmethod
     def tearDown(cls):
         """ Clean up test environment. """
         if os.path.exists(cls.tmp):
