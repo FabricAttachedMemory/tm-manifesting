@@ -20,5 +20,5 @@ L4TM_AREAS = ( 'contrib', 'non-free' )
 #L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
 
 TFTP_ROOT = MANIFESTING_ROOT + 'tftp/'
-TFTP_IMAGES = 'nodes/'
-TFTP_GRUB = 'boot/grub/'
+#TFTP_IMAGES = 'nodes/'
+#TFTP_GRUB = 'boot/grub/'

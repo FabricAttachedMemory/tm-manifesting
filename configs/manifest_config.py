@@ -1,24 +1,69 @@
-# Config file for Manifest API, can be used from Python or Bash
+import flask
+import os
+import sys
+from pdb import set_trace
 
-# Global topology config file for this instance of The Machine
-TMCONFIG = '/etc/tmconfig'
 
-# Select which interfaces on which the Manifest API listens
-HOST = '0.0.0.0'    # bind to all interfaces in this computer
-PORT = 31178        # listen on this port
+_flask_app = flask.Flask(__name__)
+_expected_fields = ('TMCONFIG', 'HOST', 'PORT',
+                    'L4TM_MIRROR', 'L4TM_RELEASE', 'L4TM_AREAS',
+                    'MANIFESTING_ROOT', 'TFTP_ROOT')
 
-# Working directory
-MANIFESTING_ROOT = '/var/lib/tmms/'
+_constructed_fields = ('FILESYSTEM_IMAGES', 'MANIFEST_UPLOADS',
+                    'GOLDEN_IMAGE', 'TFTP_IMAGES', 'TFTP_GRUB')
 
-# L4TM repo information
-L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
-L4TM_RELEASE = 'catapult'
 
-# Remove 'main' for a much faster starter (3 seconds vs 20)
-#L4TM_AREAS = ( 'main' )
-L4TM_AREAS = ( 'contrib', 'non-free' )
-#L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
+def update(config_path):
+    """
+        Unpack local variables using python config file pass passed to this function.
+    :param 'config_path': path to a .py config file.
+    """
+    config_path = os.path.realpath(config_path)
+    _flask_app.config.from_pyfile(config_path)
 
-TFTP_ROOT = MANIFESTING_ROOT + 'tftp/'
-TFTP_IMAGES = 'nodes/'
-TFTP_GRUB = 'boot/grub/'
+    validate_config(_flask_app.config)
+    result = {}
+    for field in _expected_fields:
+        result[field] = _flask_app.config[field]
+
+    result = get_expected(result)
+    result['MANIFESTING_ROOT'] = os.path.join(result['MANIFESTING_ROOT'], '')  # ensure trailing slashes
+    result['TFTP_ROOT'] = os.path.join(result['TFTP_ROOT'], '')
+
+    mroot = result['MANIFESTING_ROOT']
+    tftp = result['TFTP_ROOT']
+    result['FILESYSTEM_IMAGES'] = mroot + 'sys-images/'
+    result['MANIFEST_UPLOADS'] = mroot + 'manifests/'
+    result['GOLDEN_IMAGE'] = result['FILESYSTEM_IMAGES'] + 'golden/golden.arm.tar'
+
+    result['TFTP_IMAGES'] = tftp + 'nodes/'
+    result['TFTP_GRUB'] = tftp + 'boot/grub/'
+
+    sys.modules[__name__].__dict__.update(result)
+
+
+def validate_config(config_dict):
+    """
+        Validate that incoming .py config file has required variables set.
+    """
+    for expected in _expected_fields:
+        if expected not in config_dict:
+            raise ValueError('Config file missing field  "%s"' % expected)
+
+
+def get_expected(config):
+    """
+        Extract required config variables from .py config file.
+    """
+    result = {}
+    for field in _expected_fields:
+        if field in config:
+            result[field] = config[field]
+    return result
+
+
+_default_cfg = os.path.dirname(__file__) + '/default.py'
+_flask_app.config.from_pyfile(_default_cfg)
+validate_config(_flask_app.config)
+
+update(_default_cfg)
