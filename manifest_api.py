@@ -9,8 +9,10 @@ from pdb import set_trace
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
+
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
+from utils import utils
 
 ###########################################################################
 
@@ -48,12 +50,20 @@ mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 # Moved from config file
 mainapp.config['API_VERSION'] = 1.0
 mroot = mainapp.config['MANIFESTING_ROOT']
-mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/nodes')
-mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifests')
+mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/sys-images/')
+mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifests/')
 mainapp.config['GOLDEN_IMAGE'] = \
     os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
                                     '/golden/golden.arm.tar')
 mainapp.config['TFTP_IMAGES'] = mainapp.config['TFTP_ROOT'] + mainapp.config['TFTP_IMAGES']
+
+path_to_validate = [ mroot, mainapp.config['FILESYSTEM_IMAGES'],
+                     mainapp.config['MANIFEST_UPLOADS'], mainapp.config['GOLDEN_IMAGE'],
+                     mainapp.config['TFTP_IMAGES'], mainapp.config['TFTP_ROOT'] ]
+missing_env_path = utils.ratify(path_to_validate)
+if missing_env_path:
+    raise RuntimeError('Failed to run manifesting server. Following path missing: ' +\
+                        ', '.join(missing_env_path) )
 
 
 # Move to cmdline processing
