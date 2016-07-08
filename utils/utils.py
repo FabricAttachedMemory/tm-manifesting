@@ -56,8 +56,6 @@ def symlink_target(source, target):
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
     try:
-        if _verbose:
-            print(' - Creating a symlink from "%s" to "%s"...' % (source, target))
         os.symlink(source, target)
     except EnvironmentError as err:
         raise RuntimeError ('Couldn\'t create a symlink: %s ' % err)

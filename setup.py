@@ -2,6 +2,7 @@
 import argparse
 import os
 import json
+import flask
 import shlex
 import shutil
 import subprocess
@@ -10,7 +11,7 @@ import sys
 from pdb import set_trace
 
 from configs import manifest_config as CONFIG
-from tm_utils import wrappers
+from utils import utils
 
 
 def set_python_path(cfg_hook, hook_dist):
@@ -30,20 +31,43 @@ def set_python_path(cfg_hook, hook_dist):
         print('PYTHONPATH alread set. Overwritting...')
         os.remove(tmms_pth)
 
-    wrappers.symlink_target(cfg_hook, tmms_pth)
+    utils.symlink_target(cfg_hook, tmms_pth)
 
 
-def create_manifesting_env(config, ignore_list=['golden']):
+def create_manifesting_env(config_path, ignore_list=['GOLDEN_IMAGE']):
     """
         Set manifesting environment in the right location (based of the config file),
     which follows ERS specs '8.3.1. OS Manifesting Data Storage'.
     """
     print(' ---- Creating manifest environment ---- ')
-    for name, path in config.items():
-        if name in ignore_list:
+    from configs import manifest_config as cfg
+    cfg.parameters.update(config_path)
+    fields = cfg.parameters.manifest_env
+
+    for field in fields:
+        if field in ignore_list:
             continue
+        path = cfg.parameters.__dict__[field]
+
         print(' - ' + path)
         create_folder(path)
+
+
+def create_env(fields, ignore_list=[]):
+    """
+        Set manifesting environment in the right location (based of the config file),
+    which follows ERS specs '8.3.1. OS Manifesting Data Storage'.
+    """
+    print(' ---- Creating manifest environment ---- ')
+
+    for field in fields:
+        if field in ignore_list:
+            continue
+        path = CONFIG.parameters.__dict__[field]
+
+        print(' - ' + path)
+        create_folder(path)
+
 
 
 def create_tftp_env(config, ignore_list=[]):
@@ -53,16 +77,24 @@ def create_tftp_env(config, ignore_list=[]):
     files. Comply with ERS specs '8.3.1. OS Manifesting Data Storage'.
     """
     print(' ---- Creating manifest environment ---- ')
+    '''
     for name, path in config.items():
         if name in ignore_list:
             continue
         print(' - ' + path)
         create_folder(path)
+    '''
+    from configs import manifest_config as cfg
+    cfg.parameters.update(config_path)
+    fields = cfg.parameters.tftp_env
 
+    for field in fields:
+        if field in ignore_list:
+            continue
+        path = cfg.parameters.__dict__[field]
 
-def generate_grub():
-
-
+        print(' - ' + path)
+        create_folder(path)
 
 
 def create_folder(path):
@@ -72,11 +104,9 @@ def create_folder(path):
 
 
 def parse_config_file(path):
-    config = None
-    with open(path, 'r') as file_obj:
-        config_file_contents = file_obj.read()
-
-    return json.loads(config_file_contents)
+    flask_obj = flask.Flask(__name__)
+    flask_obj.config.from_pyfile(path)
+    return flask_obj.config
 
 
 def main(args):
@@ -85,6 +115,7 @@ def main(args):
     - set PYTHONPATH using .pth file that have a path to the manifesting/ source code.
     -
     """
+
     args['python_hook_env'] = os.path.realpath(args['python_hook_env'])
     args['python_hook'] = os.path.realpath(args['python_hook'])
 
@@ -94,11 +125,15 @@ def main(args):
     config_path = os.path.realpath(args['api_config'])
     config = parse_config_file(config_path)
 
+    CONFIG.parameters.update(config_path)
+
     print()
-    create_manifesting_env(config['manifesting'])
+    fields = CONFIG.parameters.manifest_env
+    create_env(fields, ['GOLDEN_IMAGE'])
+
     print()
-    create_tftp_env(config['tftp'])
-    print()
+    fields = CONFIG.parameters.tftp_env
+    create_env(fields)
 
 
 if __name__ == '__main__':
@@ -106,7 +141,7 @@ if __name__ == '__main__':
                                     be changed, unless you know what you doing.')
     parser.add_argument('--api-config',
                         help='A config.py file to be used by manifesting server.',
-                        default='configs/manifest_config.json')
+                        default='configs/manifest_config/default.py')
 
     parser.add_argument('--python-hook-env',
                         help='dist-packages/ folder to use for the python environment.',
