@@ -34,32 +34,17 @@ def set_python_path(cfg_hook, hook_dist):
     utils.symlink_target(cfg_hook, tmms_pth)
 
 
-def create_manifesting_env(config_path, ignore_list=['GOLDEN_IMAGE']):
+def _create_env(fields, ignore_list=[]):
     """
-        Set manifesting environment in the right location (based of the config file),
-    which follows ERS specs '8.3.1. OS Manifesting Data Storage'.
+        Create folder tree based of the list of fileds passed, that must comply
+    with config/manifest_config/ structure. This function dependent on manifest_config/ 
+    module and its  variables naming convention.
+
+    :param 'fields': [list] variable names that determines path values of the
+                    manifesting entities.
+    :param 'ignore_list': [list] of fields to ignore, e.g. GOLDEN_IMAGE
     """
-    print(' ---- Creating manifest environment ---- ')
-    from configs import manifest_config as cfg
-    cfg.parameters.update(config_path)
-    fields = cfg.parameters.manifest_env
-
-    for field in fields:
-        if field in ignore_list:
-            continue
-        path = cfg.parameters.__dict__[field]
-
-        print(' - ' + path)
-        create_folder(path)
-
-
-def create_env(fields, ignore_list=[]):
-    """
-        Set manifesting environment in the right location (based of the config file),
-    which follows ERS specs '8.3.1. OS Manifesting Data Storage'.
-    """
-    print(' ---- Creating manifest environment ---- ')
-
+    print(' ---- Creating manifest and tftp environment ---- ')
     for field in fields:
         if field in ignore_list:
             continue
@@ -69,44 +54,10 @@ def create_env(fields, ignore_list=[]):
         create_folder(path)
 
 
-
-def create_tftp_env(config, ignore_list=[]):
-    """
-        Set TFTP environment by creating uppropriate folders in the location
-    of manifesting api and running make_grub_config.py script to generate grub config
-    files. Comply with ERS specs '8.3.1. OS Manifesting Data Storage'.
-    """
-    print(' ---- Creating manifest environment ---- ')
-    '''
-    for name, path in config.items():
-        if name in ignore_list:
-            continue
-        print(' - ' + path)
-        create_folder(path)
-    '''
-    from configs import manifest_config as cfg
-    cfg.parameters.update(config_path)
-    fields = cfg.parameters.tftp_env
-
-    for field in fields:
-        if field in ignore_list:
-            continue
-        path = cfg.parameters.__dict__[field]
-
-        print(' - ' + path)
-        create_folder(path)
-
-
 def create_folder(path):
     """ A simple wrapper around os.makedirs that skip existed folders. """
     if not os.path.isdir(path):
         os.makedirs(path)
-
-
-def parse_config_file(path):
-    flask_obj = flask.Flask(__name__)
-    flask_obj.config.from_pyfile(path)
-    return flask_obj.config
 
 
 def main(args):
@@ -122,24 +73,26 @@ def main(args):
     assert os.geteuid() == 0, 'This script requires root permissions'
     set_python_path(args['python_hook'], args['python_hook_env'])
 
-    config_path = os.path.realpath(args['api_config'])
-    config = parse_config_file(config_path)
+    config_path = os.path.realpath(args['config'])
+    set_trace()
 
     CONFIG.parameters.update(config_path)
 
     print()
     fields = CONFIG.parameters.manifest_env
-    create_env(fields, ['GOLDEN_IMAGE'])
+    _create_env(fields, ['GOLDEN_IMAGE'])
 
     print()
+
     fields = CONFIG.parameters.tftp_env
-    create_env(fields)
+    _create_env(fields)
+    print()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Setup arguments that should not\
                                     be changed, unless you know what you doing.')
-    parser.add_argument('--api-config',
+    parser.add_argument('--config',
                         help='A config.py file to be used by manifesting server.',
                         default='configs/manifest_config/default.py')
 
