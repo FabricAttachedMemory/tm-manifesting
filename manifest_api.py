@@ -12,7 +12,6 @@ from jinja2.environment import create_cache
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
 from utils import utils
-#from configs import manifest_config
 from configs.manifest_config import build_config
 
 ###########################################################################
@@ -42,6 +41,7 @@ mainapp = Flask('tm_manifesting', static_url_path='/static')
 ###########################################################################
 # Set config variables for future use across the blueprints.
 config = build_config.make_config(cmdline_args['config'])
+mainapp.config['API_VERSION'] = 1.0
 mainapp.config.update(config)
 mainapp.config['url_prefix'] = '/manifesting'
 
