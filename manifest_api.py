@@ -12,7 +12,8 @@ from jinja2.environment import create_cache
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
 from utils import utils
-from configs import manifest_config
+#from configs import manifest_config
+from configs.manifest_config import build_config
 
 ###########################################################################
 
@@ -20,7 +21,7 @@ def parse_args():
     """ Parse system arguments set from command line."""
     PARSER = argparse.ArgumentParser(description='Manifesting server run settings')
     PARSER.add_argument('--config', help='Python config file to use for the server.',
-                        default='configs/manifest_config/default.py')
+                        default='configs/manifest_config/manifest_config.py')
     PARSER.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
     PARSER.add_argument('--dry-run', help='No action run; simulation of events.',
@@ -40,11 +41,8 @@ mainapp = Flask('tm_manifesting', static_url_path='/static')
 
 ###########################################################################
 # Set config variables for future use across the blueprints.
-server_cfg = manifest_config.parameters
-server_cfg.update(cmdline_args['config'])
-mainapp.config.from_object(server_cfg)
-
-#mainapp.config.from_pyfile(os.path.realpath(cmdline_args['config']))
+config = build_config.make_config(cmdline_args['config'])
+mainapp.config.update(config)
 mainapp.config['url_prefix'] = '/manifesting'
 
 mainapp.config['VERBOSE'] = cmdline_args['verbose']
@@ -54,12 +52,15 @@ mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 mainapp.config['DEBUG'] = \
     True and sys.stdin.isatty()     #  running as a Deamon or from a Terminal?
 mainapp.config['VERBOSE'] = \
-    True and sys.stdin.isatty()   # enable debugging when from terminal...
+    True and sys.stdin.isatty()     # enable debugging when from terminal...
 
 
 path_to_validate = []
-for field in server_cfg.manifest_env + server_cfg.tftp_env:
-    path_to_validate.append(server_cfg.__dict__[field])
+path_fields = build_config._manifest_env + build_config._tftp_env
+for field in path_fields:
+    if field not in mainapp.config:     # Paranoia. Should never happened!
+        raise RuntimeError('Config parameter %s is missing in mainapp.config!' % field)
+    path_to_validate.append(mainapp.config[field])
 
 missing_env_path = utils.ratify(path_to_validate)
 
