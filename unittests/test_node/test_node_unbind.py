@@ -6,7 +6,9 @@ This test suite touches the following functions:
     tmcmd.tmmanifest.show
     tmcmd.tmmanifest.delete
 
-    tmcmd.tmnode.delete
+    tmcmd.tmnode.listall
+    tmcmd.tmnode.show
+    tmcmd.tmnode.set_node
     tmcmd.tmnode.delete
 """
 import time
