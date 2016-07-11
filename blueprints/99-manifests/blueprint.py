@@ -302,6 +302,7 @@ class ManifestDestiny(object):
 ###########################################################################
 
 def _lookup(manifest_name):    # Can be sub/path/name
+    manifest_name = manifest_name.strip('/')
     return _data.get(manifest_name, None)
 
 
