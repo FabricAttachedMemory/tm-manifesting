@@ -8,7 +8,7 @@ and folders for TFTP to server for nodes.
 import argparse
 import os
 from pdb import set_trace
-from configs import manifest_config as ManCfg
+from configs import build_config as ManCfg
 
 from tm_librarian.tmconfig import TMConfig
 
@@ -160,7 +160,6 @@ def main(args):
         Configure TFTP environment.
     """
     tmconfig = TMConfig(args['config'])
-    #tftp_root = os.path.normpath(manifest_config.MANIFESTING_ROOT + '/tftp/')
 
     TFTP = TMtftp(tmconfig)
     TFTP.create_environment()

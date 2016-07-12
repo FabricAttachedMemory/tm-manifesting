@@ -12,7 +12,7 @@ from jinja2.environment import create_cache
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
 from utils import utils
-from configs.manifest_config import build_config
+from configs import build_config
 
 ###########################################################################
 
@@ -20,7 +20,7 @@ def parse_args():
     """ Parse system arguments set from command line."""
     PARSER = argparse.ArgumentParser(description='Manifesting server run settings')
     PARSER.add_argument('--config', help='Python config file to use for the server.',
-                        default='configs/manifest_config/manifest_config.py')
+                        default='manifest_config.py')
     PARSER.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
     PARSER.add_argument('--dry-run', help='No action run; simulation of events.',
