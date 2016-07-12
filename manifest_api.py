@@ -9,10 +9,10 @@ from pdb import set_trace
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
-
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
 from utils import utils
+from configs import build_config
 
 ###########################################################################
 
@@ -20,7 +20,7 @@ def parse_args():
     """ Parse system arguments set from command line."""
     PARSER = argparse.ArgumentParser(description='Manifesting server run settings')
     PARSER.add_argument('--config', help='Python config file to use for the server.',
-                        default='configs/manifest_config.py')
+                        default='manifest_config.py')
     PARSER.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
     PARSER.add_argument('--dry-run', help='No action run; simulation of events.',
@@ -40,37 +40,33 @@ mainapp = Flask('tm_manifesting', static_url_path='/static')
 
 ###########################################################################
 # Set config variables for future use across the blueprints.
-
-mainapp.config.from_pyfile(os.path.realpath(cmdline_args['config']))
+config = build_config.make_config(cmdline_args['config'])
+mainapp.config['API_VERSION'] = 1.0
+mainapp.config.update(config)
 mainapp.config['url_prefix'] = '/manifesting'
 
 mainapp.config['VERBOSE'] = cmdline_args['verbose']
 mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 
-# Moved from config file
-mainapp.config['API_VERSION'] = 1.0
-mroot = mainapp.config['MANIFESTING_ROOT']
-mainapp.config['FILESYSTEM_IMAGES'] = os.path.normpath(mroot + '/sys-images/')
-mainapp.config['MANIFEST_UPLOADS'] = os.path.normpath(mroot + '/manifests/')
-mainapp.config['GOLDEN_IMAGE'] = \
-    os.path.normpath(mainapp.config['FILESYSTEM_IMAGES'] +
-                                    '/golden/golden.arm.tar')
-mainapp.config['TFTP_IMAGES'] = mainapp.config['TFTP_ROOT'] + mainapp.config['TFTP_IMAGES']
-
-path_to_validate = [ mroot, mainapp.config['FILESYSTEM_IMAGES'],
-                     mainapp.config['MANIFEST_UPLOADS'], mainapp.config['GOLDEN_IMAGE'],
-                     mainapp.config['TFTP_IMAGES'], mainapp.config['TFTP_ROOT'] ]
-missing_env_path = utils.ratify(path_to_validate)
-if missing_env_path:
-    raise RuntimeError('Failed to run manifesting server. Following path missing: ' +\
-                        ', '.join(missing_env_path) )
-
-
 # Move to cmdline processing
 mainapp.config['DEBUG'] = \
     True and sys.stdin.isatty()     #  running as a Deamon or from a Terminal?
 mainapp.config['VERBOSE'] = \
-    True and sys.stdin.isatty()   # enable debugging when from terminal...
+    True and sys.stdin.isatty()     # enable debugging when from terminal...
+
+
+path_to_validate = []
+path_fields = build_config._manifest_env + build_config._tftp_env
+for field in path_fields:
+    if field not in mainapp.config:     # Paranoia. Should never happened!
+        raise RuntimeError('Config parameter %s is missing in mainapp.config!' % field)
+    path_to_validate.append(mainapp.config[field])
+
+missing_env_path = utils.ratify(path_to_validate)
+
+if missing_env_path:
+    raise RuntimeError('Failed to run manifesting server. Following path missing: ' +\
+                        ', '.join(missing_env_path) )
 
 try:
     mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG'])
