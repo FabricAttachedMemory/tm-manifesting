@@ -50,6 +50,7 @@ class TmCmd():
             Base class to handle delete routines.
         """
         assert len(target) >= 1, 'Missing argument: delete <name>!'
+        self.show_name = target[0] if type(target) is list else target
         if options.get('verbose', False):
             print(' - Sending request to delete %s' % (self.url, target[0]))
 
