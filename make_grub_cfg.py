@@ -8,7 +8,7 @@ and folders for TFTP to server for nodes.
 import argparse
 import os
 from pdb import set_trace
-from configs import build_config as ManCfg
+from configs import build_config
 
 from tm_librarian.tmconfig import TMConfig
 
@@ -33,13 +33,13 @@ class TMtftp(object):
         :param 'nodes_cfg': [tm_librarian.tmconfig] parsed hpetmconfig.json file.
         :param 'filesystem_dir': [str] relative to TFTP folder path to saved cpio and vmlinuz files.
         """
-        self.root = ManCfg.TFTP_ROOT   # absolute path to TFTP on the server.
+        self.root = build_config.TFTP_ROOT   # absolute path to TFTP on the server.
         assert os.path.isdir(self.root), 'Can\'t find TFTP server at "%s"!' % (self.root)
 
-        self.grub_dir = ManCfg.TFTP_GRUB
+        self.grub_dir = build_config.TFTP_GRUB
         assert os.path.isdir(self.root + '/' + self.grub_dir), 'Couldn\'t find %s!' % (self.grub_dir)
 
-        self.filesystem_dir = ManCfg.TFTP_IMAGES
+        self.filesystem_dir = build_config.TFTP_IMAGES
 
         self.node_cfg = nodes_cfg
         self.nodes = nodes_cfg.nodes
