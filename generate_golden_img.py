@@ -9,7 +9,7 @@ import subprocess
 import shlex
 from pdb import set_trace
 
-from configs import manifest_config as CFG
+from configs import build_config as CFG
 
 
 def main(args):

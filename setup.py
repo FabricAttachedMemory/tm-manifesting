@@ -2,7 +2,6 @@
 import argparse
 import os
 import json
-import flask
 import shlex
 import shutil
 import subprocess

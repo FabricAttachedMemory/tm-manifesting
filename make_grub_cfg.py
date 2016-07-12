@@ -8,7 +8,7 @@ and folders for TFTP to server for nodes.
 import argparse
 import os
 from pdb import set_trace
-from configs import manifest_config as ManCfg
+from configs import build_config as ManCfg
 
 from tm_librarian.tmconfig import TMConfig
 
