@@ -12,6 +12,7 @@ from pdb import set_trace
 
 from configs import manifest_config as CONFIG
 from utils import utils
+import make_grub_config
 
 
 def set_python_path(cfg_hook, hook_dist):
@@ -54,6 +55,14 @@ def _create_env(fields, ignore_list=[]):
         create_folder(path)
 
 
+def create_grub_env(tmconfig):
+    """
+        Create grub environment under manfiesting /tftp/ folder.
+    :param 'tmconfig': path to the hpetmconfig.json file
+    """
+    make_grub_cfg.main({'tmconfig' : tmconfig})
+
+
 def create_folder(path):
     """ A simple wrapper around os.makedirs that skip existed folders. """
     if not os.path.isdir(path):
@@ -64,7 +73,9 @@ def main(args):
     """
         Run all the functions needed to setup tm-manifesting environment:
     - set PYTHONPATH using .pth file that have a path to the manifesting/ source code.
-    -
+    - create folders for manifesting server and manifesting tftp based of the config file
+    - run make_grub_cfg.py script to create grub config files in the tftp folder
+    - run generate_golden_image.py script to generate golden image
     """
 
     args['python_hook_env'] = os.path.realpath(args['python_hook_env'])
@@ -74,7 +85,6 @@ def main(args):
     set_python_path(args['python_hook'], args['python_hook_env'])
 
     config_path = os.path.realpath(args['config'])
-    set_trace()
 
     CONFIG.parameters.update(config_path)
 
@@ -95,6 +105,10 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='A config.py file to be used by manifesting server.',
                         default='configs/manifest_config/default.py')
+
+    parser.add_argument('--tmconfig',
+                        help='A config file that stores nodes topology.',
+                        default='configs/hpetmconfig.py')
 
     parser.add_argument('--python-hook-env',
                         help='dist-packages/ folder to use for the python environment.',
