@@ -237,6 +237,8 @@ def get_node_status(node_coord):
     :return: [dict] values that describes node's state (status, message, manifest).
              (ERS document section 8.6)
     """
+    assert node_coord in BP.node_coords, 'Unknown node coordinate. Make sure requested node is in tmconfig.json'
+
     node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
     status_file = node_location + '/' + 'status.json'
     if not os.path.isdir(node_location):

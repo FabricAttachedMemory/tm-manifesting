@@ -59,7 +59,7 @@ class BindNodeTest(unittest.TestCase):
         self.assertTrue('200' in output,
                         'listall return status code does not comply with ERS.')
 
-    '''
+
     def testSetNodeAndStatus(self):
         """
         """
@@ -78,7 +78,6 @@ class BindNodeTest(unittest.TestCase):
             time.sleep(3)
 
         self.assertTrue(status['status'] == 'done', 'Node is not done?')
-    '''
 
 # =================================================================
 
