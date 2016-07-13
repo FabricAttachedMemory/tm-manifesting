@@ -500,7 +500,7 @@ def execute(args):
             copy_target_into(cpio_file, args['tftp'] + '/' + os.path.basename(cpio_file))
             copy_target_into(vmlinuz_path, args['tftp'] + '/' + args['hostname'] + '.vmlinuz')
 
-        update_status(status_file, args['manifest'], 'done')
+        update_status(status_file, args['manifest'], 'ready')
     except RuntimeError as err:
          response['status'] = 505
          response['message'] = 'Runtime error during filesystem image build process! [Error: %s] ' % (err)
