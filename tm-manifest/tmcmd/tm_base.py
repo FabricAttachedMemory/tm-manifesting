@@ -124,7 +124,7 @@ class TmCmd():
         try:
             if isinstance(content, HTTP_REQUESTS.models.Response):
                 response_text = json.loads(content.text)
-                response_code = content.status_code
+                response_code = str(content.status_code)
                 return json.dumps({ response_code : response_text },
                                 indent=self.json_indent, sort_keys=self.json_sort)
             else:
