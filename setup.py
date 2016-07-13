@@ -59,7 +59,7 @@ def create_grub_env(tmconfig):
         Create grub environment under manfiesting /tftp/ folder.
     :param 'tmconfig': path to the hpetmconfig.json file
     """
-    make_grub_cfg.main({'tmconfig' : tmconfig})
+    raise NotImplemented('No soup for you... for now.')
 
 
 def create_folder(path):
