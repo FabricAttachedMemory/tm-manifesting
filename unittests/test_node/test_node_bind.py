@@ -3,6 +3,7 @@
     Test fix_init function of customize_node.py script.
 """
 import json
+import os
 import unittest
 import time
 import tmcmd as TMCMD
@@ -16,7 +17,7 @@ class BindNodeTest(unittest.TestCase):
     tmconfig = None
     coords = []
     manifest = 'testing'
-    manifest_file = './mock-data/manifest.test'
+    manifest_file = os.path.dirname(os.path.realpath(__file__)) + '/mock-data/manifest.test'
 
     @classmethod
     def setUp(cls):
@@ -27,7 +28,9 @@ class BindNodeTest(unittest.TestCase):
         cls.coords = sorted([node.coordinate for node in cls.tmconfig.nodes])
 
         TMCMD.tmmanifest.upload(['', cls.manifest_file])
-
+        output = cls.tmcmd.show([cls.coords[1]])
+        if '204' not in output:
+            cls.tmcmd.delete([cls.coords[1]])
 
 
     @classmethod
@@ -44,10 +47,13 @@ class BindNodeTest(unittest.TestCase):
         """
         output = json.loads(self.tmcmd.listall())
 
-        self.assertTrue('nodes' in output,
+        self.assertTrue('200' in output,
+                    'listing all nodes status code is not 200: %s instead.' % output.keys())
+
+        self.assertTrue('nodes' in output['200'],
                         'listall does not comply with ERS. No "nodes" key.')
 
-        self.assertTrue(sorted(self.coords) == sorted(output['nodes']),
+        self.assertTrue(sorted(self.coords) == sorted(output['200']['nodes']),
                         'listall does not comply with ERS. Not all coords match tmconfig.')
 
 
@@ -58,26 +64,50 @@ class BindNodeTest(unittest.TestCase):
         output = json.loads(self.tmcmd.listall())
         self.assertTrue('200' in output,
                         'listall return status code does not comply with ERS.')
+        self.assertTrue('nodes' in output['200'],
+                        'listall output does not comply with ERS. Missing "nodes" field.')
 
 
     def testSetNodeAndStatus(self):
         """
         """
-        args = [self.manifest, self.coords[1]]
+        node = self.coords[-1]
+        args = [self.manifest, node]
         output = json.loads( self.tmcmd.set_node(args) )
-        self.assertTrue('201' in output, 'WOW! Node was overwritten. Not good.')
-        time.sleep(1)
+        self.assertTrue('201' in output or '200' in output,
+                'Nor 200 nor 201 was returned on setnode: %s instead' % output.keys())
 
-        status = json.loads( self.tmcmd.show([self.coords[1]]) )
-        self.assertTrue(self.node_status_fields(status), 'Node status while building does not comply.')
+        time.sleep(5)
+        status = json.loads( self.tmcmd.show([node]) )
+
+        self.assertTrue('200' in status,
+                        'Status not 200 while building: %s' % status.keys())
+
+        status = status['200']
+
+        self.assertTrue(self.node_status_fields(status),
+                'Node status while building does not comply: %s' % status['status'])
         self.assertTrue(status['status'] == 'building', 'Node is not building??')
 
         while status['status'] == 'building':
-            status = json.loads( self.tmcmd.show([self.coords[1]]) )
-            self.assertTrue(self.node_status_fields(status), 'Node status while building does not comply.')
+            status = json.loads( self.tmcmd.show([node]) )
+            self.assertTrue('200' in status,
+                        'Status not 200 while building: %s' % status.keys())
+            status = status['200']
+
+            self.assertTrue(self.node_status_fields(status),
+                    'Node status while building does not comply: %s' % status['status'])
             time.sleep(3)
 
-        self.assertTrue(status['status'] == 'done', 'Node is not done?')
+        self.assertTrue(status['status'] == 'ready', 'Node is not done?')
+
+        deleted = json.loads(self.tmcmd.delete(node))
+        self.assertTrue('204' in deleted,
+                        '204 was not returned after node delete: %s' % deleted.keys())
+
+        status = json.loads(self.tmcmd.show([node]))
+        self.assertTrue('204' in status,
+                        '204 for non binded node was not returned: %s' % status.keys())
 
 # =================================================================
 
