@@ -9,7 +9,7 @@ import subprocess
 import shlex
 from pdb import set_trace
 
-from configs import manifest_config as CFG
+from configs import build_config
 
 
 def main(args):
@@ -19,7 +19,7 @@ def main(args):
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
 
-    golden_dir = CFG.MANIFESTING_ROOT + '/sys-images/golden/'
+    golden_dir = build_config.MANIFESTING_ROOT + '/sys-images/golden/'
 
     assert os.path.isdir(golden_dir), '"%s" does not exist' % (golden_dir)
     statvfs = os.statvfs(golden_dir)
@@ -30,7 +30,7 @@ def main(args):
              --config=%s
              --mirror=%s''' % (
                 args['img_cfg'],
-                CFG.L4TM_MIRROR
+                build_config.L4TM_MIRROR
              )
     cmd = shlex.split(cmd)
     status = subprocess.call(cmd)
