@@ -7,8 +7,6 @@ and folders for TFTP to server for nodes.
 """
 import argparse
 import os
-from pdb import set_trace
-from configs import build_config
 
 from tm_librarian.tmconfig import TMConfig
 
@@ -27,19 +25,23 @@ class TMtftp(object):
     grub.cfg ---knows about ---> grub.enc#/grub.node# --picks up cpio--> (tftp)/arm64/enc#/node#/.cpio
     """
 
-    def __init__(self, nodes_cfg):
+    def __init__(self, nodes_cfg, tftp_root, grub_dir, tftp_imgs):
         """
         :param 'tftp_root': [str] absolute path to the TFTP folder on the server.
         :param 'nodes_cfg': [tm_librarian.tmconfig] parsed hpetmconfig.json file.
         :param 'filesystem_dir': [str] relative to TFTP folder path to saved cpio and vmlinuz files.
         """
-        self.root = build_config.TFTP_ROOT   # absolute path to TFTP on the server.
-        assert os.path.isdir(self.root), 'Can\'t find TFTP server at "%s"!' % (self.root)
+        self.root = tftp_root
+        assert os.path.isdir(self.root),\
+                'Can\'t find TFTP location at "%s"!' % (self.root)
 
-        self.grub_dir = build_config.TFTP_GRUB
-        assert os.path.isdir(self.root + '/' + self.grub_dir), 'Couldn\'t find %s!' % (self.grub_dir)
+        self.grub_dir = grub_dir
+        assert os.path.isdir(self.grub_dir),\
+                'Couldn\'t find grub directory at %s!' % (self.grub_dir)
 
-        self.filesystem_dir = build_config.TFTP_IMAGES
+        self.filesystem_dir = tftp_imgs
+        assert os.path.isdir(self.filesystem_dir),\
+                'Couldn\'t find fs images directory at %s!' % (self.filesystem_dir)
 
         self.node_cfg = nodes_cfg
         self.nodes = nodes_cfg.nodes
@@ -51,20 +53,17 @@ class TMtftp(object):
         but use only "enclosure and node" values of it. Then create filesystem image
         directories per these coords for grab to pick up on boot .cpio and .vmlinuz.
         """
-        for efi_cfg in self.environment.keys(): # each folder for (tftp)/arm64/* and (tftp)/boot/grub/enc*/
-            grub_folders = os.path.normpath(self.root + '/' + os.path.dirname(efi_cfg))
-            make_dir(grub_folders)      # folders for grub files (tftp)/boot/grub/enc#/
+        for efi_cfg, img_dir in self.environment.items(): # each (tftp)/images/* folder and (tftp)/boot/grub/menu.hostname file
+            for node in self.nodes:
+                tftp_node_fs = self.filesystem_dir + '/' + node.hostname
+                make_dir(tftp_node_fs)   # folders for FS images per node. (tftp)/images/hostname/
 
-            node_fs = self.root + '/' + self.environment[efi_cfg]
-            make_dir(node_fs)           # folders for FS images per node. (tftp)/arm64/enc#/node#/
+            grub_menu_content = self.grub_menu_template(img_dir)
 
-            grub_menu_file = self.root + '/' + efi_cfg
-            grub_menu_content = self.grub_menu_template(self.environment[efi_cfg])
-
-            with open(grub_menu_file, 'w') as file_obj:
+            with open(efi_cfg, 'w') as file_obj:
                 file_obj.write(str(grub_menu_content))
 
-        grub_cfg_file = self.root + '/' + self.grub_dir + '/grub.cfg'
+        grub_cfg_file = self.grub_dir + '/grub.cfg'
         grub_cfg_content = self.grub_cfg_template()
 
         with open(grub_cfg_file, 'w') as file_obj:
@@ -74,10 +73,10 @@ class TMtftp(object):
     @property
     def environment(self):
         """
-            Return dictionary of nodes' efi config path relative to tftp root and
-        its filesystem image location (on tftp).
-        Example: { 'boot/grub/enc#/grub.node#' : 'arm64/enc#/node#/' }
-        Note: path is relative to TFTP!
+            Return dictionary of nodes' efi config path and its filesystem image
+        location (on tftp).
+        Example: { '(tftp)/boot/grub/menu.hostname' : '(tftp)/images/hostname/' }
+        Note: path is absolute.
         """
         env = {}
         for node in self.nodes:
@@ -161,7 +160,7 @@ def main(args):
     """
     tmconfig = TMConfig(args['config'])
 
-    TFTP = TMtftp(tmconfig)
+    TFTP = TMtftp(tmconfig, args['tftp_root'], args['tftp_grub'], args['tftp_images'])
     TFTP.create_environment()
 
 
@@ -171,6 +170,11 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Nodes coords config json.',
                         default='configs/hpetmconfig.json')
-
+    parser.add_argument('--tftp-root',
+                        help='Path to the TFTP server.')
+    parser.add_argument('--tftp-grub',
+                        help='Path to the TFTP\'s grub folder.')
+    parser.add_argument('--tftp-images',
+                        help='Path to the TFTP\'s filesystem images folder.')
     args, _ = parser.parse_known_args()
     main(vars(args))
