@@ -91,7 +91,7 @@ class TmNode(tm_base.TmCmd):
         available to it.
         """
         super().delete(target, **options)
-        node_coord = target[0]
+        node_coord = self.show_name
         api_url = '%s%s/%s' % (self.url, 'node', node_coord)
         data = self.http_delete(api_url)
         return self.to_json(data)

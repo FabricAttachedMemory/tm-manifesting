@@ -1,15 +1,13 @@
 #!/usr/bin/python3 -tt
 """
-    TODO: Docstr
+    Generate a golden image using vmdebootstrap script that was slightly modified
+for the needs of this script. Modified vmdebootstrap is in ./configs/ folder.
+Note: vmdebootstrap must be installed on the system in order for this script to work.
 """
-
 import argparse
 import os
 import subprocess
 import shlex
-from pdb import set_trace
-
-from configs import build_config as CFG
 
 
 def main(args):
@@ -19,26 +17,25 @@ def main(args):
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
 
-    golden_dir = CFG.MANIFESTING_ROOT + '/sys-images/golden/'
-
-    assert os.path.isdir(golden_dir), '"%s" does not exist' % (golden_dir)
-    statvfs = os.statvfs(golden_dir)
+    assert os.path.isdir(args['dest']), '"%s" does not exist' % (args['dest'])
+    statvfs = os.statvfs(args['dest'])
     assert statvfs.f_bsize * statvfs.f_bavail > (4 * (1 << 30)), \
-        'Need at least 4G on "%s"' % (golden_dir)
+        'Need at least 4G on "%s"' % (args['dest'])
 
     cmd = '''./configs/vmdebootstrap --no-default-configs --hostname=GOLDEN
              --config=%s
              --mirror=%s''' % (
                 args['img_cfg'],
-                CFG.L4TM_MIRROR
+                args['mirror']
              )
     cmd = shlex.split(cmd)
     status = subprocess.call(cmd)
     assert not status, 'vmdebootstrap failed: return status %s' % status
 
+
 if __name__ == '__main__':
     """
-        TODO: Docstr
+        Parse command line arguments and call main() function.
     """
     PARSER = argparse.ArgumentParser(description='Generate golden image for nodes of The Machine.')
 
@@ -46,6 +43,13 @@ if __name__ == '__main__':
                         help='A config file for your golden filesystem image that\
                         will be taken by vmdebootstrap.',
                         default='configs/filesystem/golden.arm.vmd')
+
+    PARSER.add_argument('-d', '--dest',
+                        help='Destination to save the image into')
+
+    PARSER.add_argument('-m', '--mirror',
+                        help='Repo Mirror to create image from.',
+                        default='http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm')
 
     PARSER.add_argument('--verbose',
                         help='Make it talk.',
