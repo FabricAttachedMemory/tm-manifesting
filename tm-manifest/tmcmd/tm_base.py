@@ -68,8 +68,7 @@ class TmCmd():
             http_resp = HTTP_REQUESTS.put(url, options['payload'], headers=headers)
         else:
             http_resp = HTTP_REQUESTS.get(url, headers=headers)
-        jsondata = self.to_json(http_resp)
-        return jsondata
+        return http_resp
 
 
     def http_download(self, url, destination, **options):
@@ -124,7 +123,10 @@ class TmCmd():
         """
         try:
             if isinstance(content, HTTP_REQUESTS.models.Response):
-                return content.json()
+                response_text = json.loads(content.text)
+                response_code = content.status_code
+                return json.dumps({ response_code : response_text },
+                                indent=self.json_indent, sort_keys=self.json_sort)
             else:
                 return json.dumps(content, indent=self.json_indent, sort_keys=self.json_sort)
         except (ValueError, TypeError) as err:
