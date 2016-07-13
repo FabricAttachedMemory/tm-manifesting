@@ -40,7 +40,7 @@ class TmCmd():
         assert len(target) >= 1, 'Missing argument: thisfunction <name>!'
         # Let user pass both types to avoid confusion passing args as "list" for a single argument.
         #Passing list is helpfull for a generic function call, (as in tm_manifest.py)
-        self.show_name = target[0] if type(target) is list else target
+        self.show_name = target[0] if isinstance(target, list) else target
         if 'verbose' in options and options['verbose']:
             print(' - Sending request to "%s"...' % self.url)
 
@@ -50,7 +50,7 @@ class TmCmd():
             Base class to handle delete routines.
         """
         assert len(target) >= 1, 'Missing argument: delete <name>!'
-        self.show_name = target[0] if type(target) is list else target
+        self.show_name = target[0] if isinstance(target, list) else target
         if options.get('verbose', False):
             print(' - Sending request to delete %s' % (self.url, target[0]))
 
@@ -68,8 +68,7 @@ class TmCmd():
             http_resp = HTTP_REQUESTS.put(url, options['payload'], headers=headers)
         else:
             http_resp = HTTP_REQUESTS.get(url, headers=headers)
-        jsondata = self.to_json(http_resp)
-        return jsondata
+        return http_resp
 
 
     def http_download(self, url, destination, **options):
@@ -124,7 +123,10 @@ class TmCmd():
         """
         try:
             if isinstance(content, HTTP_REQUESTS.models.Response):
-                return content.json()
+                response_text = json.loads(content.text)
+                response_code = str(content.status_code)
+                return json.dumps({ response_code : response_text },
+                                indent=self.json_indent, sort_keys=self.json_sort)
             else:
                 return json.dumps(content, indent=self.json_indent, sort_keys=self.json_sort)
         except (ValueError, TypeError) as err:
