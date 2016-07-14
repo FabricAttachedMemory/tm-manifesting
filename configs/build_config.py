@@ -1,22 +1,28 @@
 """
-!!! NOTE: This script must only be used for manifest_api.py. Other use CASES are
-    NOT tested and not acounted for !!!
+!!! NOTE: This script must only be used for manifest_api.py. Other use CASES
+    are NOT tested and not acounted for !!!
 
-    This module parses a python (.py) config file into local variables and construct
-several other parameters that are useful for the manifesting api server.
+    This module parses a python (.py) config file into local variables and
+    constructs several other parameters that are useful for the manifesting
+    api server.
 
-    There are several pre-constructed tuple field in the beginning of this module
-that are used for validation of the config file. The other use case for this
-tuples is to organize and group setting parameters, such as "serve settings" (port,
-host, mirror...), "manifest environment" (root, manifest uploads...) and "tftp
-environment (root, images, grub...). This approach also allows the use of this
-module in slightly mor aotomated fashion (example: setup script would use "manifest
-env" set to create all necesery directories used in it)
+    There are several pre-constructed tuple field in the beginning of this
+    module that are used for validation of the config file. The other use
+    case for this tuples is to organize and group setting parameters, such as
+    "serve settings" (port, host, mirror...),
+    "manifest environment" (root, manifest uploads...) and
+    "tftp environment (root, images, grub...).
+    This approach also allows the use of this module in slightly more
+    automated fashion (example: setup script would use "manifest env" set to
+    create all necessary directories used in it)
 """
+
 from collections import namedtuple
 import flask
 import os
 import sys
+
+from pdb import set_trace
 
 _mroot_field = 'MANIFESTING_ROOT'
 _tftp_root_field = 'TFTP_ROOT'
@@ -71,6 +77,36 @@ def make_config(config_path):
     return settings
 
 
+def ratify_config(manconfig, dontcare=None):
+    '''Insure all paths specified in the config file exist.'''
+    if dontcare is None or not dontcare:
+        dontcare = ()
+    missing = []
+
+    for attr in ('MANIFESTING_ROOT', 'FILESYSTEM_IMAGES', 'MANIFEST_UPLOADS',
+                 'TFTP_GRUB', 'TFTP_IMAGES', 'TFTP_ROOT'):
+        if attr in dontcare:
+            continue
+        dname = manconfig.get(attr, None)
+        if dname is None:
+            missing.append('Missing directory key "%s"' % attr)
+        else:
+            if not os.path.isdir(dname):
+                missing.append('Missing "%s" directory "%s"' % (attr, dname))
+
+    for attr in ('GOLDEN_IMAGE', 'TMCONFIG'):
+        if attr in dontcare:
+            continue
+        fname = manconfig.get(attr, None)
+        if fname is None:
+            missing.append('Missing filename key "%s"' % attr)
+        else:
+            if not os.path.isfile(fname):
+                missing.append('Missing "%s" file "%s"' % (attr, fname))
+
+    return missing if missing else False
+
+
 def _extract_from_config(config_path):
     """
         Validate that incoming .py config file has required variables set and
@@ -86,5 +122,5 @@ def _extract_from_config(config_path):
         if expected not in flask_obj.config:
             raise ValueError('Config file missing field  "%s"' % expected)
         result[expected] = flask_obj.config[expected]
-    flask_obj = None        # Paranoia. Make sure flask is nulified and don't go outside of the funciton.
+    flask_obj = None        # Only needed it for from_object()
     return result
