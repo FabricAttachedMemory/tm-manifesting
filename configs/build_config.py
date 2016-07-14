@@ -74,7 +74,7 @@ def make_config(config_path):
     settings['TFTP_ROOT'] = tftp
     settings['FILESYSTEM_IMAGES'] = mroot + '/sys-images'
     settings['MANIFEST_UPLOADS'] = mroot + '/manifests'
-    settings['GOLDEN_IMAGE'] = settings['FILESYSTEM_IMAGES'] + 'golden/golden.arm.tar'
+    settings['GOLDEN_IMAGE'] = settings['FILESYSTEM_IMAGES'] + '/golden/golden.arm.tar'
 
     settings['TFTP_IMAGES'] = tftp + '/nodes'
     settings['TFTP_GRUB'] = tftp + '/boot/grub'
