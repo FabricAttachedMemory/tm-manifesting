@@ -2,7 +2,7 @@
 
 TEST_FILES=`find . -name "test_*.py"`
 
-set -ue
+set -u
 
 IGNORE="None"
 
@@ -21,6 +21,6 @@ do
         echo "Ignoring -> $test_file"
     else
         echo "Runing -> $test_file"
-        `python3 $test_file -q`
+        `python3 $test_file`
     fi
 done
