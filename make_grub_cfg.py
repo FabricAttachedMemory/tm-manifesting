@@ -48,7 +48,7 @@ class TMgrub(object):
         self.nodes = self.node_cfg.nodes
 
 
-    def create_environment(self, verbose=True):
+    def create_environment(self):
         """
             Create tftp environment: create grub config files based off
         nodes coords, but use only "enclosure and node" values of it.
@@ -58,7 +58,6 @@ class TMgrub(object):
         those directries when nodes are bound.
         """
 
-        self.verbose = verbose
         for efi_cfg, img_dir in self.environment.items():
             # each (tftp)/images/* folder and (tftp)/boot/grub/menu.hostname
             for node in self.nodes:
@@ -170,9 +169,11 @@ def main(config_file):
     missing = ratify_config(manconfig, dontcare=('GOLDEN_IMAGE',))
     if missing:
         raise RuntimeError('\n'.join(missing))
-    TFTP = TMgrub(manconfig)
-    TFTP.create_environment()
-    TFTP.print_status()
+    grubby = TMgrub(manconfig)
+    grubby.create_environment()
+    env = grubby.environment
+    for menu in sorted(env.keys()):
+        print('Menu:  %s\nFiles: %s\n' % (menu, env[menu]))
 
 
 if __name__ == '__main__':
