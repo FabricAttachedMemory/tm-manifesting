@@ -7,10 +7,10 @@
 TMCONFIG='/etc/tmconfig'
 
 # Top-level directories
-MANIFESTING_ROOT = '/var/lib/tmms/'
+MANIFESTING_ROOT = '/var/lib/tmms'
 
 # manifest_api delivers DHCP and TFTP by configuring a copy of dnsmasq
-TFTP_ROOT = MANIFESTING_ROOT + 'tftp/'
+TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
 
 # Select IP address in this system on which the Manifest API listens
 HOST = '0.0.0.0'    # 0.0.0.0 means all of them
