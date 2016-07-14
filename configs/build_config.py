@@ -60,20 +60,24 @@ def make_config(config_path):
     """
     config_path = os.path.realpath(config_path)
 
-    settings = {}
     settings = _extract_from_config(config_path)
 
-    mroot = os.path.join(settings['MANIFESTING_ROOT'], '')  # ensure trailing slashes
-    tftp = os.path.join(settings['TFTP_ROOT'], '')
+    # no trailing slashes
+    mroot = os.path.join(settings['MANIFESTING_ROOT'])
+    if mroot[-1] == '/':
+        mroot = mroot[:-1]
+    tftp = os.path.join(settings['TFTP_ROOT'])
+    if tftp[-1] == '/':
+        tftp = tftp[:-1]
 
     settings['MANIFESTING_ROOT'] = mroot
     settings['TFTP_ROOT'] = tftp
-    settings['FILESYSTEM_IMAGES'] = mroot + 'sys-images/'
-    settings['MANIFEST_UPLOADS'] = mroot + 'manifests/'
+    settings['FILESYSTEM_IMAGES'] = mroot + '/sys-images'
+    settings['MANIFEST_UPLOADS'] = mroot + '/manifests'
     settings['GOLDEN_IMAGE'] = settings['FILESYSTEM_IMAGES'] + 'golden/golden.arm.tar'
 
-    settings['TFTP_IMAGES'] = tftp + 'nodes/'
-    settings['TFTP_GRUB'] = tftp + 'boot/grub/'
+    settings['TFTP_IMAGES'] = tftp + '/nodes'
+    settings['TFTP_GRUB'] = tftp + '/boot/grub'
     return settings
 
 
@@ -83,26 +87,15 @@ def ratify_config(manconfig, dontcare=None):
         dontcare = ()
     missing = []
 
-    for attr in ('MANIFESTING_ROOT', 'FILESYSTEM_IMAGES', 'MANIFEST_UPLOADS',
-                 'TFTP_GRUB', 'TFTP_IMAGES', 'TFTP_ROOT'):
+    for attr in (_mroot_field, _tftp_root_field) + _manifest_env + _tftp_env:
         if attr in dontcare:
             continue
-        dname = manconfig.get(attr, None)
-        if dname is None:
-            missing.append('Missing directory key "%s"' % attr)
+        path = manconfig.get(attr, None)
+        if path is None:
+            missing.append('Missing path key "%s"' % attr)
         else:
-            if not os.path.isdir(dname):
-                missing.append('Missing "%s" directory "%s"' % (attr, dname))
-
-    for attr in ('GOLDEN_IMAGE', 'TMCONFIG'):
-        if attr in dontcare:
-            continue
-        fname = manconfig.get(attr, None)
-        if fname is None:
-            missing.append('Missing filename key "%s"' % attr)
-        else:
-            if not os.path.isfile(fname):
-                missing.append('Missing "%s" file "%s"' % (attr, fname))
+            if not os.path.isdir(path) and not os.path.isfile(path):
+                missing.append('Missing "%s" path "%s"' % (attr, path))
 
     return missing if missing else False
 
