@@ -43,6 +43,7 @@ class TMgrub(object):
 
         self.root = manconfig['TFTP_ROOT']
         self.grub_dir = manconfig['TFTP_GRUB']
+        self.grub_cfg = self.grub_dir + '/grub.cfg'
         self.filesystem_dir = manconfig['TFTP_IMAGES']
         self.node_cfg = TMConfig(manconfig['TMCONFIG'])
         self.nodes = self.node_cfg.nodes
@@ -58,7 +59,7 @@ class TMgrub(object):
         those directries when nodes are bound.
         """
 
-        for efi_cfg, img_dir in self.environment.items():
+        for grub_menu_file, img_dir in self.environment.items():
             # each (tftp)/images/* folder and (tftp)/boot/grub/menu.hostname
             for node in self.nodes:
                 tftp_node_fs = self.filesystem_dir + '/' + node.hostname
@@ -66,13 +67,12 @@ class TMgrub(object):
 
             grub_menu_content = self.grub_menu_template(img_dir)
 
-            with open(efi_cfg, 'w') as file_obj:
+            with open(grub_menu_file, 'w') as file_obj:
                 file_obj.write(str(grub_menu_content))
 
-        grub_cfg_file = self.grub_dir + '/grub.cfg'
         grub_cfg_content = self.grub_cfg_template()
 
-        with open(grub_cfg_file, 'w') as file_obj:
+        with open(self.grub_cfg, 'w') as file_obj:
             file_obj.write(grub_cfg_content)
 
 
@@ -86,9 +86,9 @@ class TMgrub(object):
         """
         env = {}
         for node in self.nodes:
-            efi_cfg = '%s/menu.%s' % (self.grub_dir, node.hostname)
+            grub_menu_file = '%s/menu.%s' % (self.grub_dir, node.hostname)
             node_dir = '%s/%s/' % (self.filesystem_dir, node.hostname)
-            env[os.path.normpath(efi_cfg)] = os.path.normpath(node_dir)
+            env[os.path.normpath(grub_menu_file)] = os.path.normpath(node_dir)
         return env
 
 
@@ -126,17 +126,21 @@ terminal_output gfxterm
 """
 
         menu_tplt = """
-if [ "$net_default_mac" -eq "{mac}" ];then
+if [ "$net_default_hostname" -eq "{hostname}" ];then
     configfile "(tftp){menu_cfg}"
 fi
 """
         lines = []
         lines.append(header_tplt)
 
+        configfile = '%s/menu.${net_default_hostname}' % (self.grub_dir)
+        lines.append('configfile "(tftp)%s' % configfile)
+        return '\n'.join(lines)
+
         for node in self.nodes:
-            node_mac = node.soc.socMacAddress
             menu_cfg = '%s/menu.%s' % (self.grub_dir, node.hostname)
-            lines.append(menu_tplt.format(mac=node_mac, menu_cfg=menu_cfg))
+            lines.append(menu_tplt.format(
+                hostname=node.hostname, menu_cfg=menu_cfg))
 
         return '\n'.join(lines)
 
@@ -174,6 +178,7 @@ def main(config_file):
     env = grubby.environment
     for menu in sorted(env.keys()):
         print('Menu:  %s\nFiles: %s\n' % (menu, env[menu]))
+    print('Master GRUB config in', grubby.grub_cfg)
 
 
 if __name__ == '__main__':
