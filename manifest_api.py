@@ -41,10 +41,10 @@ mainapp = Flask('tm_manifesting', static_url_path='/static')
 ###########################################################################
 # Set config variables for future use across the blueprints.
 config = build_config.make_config(cmdline_args['config'])
+
 mainapp.config['API_VERSION'] = 1.0
 mainapp.config.update(config)
 mainapp.config['url_prefix'] = '/manifesting'
-
 mainapp.config['VERBOSE'] = cmdline_args['verbose']
 mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 
@@ -62,7 +62,7 @@ for field in path_fields:
         raise RuntimeError('Config parameter %s is missing in mainapp.config!' % field)
     path_to_validate.append(mainapp.config[field])
 
-missing_env_path = utils.ratify(path_to_validate)
+missing_env_path = utils.ratify(path_to_validate)   # validate all manifesting path exists
 
 if missing_env_path:
     raise RuntimeError('Failed to run manifesting server. Following path missing: ' +\

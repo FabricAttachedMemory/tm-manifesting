@@ -158,7 +158,7 @@ def main(args):
     """
         Configure TFTP environment.
     """
-    tmconfig = TMConfig(args['config'])
+    tmconfig = TMConfig(args['tmconfig'])
 
     TFTP = TMtftp(tmconfig, args['tftp_root'], args['tftp_grub'], args['tftp_images'])
     TFTP.create_environment()
@@ -167,7 +167,7 @@ def main(args):
 if __name__ == '__main__':
     """ Parse command line arguments. """
     parser = argparse.ArgumentParser(description='TODO')
-    parser.add_argument('--config',
+    parser.add_argument('--tmconfig',
                         help='Nodes coords config json.',
                         default='configs/hpetmconfig.json')
     parser.add_argument('--tftp-root',
