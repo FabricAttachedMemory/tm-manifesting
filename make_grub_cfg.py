@@ -1,72 +1,78 @@
 #!/usr/bin/python3 -tt
 """
-    Create TFTP environment for nodes to pick up its curstom FS images.
-Each node must have its on grub menu (config) and its own location on TFTP server
-for .cpio and .vmlinux files to pickup. This script creates all neccessery files
-and folders for TFTP to server for nodes.
+    Create TFTP environment for nodes to pick up custom FS images.
+Each node must have its on grub menu, kernel (vmlinuz), and FS image (cpio)
+under the TFTP server.  This script generates the grub menu files plus
+a single master grub.cfg which is originally downloaded by grub.efi.
+
+    Details: A node boots and system firmware (SFW) downloads (via TFTP)
+a single file, the bootloader which is grub.efi.  Grub turns around and
+grabs its master grub.cfg file.  All nodes will use this same grub.cfg.
+grub.cfg content is based on the DHCP "ClientID" option, as opposed to
+the traditional MAC address.  The ClientID contains the node's physical
+location (enclosure and node number).  This is evaluated by grub to
+choose a specific "menu" file.  Grub menu file is generated per each
+node and is stored as env#/grub.node# file which represent each known
+node coord. That menu specifies the precise kernel file (vmlinuz) and
+customized FS image (.cpio file).
 """
+
 import argparse
 import os
+import sys
 
+from pdb import set_trace
+
+from configs.build_config import make_config, ratify_config
 from tm_librarian.tmconfig import TMConfig
 
 
-class TMtftp(object):
+class TMgrub(object):
     """
-        Set up and configure TFTP server for Manifesting. Generate grub.cfg file
-    and grub menu files for each known node. grub.cfg content is generated for
-    each node MAC address to be able to pick up its grub menu file. Grub menu
-    file is also generated per each node, but is stored as env#/grub.node# file
-    which represent each known node coord. That allows for a started node to
-    boot its generated FS image (.cpio and vmlinuz).
-        FS image folder is also generate in this class under (tftp)/arm64/enc#/node#/
-    folder structure.
+        Generate all grub grub config files under the TFTP hierarchy.
+        FS image folder is also generated in this class under
+    (tftp)/arm64/enc#/node#/ folder structure.
         Overall grub dependency:
-    grub.cfg ---knows about ---> grub.enc#/grub.node# --picks up cpio--> (tftp)/arm64/enc#/node#/.cpio
+    grub.cfg (knows about enc#/node# --> (tftp)/arm64/enc#/node#/kernel & FS
     """
 
-    def __init__(self, nodes_cfg, tftp_root, grub_dir, tftp_imgs):
+    def __init__(self, manconfig):
         """
-        :param 'tftp_root': [str] absolute path to the TFTP folder on the server.
-        :param 'nodes_cfg': [tm_librarian.tmconfig] parsed hpetmconfig.json file.
-        :param 'filesystem_dir': [str] relative to TFTP folder path to saved cpio and vmlinuz files.
+        :param 'manfconfig': dictionary with many ratified file paths
         """
-        self.root = tftp_root
-        assert os.path.isdir(self.root),\
-                'Can\'t find TFTP location at "%s"!' % (self.root)
 
-        self.grub_dir = grub_dir
-        assert os.path.isdir(self.grub_dir),\
-                'Couldn\'t find grub directory at %s!' % (self.grub_dir)
-
-        self.filesystem_dir = tftp_imgs
-        assert os.path.isdir(self.filesystem_dir),\
-                'Couldn\'t find fs images directory at %s!' % (self.filesystem_dir)
-
-        self.node_cfg = nodes_cfg
-        self.nodes = nodes_cfg.nodes
+        self.root = manconfig['TFTP_ROOT']
+        self.grub_dir = manconfig['TFTP_GRUB']
+        self.grub_cfg = self.grub_dir + '/grub.cfg'
+        self.filesystem_dir = manconfig['TFTP_IMAGES']
+        self.node_cfg = TMConfig(manconfig['TMCONFIG'])
+        self.nodes = self.node_cfg.nodes
 
 
     def create_environment(self):
         """
-            Create tftp environment: create efi config files based of nodes coords,
-        but use only "enclosure and node" values of it. Then create filesystem image
-        directories per these coords for grab to pick up on boot .cpio and .vmlinuz.
+            Create tftp environment: create grub config files based off
+        nodes coords, but use only "enclosure and node" values of it.
+        These files are static over the lifetime of a machine instance. Then
+        create filesystem image directories per these coords for PXE boot
+        to pick up on boot .cpio and .vmlinuz.  manifest_api will populate
+        those directries when nodes are bound.
         """
-        for efi_cfg, img_dir in self.environment.items(): # each (tftp)/images/* folder and (tftp)/boot/grub/menu.hostname file
+
+        for grub_menu_file, img_dir in self.environment.items():
+            # each (tftp)/images/* folder and (tftp)/boot/grub/menu.hostname
             for node in self.nodes:
                 tftp_node_fs = self.filesystem_dir + '/' + node.hostname
-                make_dir(tftp_node_fs)   # folders for FS images per node. (tftp)/images/hostname/
+                make_dir(tftp_node_fs)
 
             grub_menu_content = self.grub_menu_template(img_dir)
 
-            with open(efi_cfg, 'w') as file_obj:
+            with open(grub_menu_file, 'w') as file_obj:
                 file_obj.write(str(grub_menu_content))
 
-        grub_cfg_file = self.grub_dir + '/grub.cfg'
         grub_cfg_content = self.grub_cfg_template()
 
-        with open(grub_cfg_file, 'w') as file_obj:
+        with open(self.grub_cfg, 'w') as file_obj:
             file_obj.write(grub_cfg_content)
 
 
@@ -80,9 +86,9 @@ class TMtftp(object):
         """
         env = {}
         for node in self.nodes:
-            efi_cfg = '%s/menu.%s' % (self.grub_dir, node.hostname)
+            grub_menu_file = '%s/menu.%s' % (self.grub_dir, node.hostname)
             node_dir = '%s/%s/' % (self.filesystem_dir, node.hostname)
-            env[os.path.normpath(efi_cfg)] = os.path.normpath(node_dir)
+            env[os.path.normpath(grub_menu_file)] = os.path.normpath(node_dir)
         return env
 
 
@@ -120,17 +126,21 @@ terminal_output gfxterm
 """
 
         menu_tplt = """
-if [ "$net_default_mac" -eq "{mac}" ];then
+if [ "$net_default_hostname" -eq "{hostname}" ];then
     configfile "(tftp){menu_cfg}"
 fi
 """
         lines = []
         lines.append(header_tplt)
 
+        configfile = '%s/menu.${net_default_hostname}' % (self.grub_dir)
+        lines.append('configfile "(tftp)%s' % configfile)
+        return '\n'.join(lines)
+
         for node in self.nodes:
-            node_mac = node.soc.socMacAddress
             menu_cfg = '%s/menu.%s' % (self.grub_dir, node.hostname)
-            lines.append(menu_tplt.format(mac=node_mac, menu_cfg=menu_cfg))
+            lines.append(menu_tplt.format(
+                hostname=node.hostname, menu_cfg=menu_cfg))
 
         return '\n'.join(lines)
 
@@ -154,27 +164,34 @@ def make_dir(target):
     return True
 
 
-def main(args):
+def main(config_file):
     """
         Configure TFTP environment.
     """
-    tmconfig = TMConfig(args['tmconfig'])
 
-    TFTP = TMtftp(tmconfig, args['tftp_root'], args['tftp_grub'], args['tftp_images'])
-    TFTP.create_environment()
+    manconfig = make_config(config_file)
+    missing = ratify_config(manconfig, dontcare=('GOLDEN_IMAGE',))
+    if missing:
+        raise RuntimeError('\n'.join(missing))
+    grubby = TMgrub(manconfig)
+    grubby.create_environment()
+    env = grubby.environment
+    for menu in sorted(env.keys()):
+        print('Menu:  %s\nFiles: %s\n' % (menu, env[menu]))
+    print('Master GRUB config in', grubby.grub_cfg)
 
 
 if __name__ == '__main__':
     """ Parse command line arguments. """
-    parser = argparse.ArgumentParser(description='TODO')
-    parser.add_argument('--tmconfig',
-                        help='Nodes coords config json.',
-                        default='configs/hpetmconfig.json')
-    parser.add_argument('--tftp-root',
-                        help='Path to the TFTP server.')
-    parser.add_argument('--tftp-grub',
-                        help='Path to the TFTP\'s grub folder.')
-    parser.add_argument('--tftp-images',
-                        help='Path to the TFTP\'s filesystem images folder.')
-    args, _ = parser.parse_known_args()
-    main(vars(args))
+    parser = argparse.ArgumentParser(description='Generate GRUB2 config files')
+    parser.add_argument('--config',
+                        help='Manifest API server configuration file',
+                        default='manifest_config.py')
+    args, _ = parser.parse_known_args(sys.argv[1:])
+
+    msg = 0     # establish scope
+    try:
+        main(args.config)
+    except Exception as e:
+        msg = str(e)
+    raise SystemExit(msg)
