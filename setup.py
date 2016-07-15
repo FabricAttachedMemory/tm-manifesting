@@ -11,7 +11,6 @@ from pdb import set_trace
 
 from configs import build_config
 from utils import utils
-#import make_grub_config
 
 
 def set_python_path(hook_dest):
@@ -79,7 +78,6 @@ def main(args):
     - run make_grub_cfg.py script to create grub config files in the tftp folder
     - run generate_golden_image.py script to generate golden image
     """
-
     assert os.geteuid() == 0, 'This script requires root permissions'
     set_python_path(args['python_hook'])
 
