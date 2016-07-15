@@ -19,12 +19,18 @@ sudo apt install tm-librarian python3 python3-flask python3-requests python3-deb
 ===============================================================================
 
 Next, we need a folder in a specifiec location for tm-manifesting to save its
-filesystem images and other production files:
+filesystem images and other production files. Also, PYTHONPATH needs to be set
+to ./manifesting/ environment and its other modules. To do that run:
 
-mkdir /var/lib/tm-manifesting/
-mkdir /var/lib/tm-manifesting/sys-images/
-mkdir /var/lib/tm-manifesting/manifest_uploads/
+sudo ./setup.py
 
+SIDE NOTE:
+ To check if environment was created, check default config file ./manifest_config.py,
+to find MANIFESTING_ROOT and TFTP_ROOT variables (at the time of writing this
+documentation it should be '/var/lib/tmms/' and MANIFESTING_ROOT + 'tftp'.
+ Knowing that, you can observe:
+
+ls /var/lib/tmms/
 
 ===============================================================================
 

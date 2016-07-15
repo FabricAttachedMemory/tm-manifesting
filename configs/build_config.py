@@ -58,6 +58,7 @@ def make_config(config_path):
 
     :param 'config_path': path to a .py config file.
     """
+    global settings
     config_path = os.path.realpath(config_path)
 
     settings = _extract_from_config(config_path)

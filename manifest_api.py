@@ -20,7 +20,7 @@ def parse_args():
     """ Parse system arguments set from command line."""
     PARSER = argparse.ArgumentParser(description='Manifesting server run settings')
     PARSER.add_argument('--config', help='Python config file to use for the server.',
-                        default='manifest_config.py')
+                        default=None)
     PARSER.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
     PARSER.add_argument('--debug', help='Turn on flask debugging',
@@ -33,6 +33,10 @@ def parse_args():
 # Set config variables for future use across the blueprints.
 
 cmdline_args = parse_args()
+if cmdline_args['config'] is None:
+    this_file = os.path.realpath(__file__)
+    cmdline_args['config'] = os.path.dirname(this_file) + '/manifest_config.py'
+
 config = build_config.make_config(cmdline_args['config'])
 
 # ---------------- This section will be unified into one ratify()
