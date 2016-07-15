@@ -45,8 +45,10 @@ class TMgrub(object):
         self.grub_dir = manconfig['TFTP_GRUB']
         self.grub_cfg = self.grub_dir + '/grub.cfg'
         self.filesystem_dir = manconfig['TFTP_IMAGES']
-        self.node_cfg = TMConfig(manconfig['TMCONFIG'])
-        self.nodes = self.node_cfg.nodes
+        tmconfig = TMConfig(manconfig['TMCONFIG'])
+        if tmconfig.errors:
+            raise ValueError('\n'.join(tmconfig.errors))
+        self.nodes = tmconfig.nodes
 
 
     def create_environment(self):

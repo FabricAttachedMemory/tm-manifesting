@@ -23,55 +23,51 @@ def parse_args():
                         default='manifest_config.py')
     PARSER.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
-    PARSER.add_argument('--dry-run', help='No action run; simulation of events.',
+    PARSER.add_argument('--debug', help='Turn on flask debugging',
+                        action='store_true')
+    PARSER.add_argument('--dry-run', help='No action; simulation of events.',
                         action='store_true')
     return vars(PARSER.parse_known_args()[0])
 
-cmdline_args = parse_args()
-
-###########################################################################
-# Everything is global until I figure out decorators on class methods
-# Flask sets mainapp.root_path to cwd.  Fix that, because I also need
-# it changed for other things.
-
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
-
-mainapp = Flask('tm_manifesting', static_url_path='/static')
-
 ###########################################################################
 # Set config variables for future use across the blueprints.
+
+cmdline_args = parse_args()
 config = build_config.make_config(cmdline_args['config'])
 
-mainapp.config['API_VERSION'] = 1.0
-mainapp.config.update(config)
-mainapp.config['url_prefix'] = '/manifesting'
-mainapp.config['VERBOSE'] = cmdline_args['verbose']
-mainapp.config['DRYRUN'] = cmdline_args['dry_run']
-
-# Move to cmdline processing
-mainapp.config['DEBUG'] = \
-    True and sys.stdin.isatty()     #  running as a Deamon or from a Terminal?
-mainapp.config['VERBOSE'] = \
-    True and sys.stdin.isatty()     # enable debugging when from terminal...
-
-
+# ---------------- This section will be unified into one ratify()
 path_to_validate = []
 path_fields = build_config._manifest_env + build_config._tftp_env
 for field in path_fields:
-    if field not in mainapp.config:     # Paranoia. Should never happened!
-        raise RuntimeError('Config parameter %s is missing in mainapp.config!' % field)
-    path_to_validate.append(mainapp.config[field])
+    if field not in config:
+        raise SystemExit('Config parameter %s is missing!' % field)
+    path_to_validate.append(config[field])
 
-missing_env_path = utils.ratify(path_to_validate)   # validate all manifesting path exists
+missing_env_path = utils.ratify(path_to_validate)
 
 if missing_env_path:
-    raise RuntimeError('Failed to run manifesting server. Following path missing: ' +\
-                        ', '.join(missing_env_path) )
+    raise SystemExit('Missing path(s):\n' + '\n'.join(missing_env_path))
+# ---------------
 
-try:
-    mainapp.config['tmconfig'] = TMConfig(mainapp.config['TMCONFIG'])
-except Exception as e:
-    mainapp.config['tmconfig'] = TMConfig('configs/hpetmconfig.json')
+tmconfig = TMConfig(config['TMCONFIG'])
+if tmconfig.errors:
+    raise SystemExit('Bad TMCF:\n' + '\n'.join(tmconfig.errors))
+
+# mainapp is needed as decorator base so it comes early.
+# Flask sets mainapp.root_path to cwd.  Set that now; it's also needed
+# during blueprint scanning.
+
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+mainapp = Flask('tm_manifesting', static_url_path='/static')
+mainapp.config.update(config)
+mainapp.config['tmconfig'] = tmconfig
+
+mainapp.config['API_VERSION'] = 1.0
+mainapp.config['url_prefix'] = '/manifesting'
+mainapp.config['VERBOSE'] = \
+    cmdline_args['verbose'] if sys.stdin.isatty() else 0
+mainapp.config['DEBUG'] = cmdline_args['debug'] and sys.stdin.isatty()
+mainapp.config['DRYRUN'] = cmdline_args['dry_run']
 
 ###########################################################################
 # Must come after mainapp setup because Mobius
@@ -79,10 +75,7 @@ except Exception as e:
 paths = sorted([ p for p in glob.glob('blueprints/*') ])
 if not paths:
     raise SystemExit('Cannot find any blueprints')
-n = 0
-
-#mainapp.VERBOSE = mainapp.config['VERBOSE']  # lower cased already taken
-#mainapp.DEBUG = mainapp.config['DEBUG']      #
+ngood = 0
 
 for p in paths:
     try:
@@ -91,7 +84,7 @@ for p in paths:
         BP.BP.VERBOSE = mainapp.config['VERBOSE']  # lower cased already taken
         BP.BP.DEBUG = mainapp.config['DEBUG']      #
         BP.register(mainapp)
-        n += 1
+        ngood += 1
     except ImportError as e:
         set_trace()
         print('No blueprint at %s' % p, file=sys.stderr)
@@ -100,7 +93,7 @@ for p in paths:
     except Exception as e:
         print('blueprint at %s failed: %s' % (p, e), file=sys.stderr)
 
-if n != len(paths):
+if ngood != len(paths):
     raise SystemExit('Not all blueprints finished registration')
 
 ###########################################################################
