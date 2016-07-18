@@ -67,6 +67,18 @@ def create_folder(path):
         os.makedirs(path)
 
 
+def install_packages():
+    """
+        Install packages required by manifesting service.
+    """
+    pkg_list = ['vmdebootstrap', 'python3',
+                'python3-flask', 'python3-requests',
+                'python3-debian']
+    cmd = 'apt install -y %s' % (' '.join(pkg_list))
+    cmd = shlex.split(cmd)
+    subprocess.call(cmd)
+
+
 def main(args):
     """
         Run all the functions needed to setup tm-manifesting environment:
