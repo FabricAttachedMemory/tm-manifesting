@@ -9,9 +9,9 @@ import sys
 
 from pdb import set_trace
 
-from configs import build_config
 from utils import utils
 
+build_config = None
 
 def set_python_path():
     """
@@ -88,10 +88,12 @@ def main(args):
     - run generate_golden_image.py script to generate golden image
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
-    set_python_path(args['python_hook'])
+    install_packages()
 
     config_path = os.path.realpath(args['config'])
 
+    from configs import build_config as BC
+    build_config = BC
     build_config.make_config(config_path)
 
     print()
