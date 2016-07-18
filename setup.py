@@ -93,6 +93,7 @@ def main(args):
     config_path = os.path.realpath(args['config'])
 
     from configs import build_config as BC
+    global build_config
     build_config = BC
     build_config.make_config(config_path)
 
