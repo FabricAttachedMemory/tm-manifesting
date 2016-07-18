@@ -13,15 +13,12 @@ from configs import build_config
 from utils import utils
 
 
-def set_python_path(hook_dest):
+def set_python_path():
     """
-        Set PYTHONPATH environment by creating a symlink fron tmms.pth file to the
-    'path'/tmms.pth. Python interpreter then will pick it up and append path included
-    in the tmmms.pth file.
-
-    :param 'hook_dest': path to where to place python config hook file. Usually,
-                    or by default in this function, it's: /usr/local/lib/python3.4/dist-packages/
+        Create a tmms.pth file insed /usr/local/lib/python3.4/dist-packages/
+    folder that has path to the manifesting modules.
     """
+    hook_dest = '/usr/local/lib/python3.4/dist-packages/tmms.pth'
     manifest_module_path = ['/tm-manifest/', '.', '/unittests/']
     generated_path = []
     for path in manifest_module_path:
@@ -106,10 +103,6 @@ if __name__ == '__main__':
     parser.add_argument('-C', '--tmconfig',
                         help='A config file that stores nodes topology.',
                         default='configs/hpetmconfig.py')
-
-    parser.add_argument('-p', '--python-hook',
-                        help='dist-packages/ folder to use for the python environment.',
-                        default='/usr/local/lib/python3.4/dist-packages/tmms.pth')
 
     args, _ = parser.parse_known_args()
     main(vars(args))
