@@ -14,20 +14,22 @@ class TmManifest(tm_base.TmCmd):
         self.args = {
             'list' : self.listall,
             'get' : self.show,
-            'put' : self.upload
+            'put' : self.upload,
+            'delete' : self.delete
         }
 
 
     def listall(self, arg_list=None, **options):
         """
     SYNOPSIS
-        listnodes
+        list
 
     DESCRIPTION
         List all available manifests uploaded to the server.
         """
         super().listall(arg_list, **options)
         url = "%s%s" % (self.url, 'manifest/')
+
         data = self.http_request(url)
         return self.to_json(data)
 
@@ -35,15 +37,22 @@ class TmManifest(tm_base.TmCmd):
     def show(self, target, **options):
         """
     SYNOPSIS
-        getnode <name>
+        get <prefix/manname> (file-to-save-into)
 
     DESCRIPTION
-         Show the manifest name that the specified node is currently directed to
-        use at next boot.
+            Download a manifest from the server with the specified name to the specified
+        file.
+        (file-to-save-into) is an optional second parameter if you want to save
+        manifest into a file. Otherwise, it will only display manifest contents
+        on the screen without saving.
         """
         super().show(target, **options)
-        api_url = "%s%s%s" % (self.url, 'node/', self.show_name)
+        api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name)
         data = self.http_request(api_url)
+        if len(target) == 2:
+            save_into = target[1]
+            with open(save_into, 'w') as file_obj:
+                file_obj.write(self.to_json(data))
         return self.to_json(data)
 
 
@@ -73,3 +82,20 @@ class TmManifest(tm_base.TmCmd):
 
         data = self.http_upload(api_url, payload=payload)
         return self.to_json(data)
+
+
+    def delete(self, target, **options):
+        """
+    SYNOPSIS
+        delete <manifest name>
+    DESCRIPTION
+            Deletes an existing manifest from the service. Note that this simply deletes the
+        manifest itself and that any nodes configured to use the manifest will continue to
+        boot using the constructed kernel and root file system.
+        """
+        super().show(target, **options)
+        api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name.strip('/'))
+        data = self.http_delete(api_url)
+        return self.to_json(data)
+
+

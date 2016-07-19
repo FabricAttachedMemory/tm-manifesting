@@ -1,10 +1,12 @@
 '''TM Manifests'''
 import json
 import os
+from glob import glob
 import sys
+from shutil import rmtree
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, g
+from flask import Blueprint, render_template, request, jsonify, g, abort, make_response
 from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
@@ -17,10 +19,10 @@ BP = Blueprint(_ERS_element, __name__)
 
 _UPFROM = 'uploaded_from'
 
+
 ###########################################################################
 # HTML
 # See blueprint registration in manifest_api.py, these are relative paths
-
 
 def render_all(okmsg='', errmsg=''):
     return render_template(
@@ -50,10 +52,6 @@ def webpage(name=None):
 
 @BP.route('/%s/' % _ERS_element, methods=('POST', ))
 def webpage_upload():
-    # files = request.files.getlist('file[]')
-    # for file in files:
-        # if not file: #
-            # continue
     try:
         assert int(request['Content-Length']) < 20000, 'Too big'
         file = request.files['file[]']
@@ -88,47 +86,123 @@ def listall():
         GET request that returns a json string response of all the manifests uploaded
     to the server.
     """
-    _load_data()
+    all_manifests = sorted(list(_data.keys()))
+    msg = json.dumps({ 'manifests' : all_manifests }, indent=4)
+    status_code = 200
+    if not all_manifests:
+        status_code = 204
+    return make_response(msg, status_code)
 
-    all_manifests = { 'manifest' : [], 'directory' : [] }
-    for manname, man_obj in _data.items():
-        all_manifests['manifest'].append(manname)
-        all_manifests['directory'].append(man_obj.dirpath)
 
-    response = jsonify(all_manifests)
-    response.status_code = 200
+@BP.route('/api/%s/' % _ERS_element)
+@BP.route('/api/%s/<path:manname>' % _ERS_element)
+def show_manifest_json(manname='/'):
+    """
+        Find a specifiec manifest with respect to <prefix> and a <manifest name>
+    and return a manifest contents in the response body.
+
+    :param <prefix>: [str] full path to a user's manifesting folder.
+    :return: json string with the full contents of the manifest,
+            404 status code if manifest was not found.
+    """
+    if manname.endswith('/'):
+        return list_manifests_by_prefix(manname.lstrip('/'))
+
+    found_manifest = _lookup(manname)
+
+    if not found_manifest:
+        return make_response('The specified manifest does not exist.', 404)
+
+    return make_response(jsonify(found_manifest.thedict), 200)
+
+
+def list_manifests_by_prefix(prefix=None):
+    """
+        This function loops throw _data.items() and for each element in it, finds
+    match with the provided <prefix>. Note: the comparison is happening between
+    _data's known manifests and provided <prefix> with a .startswith() function.
+
+    :param <prefix>: [str] full path to user's manifesting folder e.g. "funutarama/" or "my/futurama/manifests/"
+
+    :return: json string of { 'manifests' : ['prefix/manifest_name']
+                Example: if there is a "futurama/" folder on the server that has
+                'bender' and 'fry' manifests, then request to ../manifest/futurama/
+                will reesult a respons of "{ 'manifests' : ['futurama/bender', 'futurama/fry'] }".
+    """
+    result = { 'manifests' : [] }
+
+    for man_path, man_obj in _data.items():
+        if man_path.startswith(prefix) or not prefix:
+            result['manifests'].append(man_path)
+
+    if not result['manifests']:
+        response = make_response('No Manifests are available under the provided path.', 204)
+    else:
+        response = make_response(jsonify(result), 200)
+
     return response
 
 
-@BP.route('/api/%s/<path:name>/' % _ERS_element)
-def api(name=None):
-    response = jsonify({ 'error': 'API GET not implemented' })
-    response.status_code = 501
-    return response
+# Must have a string greater or equal to 1. Thats the RULE for Flask's rules (<path:str>).
+# Reference: http://werkzeug.pocoo.org/docs/0.11/routing/
+# Thus, to upload to root folder, we have to have a separate rule.
+@BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))                  # Upload to the Root
+@BP.route('/api/%s/<path:prefix>' % _ERS_element, methods=(('POST', )))    # Upload with prefix/
+def api_upload(prefix=''):
+    """
+        Upload a manifest to the server using json string body content provided
+    in the Request.
 
-
-@BP.route('/api/%s/<path:manname>/' % _ERS_element, methods=(('PUT', )))
-def api_upload(manname=None):
-    manname = manname.rstrip('/')
-    response = jsonify({ 'success' : 'A new manifest has been created with the provided contetnts!' })
-    response.status_code = 201  # but not always
-
-    if os.path.exists(BP.UPLOADS + '/' + manname):
-        response = jsonify({ 'warning' :
-            'An existed manifest "%s" has been replaced with new contents.' % manname })
-        response.status_code = 200
-
+    :param 'prefix': (optional) namespace path for the manifest to upload to.
+                    e.g: when prefix = futurama/world/, manifest will be uploaded
+                        into that provided folder on the server.
+                        when prefix = '' (no prefix passed), then manifest will
+                        be uploaded into root of the server's manifest uploads location.
+    """
+    if prefix and not prefix.endswith('/'):    # No trailing slash? Not a good request!
+        abort(404)
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
         contentstr = request.get_data().decode()
+
         if BP.config['DRYRUN']:
-            _data[manname] = 'dry-run'
+            _data[prefix] = 'dry-run'
             return response
         else:
-            ManifestDestiny(manname, '', contentstr)
+            manifest = ManifestDestiny(prefix, '', contentstr)
+        response = manifest.response
+
     except Exception as e:
-        response = jsonify({ 'error': 'Couldn\'t upload manifest! %s' % str(e) })
-        response.status_code = 422
+        response = make_response('Failed to upload manifest! [Error: %s]' % str(e), 422)
+
+    _load_data()
+    return response
+
+
+@BP.route('/api/%s/<path:manname>' % _ERS_element, methods=(('DELETE', )))
+def delete_manifest(manname=None):
+    """
+        Deletes an existing manifest from the service. Note that this simply deletes the
+    manifest itself and that any nodes configured to use the manifest will continue to
+    boot using the constructed kernel and root file system.
+
+    :param 'prefix': manifest path used to create PUT manifest to a server
+    :param 'manname': manifest file name
+    """
+    found_manifest = _lookup(manname)
+    response = make_response('The specified manifest has been deleted.', 204)
+
+    if not found_manifest:
+        return make_response('The specified manifest does not exist.', 404)
+
+    manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + manname
+
+    try:
+        if not BP.config['DRYRUN']:
+            os.remove(manifest_server_path)
+            # TODO: cleanout prefix folders of the manifests if it is empty!
+    except EnvironmentError:
+        response = make_response('Failed to remove requested manifest!', 500)
 
     _load_data()
     return response
@@ -168,6 +242,7 @@ class ManifestDestiny(object):
 
     def __init__(self, dirpath, basename, contentstr=None):
         '''If contentstr is given, it is an upload, else read a file.'''
+        self.prefix = dirpath.split(BP.UPLOADS)[-1].strip('/')  # Doesnt include basename.
         if contentstr is not None:
             # some kind of upload, basename not used
             self.thedict = self.validate_manifest(contentstr)
@@ -182,9 +257,17 @@ class ManifestDestiny(object):
 
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
+
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
+            self.manifest_file = BP.UPLOADS + '/' + self.namespace
+
+            if os.path.exists(self.manifest_file):
+                self.response = make_response('An existing manifest has been replaced with the provided contents.', 200)
+            else:
+                self.response = make_response('A new manifest has been created with the provided contetnts!', 201)
+
             os.makedirs(self.dirpath, exist_ok=True)
-            with open(os.path.join(self.dirpath, fname), 'w') as f:
+            with open(self.manifest_file, 'w') as f:
                 f.write(contentstr)
             return
 
@@ -203,14 +286,14 @@ class ManifestDestiny(object):
     def fullpath(self):
         return '%s/%s' % (self.dirpath, self.basename)
 
+
     @property
     def namespace(self):
-        if self.dirpath.startswith(BP.UPLOADS):
-            tmp = self.dirpath.split(BP.UPLOADS)[-1][1:]    # chomp leading /
-            return tmp
-        # Some kind of relative path, just send it all back
-        tmp = os.path.join(self.dirpath.split(self.basename)[0])
-        return tmp
+        namespace = self.prefix + '/' + self.thedict['name']
+        namespace = os.path.normpath(namespace)
+        namespace = namespace.strip('/')
+        return namespace
+
 
     @property
     def key(self):
@@ -218,8 +301,8 @@ class ManifestDestiny(object):
 
 ###########################################################################
 
-
 def _lookup(manifest_name):    # Can be sub/path/name
+    manifest_name = manifest_name.strip('/')
     return _data.get(manifest_name, None)
 
 
@@ -242,7 +325,12 @@ def _load_data():
         ]
         for dirpath, basename in manfiles:
             this = ManifestDestiny(dirpath, basename)
-            _data[basename] = this # search is expected by manifest name, (e.g. manifest.json, not path/manifest.json)
+
+            manname = os.path.join(dirpath, basename)                   # Build a manifest full path
+            manname = manname.split(BP.config['MANIFEST_UPLOADS'])[-1]  # relative to Manifest Uploads
+            manname = os.path.normpath(manname).strip('/')              # folder. e.g. user_folder/my_manifest
+
+            _data[manname] = this # search is expected by manifest name, (e.g. manifest.json, not path/manifest.json)
     except Exception as e:
         pass
 

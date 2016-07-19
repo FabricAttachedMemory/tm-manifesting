@@ -4,6 +4,8 @@ from glob import glob
 import json
 import os
 import sys
+import shlex
+import subprocess
 from shutil import copyfile
 from pdb import set_trace
 
@@ -33,7 +35,6 @@ def node():
 
 @BP.route('/%s/<path:name>' % _ERS_element)
 def node_name(name=None):
-    manifest = BP.manifest_lookup('ZHOPA')
     try:
         node = BP.nodes[name][0]
         MACaddress = node.soc.socMacAddress
@@ -50,33 +51,91 @@ def node_name(name=None):
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
 
+@BP.route('/api/%ss/' % _ERS_element, methods=('GET', ))
+def get_all_nodes():
+    """
+        List all nodes coordinates known to the server.
+    """
+    response = jsonify( { 'nodes' : list(BP.node_coords) } )
+    response.status_code = 200
+    return response
+
 
 @BP.route('/api/%s/' % _ERS_element, methods=('GET', ))
-def get_all():
-    response = jsonify( { 'node' : list(BP.node_coords) } )
-    response.status_code = 404
+def get_all_bindings():
+    """
+        List all node binded to a manifest with its status (ready, building or error).
+    """
+    nodes_info = _load_data()
+    if not nodes_info:              # FIXME: This is not a correct indentification of the node binding
+        response = jsonify( { 'No Content' : 'There are no manifests associated with any nodes.' } )
+        response.status_code = 204
+        return response
+
+    response = jsonify( { 'mappings' : nodes_info } )
+    response.status_code = 200
     return response
 
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('GET', ))
-def api_node(node_coord=None):
-    if node_coord not in _data:
-        response = jsonify({ '%s' % BP.nodes[node_coord][0].soc.socMacAddress : 'No binding' })
-        response.status_code = 404
-        return response
-    response = jsonify({ 'manifest' : _data[node_coord] })
-    response.status_code = 200
-    return response
+def get_node_bind_info(node_coord=None):
+    """
+        List status json of the manifest binded to the node.
+    """
+    if not BP.nodes[node_coord]:
+        return make_response('The specified node does not exist.', 404)
+
+    result = get_node_status(node_coord)
+    if result is None:
+        return make_response('No Content', 204)
+
+    return make_response(jsonify(result), 200)
+
+
+@BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
+def delete_node_binding(node_coord):
+    """
+        Remove Node to Manifest binding. Find node's folder in the TFTP directory
+    by its hostname and clean out the content. Thus, on the next node reboot, it
+    will be not served by the TFTP.
+
+    :param 'node_coord': full node's coordinate to unbinde Manifest from.
+    """
+    if node_coord not in BP.node_coords:
+        return make_response('The specified node does not exist.', 404)
+
+    node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
+    if not os.path.isdir(node_location):        # Paranoia. That should never happened.
+        return make_response('TFT doesn\'t serve requested node.', 404)
+
+    try:
+        for node_file in glob(node_location + '/*'):
+            os.remove(node_file)
+    except OSError as err:
+        return make_response('Failed to delete binding due to OSError:\n%s' % err, 500)
+
+    return make_response('Successful cleanup.', 204)
 
 ####################### API (PUT) ###############################
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('PUT', ))
-def api_node_coord(node_coord=None):
-    print ('Requesting customization of "%s"...' % node_coord)
-    try:
-        err_status = 413
-        assert int(request.headers['Content-Length']) < 200, 'Too big'
+def bind_node_to_manifest(node_coord=None):
+    """
+        Generate a custom filesystem image for a provided node coordinate using
+    a manifest specified in the request's body. The resulting FS image will be
+    placed at the server's location for PXE to pickup. This location is determined
+    by the node's hostname, e.g. tftp/arm64/hostname1/
 
+    :param 'node_coord': full node's coordinate with it's rack number, enclouse and etc.
+    """
+    try:
+        resp_status = 409   # Conflict
+        assert get_node_status(node_coord) is None, 'Node is occupied. Remove binding before assigning a new one.'
+
+        resp_status = 413
+        assert int(request.headers['Content-Length']) < 200, 'Content is too long! Max size is 200 characters.'
+
+        resp_status = 400       # if failed at this point, then it is a server error.
         # Validate requested manifest exists.
         contentstr = request.get_data().decode()
         req_body = request.get_json(contentstr)
@@ -84,21 +143,15 @@ def api_node_coord(node_coord=None):
         manname = req_body['manifest']  # can have path in it
 
         manifest = BP.manifest_lookup(manname)
-        err_status = 404
-        assert manifest is not None, 'no such manifest ' + manname
+        resp_status = 404
+        assert (manifest is not None) and node_coord in BP.node_coords, "The specified node or manifest does not exist."
 
-        _data[node_coord] = manifest.basename
-        save(_data, BP.binding)     # FIXME: ignoring return value?
-
-        img_resp = build_node(manifest, node_coord)
-
-        return jsonify(img_resp)
-
+        response = build_node(manifest, node_coord)
     except BadRequest as e:
-        response = e.get_response()
-    except (AssertionError, ValueError) as e:
-        response = jsonify({ 'error': str(e) })
-    response.status_code = err_status
+        response = make_response(e.get_response(), resp_status)
+    except (AssertionError, ValueError) as err:
+        response = make_response(str(err), resp_status)
+
     return response
 
 ###########################################################################
@@ -106,110 +159,138 @@ def api_node_coord(node_coord=None):
 
 def build_node(manifest, node_coord):
     """
-        Generate a custom filesystem image based of the provided manifset.
+        Build Process to Generate a custom filesystem image based of the provided manifset.
 
-    :param 'manifest': [str] absolute path to manifest.json file.
+    :param 'manifest': [cls] manifest class of the 99-manifest/blueprint.py
     :param 'node_coord': [int\str] node number or name to generate filesystem image for.
-    :return: [json str] success or error status.
+    :return: flask's response data.
     """
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     golden_tar = BP.config['GOLDEN_IMAGE']
+
     if not os.path.exists(golden_tar):
-        return { 'error' : 'Can not customize image for node "%s"! No "Golden Image" found!' % node_coord }
+        return make_response('Can not generate image! No "Golden Image" found!', 505)
 
+    # ----------------------- Variables
+    node_dir = os.path.join(sys_imgs,
+                    BP.nodes[node_coord][0].hostname)   # place to build FS image at.
+    tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' +\
+                    BP.nodes[node_coord][0].hostname    # place for PXE to pickup FS img from.
+    node_hostname = BP.nodes[node_coord][0].hostname    # we except to find only one occurance of node_coord.
+    custom_tar = os.path.normpath(node_dir + '/untar/') # path for FS img 'untar' folder to mess with.
+
+    response = make_response('The manifest for the specified node has been set.', 201)
+
+    if glob(tftp_node_dir + '/*.cpio'):
+        response = make_response('The manifest for the specified node has been changed.', 200)
+
+    # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
-        return { 'success' : 'Manifest [%s] is set to node [%s]' %
-                (os.path.basename(manifest.basename), node_coord) }
-
-    node_dir = os.path.join(sys_imgs, node_coord)
+        return response
+    # ---------------------------------
 
     try:
-        if not os.path.isdir(node_dir): # directory to save generated img into.
+        if not os.path.isdir(node_dir): # create directory to save generated img into.
             os.makedirs(node_dir)
     except (EnvironmentError):
-        return { 'error' : 'Couldn\'t create destination folder for the image at: %s' % (node_dir) }
+        return make_response('Failed to create "%s"!' % node_dir, 505)
 
-    # absolute path (with a file name) to where Golden image .tar file will be coppied to
-    custom_tar = os.path.normpath(node_dir + '/untar/')
-    # prepare the environment to mess with - untar into node's coord folder of manifesting server.
+    # prepare FS environment to customize - untar into node's folder of manifesting server.
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
-    tftp_arm = os.path.normpath(BP.config['TFTP'] + '/arm64/')
-    # customization magic (not so much though).
-    node_hostname = BP.nodes[node_coord][0].hostname  # we except to find only one occurance of node_coord
+    build_args = {
+            'fs-image' : custom_tar,
+            'hostname' : node_hostname,
+            'tftp' : tftp_node_dir,
+            'verbose' : BP.VERBOSE,
+            'debug' : BP.DEBUG,
+            'packages' : manifest.thedict['packages'],
+            'manifest' : manifest.namespace
+    }
 
-    status = customize_node.execute(
-        custom_tar, hostname=node_hostname, tftp=tftp_arm,
-        package_list=manifest.thedict['packages'],
-        verbose=BP.VERBOSE, debug=BP.DEBUG
-        )
+    cmd_args = []
+    for key, val in build_args.items():
+        cmd_args.append('--%s %s' % (key, val))
+    cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
+    cmd = shlex.split(cmd)
 
-    if status['status'] == 'success':
-        return { 'success' : 'Manifest [%s] is set to node [%s]' %
-                (os.path.basename(manifest.basename), node_coord) }
-    else:
-        return { status['status'] : status['message'] }
+    try:
+        _ = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+    except subprocess.SubprocessError as err:       # TSNH =)
+        return make_response('Failed to start node binding process.', 418)
 
+    manifest_tftp_file = manifest.namespace.replace('/', '.')
+    customize_node.copy_target_into(manifest.fullpath, tftp_node_dir + '/' + manifest_tftp_file)
+
+    return response
 
 ###########################################################################
-_data = None    # node <-> manifest bindings
+_data = None # node <-> manifest bindings
 
-
-def save(content, destination):
+def get_node_status(node_coord):
     """
-        Save json content into destination file.
-    Note: file will be removed before saving into it - e.g. overwritten with a new data.
+        Scan tftp/images/{hostname} folder for "status.json" that is generated
+    by node_builder/customize_node.py script. This file contatins information
+    about the Node binding status that Comply with ERS specs (Section 8.6)
 
-    :param 'content': [str or dict] data to be saved.
-    :param 'destination': [str] file to save into.
+    :param 'node_coord': [str] noode full coordinate string.
+    :return: [dict] values that describes node's state (status, message, manifest).
+             (ERS document section 8.6)
     """
-    if isinstance(content, dict):
-        content = json.dumps(content, indent=4)
+    assert node_coord in BP.node_coords, 'Unknown node coordinate. Make sure requested node is in tmconfig.json'
 
-    new_file = '%s.new' % (destination)
+    node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
+    status_file = node_location + '/' + 'status.json'
+    if not os.path.isdir(node_location):
+        return None
+
+    if not os.path.exists(status_file):
+        return None
+
+    status = {}
     try:
-        with open(new_file, 'w+') as file_obj: # if that fails, shouldn't bother to rename then.
-            file_obj.write(content)
-        os.rename(new_file, destination)
-    except IOError as error:
-        print('Couldn\'t save file into "%s"' % (destination), file=sys.stderr)
-        return False
-    return True
+        with open(status_file, 'r') as file_obj:
+            status = json.loads(file_obj.read())
+    except ValueError as err:       # TCNH =)
+        status['message'] = 'Failed to parse status file. Exception Error: %s ' % str(err)
+        status['manifest'] = 'unknown'
+        status['status'] = 'error'
+
+    return status
 
 
 def _load_data():
     """
-        Load json data from file and return a dictionary.
+        Scan tftp/images folder for known hostnames and read its status.json
+    file. Save this data into a dictionary and return it to the user.
 
-    :param 'target_file': [str] path to a file to load data from.
-    :return: [dict] data parsed from a json string of the 'target_file'
+    :return: [dict] node_coordinate - node_status key value pair of the current
+            status of the nodes.
     """
-    global _data
-    _data = {}
-    try:
-        with open(BP.binding, 'r+') as file_obj:
-            _data = json.loads(file_obj.read())
-    except IOError as err:
-        print ('Couldn\'t load "%s"' % (BP.binding), file=sys.stderr)
-    #for node in _data.keys():
-    #    if node not in BP.node_coords:
-    #        _data.remove(node)
-
-    return _data
+    result = {}
+    for node in BP.nodes:
+        node_status = get_node_status(node.coordinate)
+        if node_status:
+            result[node.coordinate] = node_status
+    return result
 
 
 def _manifest_lookup(name):
     # blueprints lookup has to be deferred until all are registered
+    if name:
+        name = name.strip('/')
     return BP.blueprints['manifest'].lookup(name)
+
+###########################################################################
 
 
 def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
+    global _data
     BP.config = mainapp.config
     BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
-    BP.binding = BP.config['NODE_BINDING'] # json file of all the Node to Manifest bindings.
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    _load_data()
+    _data = _load_data()

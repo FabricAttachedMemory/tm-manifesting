@@ -12,8 +12,10 @@ class TmNode(tm_base.TmCmd):
         super().__init__()
         self.args = {
             'listnodes' : self.listall,
+            'listbindings': self.listbindings,
             'getnode' : self.show,
-            'setnode' : self.set_node
+            'setnode' : self.set_node,
+            'unsetnode' : self.delete
         }
 
 
@@ -26,7 +28,21 @@ class TmNode(tm_base.TmCmd):
         List all the available nodes in the network.
         """
         super().listall(arg_list, **options)
-        url = "%s%s" % (self.url, 'node/')
+        url = "%s%s" % (self.url, 'nodes')
+        data = self.http_request(url)
+        return self.to_json(data)
+
+
+    def listbindings(self, arg_list=None, **options):
+        """
+    SYNOPSIS
+        listbindings
+
+    DESCRIPTION
+        List all the manifests assigned to a specific node.
+        """
+        super().listall(arg_list, **options)
+        url = "%s%s" % (self.url, 'node')
         data = self.http_request(url)
         return self.to_json(data)
 
@@ -61,4 +77,21 @@ class TmNode(tm_base.TmCmd):
         clean_url = os.path.normpath(api_url.split('http://')[1])
         api_url = 'http://' + clean_url
         data = self.http_request(api_url, payload=payload)
+        return self.to_json(data)
+
+
+    def delete(self, target, **options):
+        """
+    SYNOPSIS
+        unsetnode <node coord>
+
+    DESCRIPTION
+            Remove the node configuration from the manifesting service. When the node
+        is rebooted, there will not be an operating system or root file system made
+        available to it.
+        """
+        super().delete(target, **options)
+        node_coord = self.show_name
+        api_url = '%s%s/%s' % (self.url, 'node', node_coord)
+        data = self.http_delete(api_url)
         return self.to_json(data)

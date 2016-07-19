@@ -21,16 +21,17 @@ BP = Blueprint(_ERS_element, __name__)
 # See blueprint registration in manifest_api.py, these are relative paths
 
 
-@BP.route('/%s/' % _ERS_element)
-@BP.route('/%s/<name>' % _ERS_element)
+@BP.route('/%ss/' % _ERS_element)       # Plurar form of the element name to list all Packages
+@BP.route('/%s/<name>' % _ERS_element)  # Songular - to list one package.
 def _webpage(name=None):
 
-    if name is None:
+    if name is None:    # overloaded detection of singular rule
         return render_template(
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
-            url_base=request.url)
+            url_base='/manifesting/%s/' % _ERS_element) # singular
+            # FIXME: remove hardcoded "manifesting" from above
 
     return render_template(
         _ERS_element + '.tpl',
@@ -43,8 +44,8 @@ def _webpage(name=None):
 # As a blueprint registration against mainapp, these are relative paths
 
 
-@BP.route('/api/%s/' % _ERS_element)
-@BP.route('/api/%s/<name>' % _ERS_element)
+@BP.route('/api/%ss/' % _ERS_element)       # Plurar form of the element name to list all Packages
+@BP.route('/api/%s/<name>' % _ERS_element)  # Songular - to list one package.
 def _api(name=None):
     if name is None:
         packages = [ ]

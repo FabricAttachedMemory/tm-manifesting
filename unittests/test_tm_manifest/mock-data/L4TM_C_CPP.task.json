@@ -1,7 +1,0 @@
-{
-    "Description": "C/C++ development\n  gcc, make, and other tools for kernel (module) compilation",
-    "Key": "\n  bash-completion\n  bc\n  build-essential\n  dpkg-dev\n  gcc\n  gcc-doc\n  gcc-doc-base\n  git\n  htop\n  lsof\n  make\n  perl\n  perl-doc\n  psmisc\n  ssh\n  sudo\n  vim",
-    "Relevance": "10 ",
-    "Section": "Development",
-    "Task": "L4TM_C_CPP"
-}
