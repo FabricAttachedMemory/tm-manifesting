@@ -78,25 +78,6 @@ def install_packages():
     except subprocess.CalledProcessError:
         raise RuntimeError('Error occured during the install of packages.')
 
-def install_keyring():
-    """
-        Install an l4tm keyring from deb file located inside the configs/ folder.
-    Then, add keyring to the debootstrap directory.
-    """
-    cmd = 'dpkg -i ./configs/filesystem/l4tm_keyring.deb'
-    cmd = shlex.split(cmd)
-    try:
-        subprocess.call(cmd)
-    except subprocess.CalledProcessError:
-        raise RuntimeError('Faild to install configs/filesystem/l4tm_keyring.deb')
-
-    catapult_script = './configs/filesystem/catapult'
-    debootstrap_dest = '/usr/share/debootstrap/scripts/catapult'
-    try:
-        shutil.copyfile(catapult_script, debootstrap_dest)
-    except OSError:
-        raise RuntimeError('Failed to copy %s into %s' % (catapult_script, debootstrap_Dest))
-
 
 def main(args):
     """
@@ -112,7 +93,6 @@ def main(args):
     config_path = os.path.realpath(args['config'])
 
     set_python_path()
-    install_keyring()
 
     from configs import build_config as BC
     global build_config
