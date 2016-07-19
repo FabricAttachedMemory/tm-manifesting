@@ -28,15 +28,17 @@ def set_python_path():
 
     if os.path.exists(hook_dest):
         print('PYTHONPATH alread set. Overwritting...')
-
-    with open(hook_dest, 'w') as file_obj:
-        file_obj.write('\n'.join(generated_path))
+    try:
+        with open(hook_dest, 'w') as file_obj:
+            file_obj.write('\n'.join(generated_path))
+    except (OSError, EnvironmentError) as err:
+        raise RuntimeError('Faild to create /usr/local/lib/python3.4/dist-packages/tmms.pth.')
 
 
 def _create_env(fields, ignore_list=[]):
     """
         Create folder tree based of the list of fileds passed, that must comply
-    with config/build_config/ structure. This function dependent on build_config/ 
+    with config/build_config/ structure. This function dependent on build_config/
     module and its  variables naming convention.
 
     :param 'fields': [list] variable names that determines path values of the
@@ -53,18 +55,13 @@ def _create_env(fields, ignore_list=[]):
         create_folder(path)
 
 
-def create_grub_env(tmconfig):
-    """
-        Create grub environment under manfiesting /tftp/ folder.
-    :param 'tmconfig': path to the hpetmconfig.json file
-    """
-    raise NotImplemented('No soup for you... for now.')
-
-
 def create_folder(path):
     """ A simple wrapper around os.makedirs that skip existed folders. """
-    if not os.path.isdir(path):
-        os.makedirs(path)
+    try:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+    except OSError:
+        raise RuntimeError('Failed to create %s' % (path))
 
 
 def install_packages():
@@ -76,7 +73,29 @@ def install_packages():
                 'python3-debian']
     cmd = 'apt install -y %s' % (' '.join(pkg_list))
     cmd = shlex.split(cmd)
-    subprocess.call(cmd)
+    try:
+        subprocess.call(cmd)
+    except subprocess.CalledProcessError:
+        raise RuntimeError('Error occured during the install of packages.')
+
+def install_keyring():
+    """
+        Install an l4tm keyring from deb file located inside the configs/ folder.
+    Then, add keyring to the debootstrap directory.
+    """
+    cmd = 'dpkg -i ./configs/filesystem/l4tm_keyring.deb'
+    cmd = shlex.split(cmd)
+    try:
+        subprocess.call(cmd)
+    except subprocess.CalledProcessError:
+        raise RuntimeError('Faild to install configs/filesystem/l4tm_keyring.deb')
+
+    catapult_script = './configs/filesystem/catapult'
+    debootstrap_dest = '/usr/share/debootstrap/scripts/catapult'
+    try:
+        shutil.copyfile(catapult_script, debootstrap_dest)
+    except OSError:
+        raise RuntimeError('Failed to copy %s into %s' % (catapult_script, debootstrap_Dest))
 
 
 def main(args):
@@ -93,6 +112,7 @@ def main(args):
     config_path = os.path.realpath(args['config'])
 
     set_python_path()
+    install_keyring()
 
     from configs import build_config as BC
     global build_config
@@ -124,5 +144,9 @@ if __name__ == '__main__':
                         default='configs/hpetmconfig.py')
 
     args, _ = parser.parse_known_args()
-    main(vars(args))
-
+    try:
+        main(vars(args))
+    except RuntimeError as err:
+        raise SystemExit('Setup failed: %s' % err)
+    except Exception as err:
+        raise SystemExit('Setup failed! Something bad happened: %s' % err)
