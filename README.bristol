@@ -11,20 +11,34 @@ git clone https://github.hpe.com/hpelinux/manifesting.git
 
 ===============================================================================
 
-tm-manifesting depends on tm-librarian and is developed on python3, thus it is
-requires several libraries that needed to be installed on your system:
-
-sudo apt install tm-librarian python3 python3-flask python3-requests python3-debian
+cd manifesting
+sudo ./setup.py
 
 ===============================================================================
+Install tm-librarin.
 
-Next, we need a folder in a specifiec location for tm-manifesting to save its
-filesystem images and other production files:
+Step out of manifesting directory if still in there:
 
-mkdir /var/lib/tm-manifesting/
-mkdir /var/lib/tm-manifesting/sys-images/
-mkdir /var/lib/tm-manifesting/manifest_uploads/
+cd ..
 
+--------------------------------
+If Running L4TM:
+
+sudo apt install tm-librarian
+
+
+--------------------------------
+If Runnin Debian:
+
+git clone https://github.hpe.com/hpelinux/tm-librarian.git
+
+sudo ln -s ~/tm-librarian/ /usr/lib/python3/dist-packages/tm_librarian
+
+Make sure link is valid:
+
+ls -l /usr/lib/python3/dist-packages/tm_librarian
+
+(Output must be green)
 
 ===============================================================================
 
