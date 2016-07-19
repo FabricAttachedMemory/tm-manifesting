@@ -102,8 +102,8 @@ def main(args):
     print()
     fields = build_config._manifest_env
     _create_env(fields, ['GOLDEN_IMAGE'])
-    golden_img_dir = os.path.dirname(build_config.settings['Golden_IMAGE'])
-    _create_env((golden_img_dir))
+    golden_img_dir = os.path.dirname(build_config.settings['GOLDEN_IMAGE'])
+    create_folder(golden_img_dir)
 
     print()
 

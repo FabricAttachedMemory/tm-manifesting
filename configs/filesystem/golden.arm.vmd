@@ -8,9 +8,9 @@
 #    b. mv /etc/apt/sources.list.d/base.list /etc/apt/sources.list
 
 [config]
-log = /var/lib/tm-manifesting/sys-images/golden/golden.arm.log
-image = /var/lib/tm-manifesting/sys-images/golden/golden.arm.img
-tarball = /var/lib/tm-manifesting/sys-images/golden/golden.arm.tar
+log = /var/lib/tmms/sys-images/golden/golden.arm.log
+image = /var/lib/tmms/sys-images/golden/golden.arm.img
+tarball = /var/lib/tmms/sys-images/golden/golden.arm.tar
 mirror = 
 
 arch = arm64
