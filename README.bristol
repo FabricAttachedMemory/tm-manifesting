@@ -68,6 +68,17 @@ To verify this step, check for "golden.arm.tar" file inside the expected folder:
 ls /var/lib/tmms/sys-images/golden/
 
 ===============================================================================
+        MANIFESTING ENVIRONMENT: tmconfig
+(All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
+
+if running manifest_api.py causing:
+RuntimeError: Line 201: [Errno 2] No such file or directory: '/etc/tmconfig'
+
+ Then place yout The Machine Config json file into /etc/tmconfig e.g:
+
+sudo cp ~/my_tmconfig.json /etc/tmconfig
+
+===============================================================================
         CREATE A SYSTEM SHORTCAT TO MANIFESTING
 
 (Optional step that make interaction with manifesting cmd line sligtly more convenient)
