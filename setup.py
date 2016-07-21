@@ -20,15 +20,21 @@ def set_python_lib():
     /usr/local/lib/python3.4/dist-packages/tmms so that user could import
     manifeseting libraries as follows: import tmms.unittests
     """
-    path_to_lib = sorted(sys.path)[-1]
-    for path in sorted(sys.path):           # find a python3/dist-packages
-        if 'python3/dist-packages' in path: # path in the python environment
-            path_to_lib = path + '/tmms'    # use it to construct symlink
-            break                           # break on first occurance.
+    py_ver = 'python%d.%d' % (sys.version_info.major, sys.version_info.minor)
+    paths_to_lib = ('/usr/local/lib/%s/dist-packages' % py_ver,
+                    '/%s/lib/%s/dist-packages' % (sys.prefix, py_ver))
+
     manifesting_path = os.path.realpath(__file__)
     manifesting_path = os.path.dirname(manifesting_path)    # setup script must be in top of tree
-    print(' - Creating a symlink from [%s] to [%s]' % (manifesting_path, path_to_lib))
-    os.symlink(manifesting_path, path_to_lib)
+    for path in paths_to_lib:
+        if path in sys.path:
+            path = path + '/tmms'
+            print(' - Creating a symlink from [%s] to [%s]' % (manifesting_path, path))
+            os.symlink(manifesting_path, path)
+            break
+    else:
+        raise RuntimeError('Can\'t find suitable path in python environment to link tmms!')
+
 
 
 def _create_env(fields, ignore_list=[]):
@@ -84,6 +90,8 @@ def main(args):
     - run generate_golden_image.py script to generate golden image
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
+    assert sys.platform == 'linux'
+
     install_packages()
 
     config_path = os.path.realpath(args['config'])
