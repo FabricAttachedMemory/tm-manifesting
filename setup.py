@@ -66,7 +66,7 @@ def install_packages():
     """
     pkg_list = ['vmdebootstrap', 'python3',
                 'python3-flask', 'python3-requests',
-                'python3-debian']
+                'python3-debian', 'tm-librarian']
     cmd = 'apt install -y %s' % (' '.join(pkg_list))
     cmd = shlex.split(cmd)
     try:
