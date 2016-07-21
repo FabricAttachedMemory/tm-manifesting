@@ -9,6 +9,11 @@ Clone latest repo from github.hpe:
 
 git clone https://github.hpe.com/hpelinux/manifesting.git
 
+
+Make sure system is updated and Python3 is installed on the system:
+sudo apt update
+sudo apt install python3
+
 ===============================================================================
 
 cd manifesting
@@ -25,7 +30,6 @@ cd ..
 If Running L4TM:
 
 sudo apt install tm-librarian
-
 
 --------------------------------
 If Runnin Debian:
