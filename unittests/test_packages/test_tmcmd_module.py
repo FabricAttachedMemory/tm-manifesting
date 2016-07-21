@@ -12,7 +12,7 @@ class PackageTest(unittest.TestCase):
         """ Check if tmcmd module can be imported """
         status = True
         try:
-            import tmcmd
+            from tmms.tm_cmd import tmcmd
             status = True
         except ImportError:
             status = False
@@ -25,7 +25,7 @@ class PackageTest(unittest.TestCase):
             Check if tmpkg variable of type TmPackage is created successfully by
         __init__.py script for tmcmd module.
         """
-        import tmcmd
+        from tmms.tm_cmd import tmcmd
         status = True
         try:
             tmcmd.tmpkg

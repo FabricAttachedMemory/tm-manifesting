@@ -13,26 +13,18 @@ from utils import utils
 
 build_config = None
 
-def set_python_path():
-    """
-        Create a tmms.pth file insed /usr/local/lib/python3.4/dist-packages/
-    folder that has path to the manifesting modules.
-    """
-    hook_dest = '/usr/local/lib/python3.4/dist-packages/tmms.pth'
-    manifest_module_path = ['/tm-manifest/', '.', '/unittests/']
-    generated_path = []
-    for path in manifest_module_path:
-        this_file = os.path.dirname(os.path.realpath(__file__))
-        norm_path = os.path.normpath(this_file + '/' + path)
-        generated_path.append(norm_path)
 
-    if os.path.exists(hook_dest):
-        print('PYTHONPATH alread set. Overwritting...')
-    try:
-        with open(hook_dest, 'w') as file_obj:
-            file_obj.write('\n'.join(generated_path))
-    except (OSError, EnvironmentError) as err:
-        raise RuntimeError('Faild to create /usr/local/lib/python3.4/dist-packages/tmms.pth.')
+def set_python_lib():
+    """
+        Create a symlink to manifesting source code to:
+    /usr/local/lib/python3.4/dist-packages/tmms so that user could import
+    manifeseting libraries as follows: import tmms.unittests
+    """
+    path_to_lib = '/usr/local/lib/python3.4/dist-packages/tmms'
+    manifesting_path = os.path.realpath(__file__)
+    manifesting_path = os.path.dirname(manifesting_path)    # setup script must be in top of tree
+    print('Creating a symlink from %s to %s.' % (manifesting_path, path_to_lib))
+    os.symlink(manifesting_path, path_to_lib)
 
 
 def _create_env(fields, ignore_list=[]):
@@ -88,12 +80,13 @@ def main(args):
     - run generate_golden_image.py script to generate golden image
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
-    install_packages()
+    #install_packages()
 
     config_path = os.path.realpath(args['config'])
 
-    set_python_path()
-
+    #set_python_path()
+    set_python_lib()
+    return
     from configs import build_config as BC
     global build_config
     build_config = BC

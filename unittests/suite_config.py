@@ -5,12 +5,12 @@ import sys
 from tm_librarian.tmconfig import TMConfig
 from pdb import set_trace
 
-from configs import build_config
+from tmms.configs import build_config
 config_file = os.path.dirname(__file__) + '/config.unittests'
 
 # ------------------------------
 
-import tmcmd as TMCMD
+import tmms.tm_cmd.tmcmd as TMCMD
 
 # ------------------------------
 
