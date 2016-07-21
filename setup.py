@@ -73,10 +73,15 @@ def install_packages():
     pkg_list = ['vmdebootstrap', 'python3',
                 'python3-flask', 'python3-requests',
                 'python3-debian', 'tm-librarian']
-    cmd = 'apt install -y %s' % (' '.join(pkg_list))
-    cmd = shlex.split(cmd)
     try:
-        subprocess.call(cmd)
+        for pkg in pkg_list:
+            cmd = 'apt-get install -y -qq %s' % (pkg)
+            cmd = shlex.split(cmd)
+            process = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+            output, err = process.communicate()
+            if err:
+                print ("!!!!WARNING!!!!! Package [%s] was not installed!" % (pkg) )
+
     except subprocess.CalledProcessError:
         raise RuntimeError('Error occured during the install of packages.')
 
@@ -133,4 +138,4 @@ if __name__ == '__main__':
     except RuntimeError as err:
         raise SystemExit('Setup failed: %s' % err)
     except Exception as err:
-        raise SystemExit('Setup failed! Something bad happened: %s' % err)
+        raise SystemExit('Ooops: - \n%s' % err)
