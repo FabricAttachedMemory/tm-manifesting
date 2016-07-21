@@ -74,14 +74,17 @@ def install_packages():
                 'python3-flask', 'python3-requests',
                 'python3-debian', 'tm-librarian']
     try:
+        errors = []
         for pkg in pkg_list:
             cmd = 'apt-get install -y -qq %s' % (pkg)
             cmd = shlex.split(cmd)
             process = subprocess.Popen(cmd, stderr=subprocess.PIPE)
             output, err = process.communicate()
             if err:
-                print ("!!!!WARNING!!!!! Package [%s] was not installed!" % (pkg) )
-
+                errors.append(pkg)
+        if errors:
+            raise RuntimeError('The required packages were not installed:\n - %s' %\
+                                ', '.join(errors))
     except subprocess.CalledProcessError:
         raise RuntimeError('Error occured during the install of packages.')
 
