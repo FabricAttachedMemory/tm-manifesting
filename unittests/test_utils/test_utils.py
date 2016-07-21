@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from shutil import rmtree
 
-from utils import utils
+from tmms.utils import utils
 from pdb import set_trace
 
 

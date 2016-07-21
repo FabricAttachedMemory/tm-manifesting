@@ -6,9 +6,9 @@ import json
 import os
 import unittest
 import time
-import tmcmd as TMCMD
 
-import suite_config as config
+from tmms.tm_cmd import tmcmd as TMCMD
+from tmms.unittests import suite_config as config
 from pdb import set_trace
 
 class BindNodeTest(unittest.TestCase):
