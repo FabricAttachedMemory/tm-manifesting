@@ -80,13 +80,12 @@ def main(args):
     - run generate_golden_image.py script to generate golden image
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
-    #install_packages()
+    install_packages()
 
     config_path = os.path.realpath(args['config'])
 
-    #set_python_path()
     set_python_lib()
-    return
+
     from configs import build_config as BC
     global build_config
     build_config = BC
