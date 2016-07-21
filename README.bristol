@@ -12,8 +12,8 @@ git clone https://github.hpe.com/hpelinux/manifesting.git
 
 
 Make sure system is updated and Python3 is installed on the system:
-sudo apt update
-sudo apt install python3
+sudo apt-get update
+sudo apt-get install python3
 
 ===============================================================================
 
@@ -50,7 +50,7 @@ ls -l /usr/lib/python3/dist-packages/tm_librarian
 (All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
 
  At this point you can try to run manifesting server:
-sudo ./manifest_api
+sudo ./manifest_api.py
 
 If the command above errored out with
 
