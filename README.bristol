@@ -4,10 +4,16 @@ tm-manifesting is developed on L4TM system, thus, as of today, we do not provide
 support of Manifesting services on any other distribution.
 
 ===============================================================================
+        MANIFESTING ENVIRONMENT: SETUP
 
 Clone latest repo from github.hpe:
 
 git clone https://github.hpe.com/hpelinux/manifesting.git
+
+
+Make sure system is updated and Python3 is installed on the system:
+sudo apt-get update
+sudo apt-get install python3
 
 ===============================================================================
 
@@ -26,7 +32,6 @@ If Running L4TM:
 
 sudo apt install tm-librarian
 
-
 --------------------------------
 If Runnin Debian:
 
@@ -41,6 +46,40 @@ ls -l /usr/lib/python3/dist-packages/tm_librarian
 (Output must be green)
 
 ===============================================================================
+        MANIFESTING ENVIRONMENT: GENERATE GOLDEN IMAGE
+(All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
+
+ At this point you can try to run manifesting server:
+sudo ./manifest_api.py
+
+If the command above errored out with
+
+Missing path(s):
+/var/lib/tmms/sys-images/golden/golden.arm.tar
+
+Then you have to generate a golden image, by running a script with the path (without
+*.tar file, just directory tree) mentioned in the error output above:
+
+sudo ./generate_golden_image.py -d /var/lib/tmms/sys-images/golden/
+
+
+To verify this step, check for "golden.arm.tar" file inside the expected folder:
+
+ls /var/lib/tmms/sys-images/golden/
+
+===============================================================================
+        MANIFESTING ENVIRONMENT: tmconfig
+(All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
+
+if running manifest_api.py causing:
+RuntimeError: Line 201: [Errno 2] No such file or directory: '/etc/tmconfig'
+
+ Then place your The Machine Config json file into /etc/tmconfig e.g:
+
+sudo cp ~/my_tmconfig.json /etc/tmconfig
+
+===============================================================================
+        CREATE A SYSTEM SHORTCUT TO MANIFESTING
 
 (Optional step that make interaction with manifesting cmd line sligtly more convenient)
 
@@ -51,21 +90,8 @@ NOTE: in the next command, ~/Development/... is MY location of the cloned manife
 Change it to the location where you cloned yours."/usr/local/bin/tm-manifest" stays
 the same.
 
-sudo ln -s ~/Development/manifesting/tm-manifest/tm_manifest.py /usr/local/bin/tm-manifest
-
-
-===============================================================================
-
-(Optional step that make interaction with manifesting api launcher sligtly more convenient)
-
-Create a symbolic link to manifest_api.py to use it as if it is an installed
-application.
-
-NOTE: in the next command, ~/Development/... is MY location of the cloned manifesting.
-Change it to the location where you cloned yours."/usr/local/bin/tm-manifest-server" stays
-the same.
-
-sudo ln -s ~/Development/manifesting/tm-manifest/tm_manifest.py /usr/local/bin/tm-manifest
+sudo ln -s ~/Development/manifesting/tm_cmd/tm_manifest.py /usr/local/bin/tm-manifest
+sudo ln -s ~/Development/manifesting/manifest_api.py /usr/local/bin/tm-manifest-server
 
 ===============================================================================
 
@@ -76,7 +102,7 @@ tm-manifest help
 you should get a list of commands.
 This is equivalent to (if you were not doing symbolic links):
 
-~/Development/manifesting/tm-manifest/tm_manifest.py help
+~/Development/manifesting/tm_cmd/tm_manifest.py help
 
 -------------------------------------------------------------------------------
 
