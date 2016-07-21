@@ -20,10 +20,14 @@ def set_python_lib():
     /usr/local/lib/python3.4/dist-packages/tmms so that user could import
     manifeseting libraries as follows: import tmms.unittests
     """
-    path_to_lib = '/usr/local/lib/python3.4/dist-packages/tmms'
+    path_to_lib = sorted(sys.path)[-1]
+    for path in sorted(sys.path):           # find a python3/dist-packages
+        if 'python3/dist-packages' in path: # path in the python environment
+            path_to_lib = path + '/tmms'    # use it to construct symlink
+            break                           # break on first occurance.
     manifesting_path = os.path.realpath(__file__)
     manifesting_path = os.path.dirname(manifesting_path)    # setup script must be in top of tree
-    print('Creating a symlink from %s to %s.' % (manifesting_path, path_to_lib))
+    print(' - Creating a symlink from [%s] to [%s]' % (manifesting_path, path_to_lib))
     os.symlink(manifesting_path, path_to_lib)
 
 
