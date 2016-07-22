@@ -1,6 +1,6 @@
 Quick Start to Manifesting from Github
 
-tm-manifesting is developed on L4TM systems for use in The Machine 
+tm-manifesting is developed on L4TM systems for use in The Machine
 environment.  Support for any other distro, even Debian or HPE Linux,
 is optional and discretionary.
 
@@ -9,13 +9,11 @@ is optional and discretionary.
 
 Install L4TM on your target server (probably a ToRMS).
 
-Insure the system's packages are updated and include the following:
+Insure the system's packages are updated and include the following
+packages:
 
 $ sudo apt-get update
-$ sudo apt-get install python3 git tm-librarian
-
-Manifesting is dependent on Python modules from the Librarian.  You
-won't actually be running the Librarian.
+$ sudo apt-get install python3 git
 
 ===============================================================================
         MANIFESTING ENVIRONMENT: SETUP
@@ -26,30 +24,30 @@ $ git clone https://github.hpe.com/hpelinux/manifesting.git
 $ cd manifesting
 $ sudo ./setup.py
 
+All commands below need to be run from the "manifesting" directory.
+
+===============================================================================
+
+        MANIFESTING ENVIRONMENT: CONFIG FILE
+
+ROCKY ONLY MADE IT THIS FAR
+
+Use the config file in .....
+
 ===============================================================================
         MANIFESTING ENVIRONMENT: GENERATE GOLDEN IMAGE
-(All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
+
+sudo ./generate_golden_image.py -d /var/lib/tmms/sys-images/golden/
+
+===============================================================================
+        MANIFESTING: RUN API SERVER
 
  At this point you can try to run manifesting server:
 sudo ./manifest_api.py
 
-If the command above errored out with
-
-Missing path(s):
-/var/lib/tmms/sys-images/golden/golden.arm.tar
-
-Then you have to generate a golden image, by running a script with the path (without
-*.tar file, just directory tree) mentioned in the error output above:
-
-sudo ./generate_golden_image.py -d /var/lib/tmms/sys-images/golden/
-
-
-To verify this step, check for "golden.arm.tar" file inside the expected folder:
-
-ls /var/lib/tmms/sys-images/golden/
-
 ===============================================================================
         MANIFESTING ENVIRONMENT: tmconfig
+
 (All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
 
 if running manifest_api.py causing:
