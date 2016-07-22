@@ -1,6 +1,6 @@
 """
-!!! NOTE: This script must only be used for manifest_api.py. Other use CASES
-    are NOT tested and not acounted for !!!
+!!! NOTE: This script must only be used for manifest_api.py. Other use cases
+    are NOT tested or supported !!!
 
     This module parses a python (.py) config file into local variables and
     constructs several other parameters that are useful for the manifesting
@@ -21,6 +21,7 @@ from collections import namedtuple
 import flask
 import os
 import sys
+import time
 
 from pdb import set_trace
 
@@ -47,38 +48,40 @@ _tftp_env = (
             'TFTP_GRUB'
            )
 
-_expected_fields = _server_fields + (_mroot_field, _tftp_root_field)
+_required_fields = _server_fields + (_mroot_field, _tftp_root_field)
 
-settings = {}
+_settings = {}
 
 def make_config(config_path):
     """
-        Unpack parameters of the passed config file into the local variables of
-    this module.
+        Unpack parameters of the passed config file into the local
+        variables of this module.
 
     :param 'config_path': path to a .py config file.
     """
-    global settings
-    config_path = os.path.realpath(config_path)
-
-    settings = _extract_from_config(config_path)
+    global _settings
+    _settings = _extract_from_config(config_path)
 
     # no trailing slashes
-    mroot = os.path.join(settings['MANIFESTING_ROOT'])
+    mroot = os.path.join(_settings['MANIFESTING_ROOT'])
     if mroot[-1] == '/':
         mroot = mroot[:-1]
-    tftp = os.path.join(settings['TFTP_ROOT'])
+    
+    tftp = os.path.join(_settings['TFTP_ROOT'])
     if tftp[-1] == '/':
         tftp = tftp[:-1]
 
-    settings['MANIFESTING_ROOT'] = mroot
-    settings['TFTP_ROOT'] = tftp
-    settings['FILESYSTEM_IMAGES'] = mroot + '/sys-images'
-    settings['MANIFEST_UPLOADS'] = mroot + '/manifests'
-    settings['GOLDEN_IMAGE'] = settings['FILESYSTEM_IMAGES'] + '/golden/golden.arm.tar'
+    fsimages = mroot + '/sys-images'
 
-    settings['TFTP_IMAGES'] = tftp + '/nodes'
-    settings['TFTP_GRUB'] = tftp + '/boot/grub'
+    _settings.update({
+        'MANIFESTING_ROOT':     mroot,
+        'FILESYSTEM_IMAGES':    fsimages,
+        'GOLDEN_IMAGE':         fsimages + '/golden/golden.arm.tar'
+        'MANIFEST_UPLOADS':     mroot + '/manifests',
+
+        'TFTP_ROOT':            tftp,
+        'TFTP_IMAGES':          tftp + '/nodes',
+        'TFTP_GRUB':            tftp + '/boot/grub'     # architected in grub
     return settings
 
 
@@ -104,17 +107,18 @@ def ratify_config(manconfig, dontcare=None):
 def _extract_from_config(config_path):
     """
         Validate that incoming .py config file has required variables set and
-    return a dictionary of expected parameters.
+    return a dictionary of required parameters.
 
     :param 'config_path': path to the .py config file.
-    :return: [dict] pair of field names (variables) that will be used with its values.
+    :return: [dict] pair of field names (keys) and path names (values).
     """
-    flask_obj = flask.Flask('dummy_flask_obj')   # Just to pars .py config into dict
+
+    flask_obj = flask.Flask(time.ctime())   # convenience routine only
     flask_obj.config.from_pyfile(config_path)
     result = {}
-    for expected in _expected_fields:
-        if expected not in flask_obj.config:
-            raise ValueError('Config file missing field  "%s"' % expected)
-        result[expected] = flask_obj.config[expected]
-    flask_obj = None        # Only needed it for from_object()
+    for f in _required_fields:
+        if f not in flask_obj.config:
+            raise ValueError('Config file missing "%s"' % f)
+        result[f] = flask_obj.config[f]
+    flask_obj = None
     return result

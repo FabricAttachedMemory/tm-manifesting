@@ -27,45 +27,49 @@ def set_python_lib():
     setup.py must be at top of manifesting repo tree.
     """
     py_ver = 'python%d.%d' % (sys.version_info.major, sys.version_info.minor)
-    paths_to_lib = ('/usr/local/lib/%s/dist-packages' % py_ver,
-                    '/%s/lib/%s/dist-packages' % (sys.prefix, py_ver))
+    tmptuple = (sys.prefix, py_ver)
+    paths_to_lib = ('%s/local/lib/%s/dist-packages' % tmptuple,
+                    '%s/lib/%s/dist-packages' % tmptuple)
 
-    manifesting_path = os.path.realpath(__file__)
-    manifesting_path = os.path.dirname(manifesting_path)
+    setup_file = os.path.realpath(__file__)
+    repo_path = os.path.dirname(setup_file)
     for path in paths_to_lib:
         if path not in sys.path:
             break
 
         path = path + '/tmms'
-        print(' - symlink [%s] -> [%s]' % (path, manifesting_path))
+        print(' - symlink [%s] -> [%s]' % (path, repo_path))
         try:
-            os.symlink(manifesting_path, path)
+            os.symlink(repo_path, path)
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise RuntimeError('symlink() failed: %s' % str(e))
             if os.lstat(path).st_mode & S_IFLNK != S_IFLNK:
                 raise RuntimeError('Existing "%s" is not a symlink' % path)
-            if os.path.realpath(path) != manifesting_path:
+            if os.path.realpath(path) != repo_path:
                 raise RuntimeError(
                     'Existing "%s" symlink does not point to %s' % (
-                        path, manifesting_path))
+                        path, repo_path))
     else:
         raise RuntimeError(
             'Can\'t find suitable path in python environment to link tmms!')
 
 
-def _create_env(fields, ignore_list=[]):
+def _create_env(fields, ignore=None):
     """
-        Create folder tree based of the list of fields passed, that must comply
-    with config/build_config/ structure. This function dependent on build_config/
-    module and its  variables naming convention.
+        Create folder tree from passed parameters that must comply with
+    config/build_config/ structure. This function depends on build_config
+    module and its variables naming convention.
 
     :param 'fields': [list] variable names that determines path values of the
                     manifesting entities.
-    :param 'ignore_list': [list] of fields to ignore, e.g. GOLDEN_IMAGE
+    :param 'ignore': (tuple) of fields to ignore, e.g. ('GOLDEN_IMAGE', )
     """
+
+    if ignore is None:
+        ignore = ()
     for field in fields:
-        if field in ignore_list:
+        if field in ignore:
             continue
         path = build_config.settings[field]
 
@@ -78,11 +82,11 @@ def create_folder(path):
     try:
         if not os.path.isdir(path):
             os.makedirs(path)
-    except OSError:
-        raise RuntimeError('Failed to create %s' % (path))
+    except OSError as e:
+        raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
 
 
-def install_packages():
+def install_base_packages():
     """
         Install packages required by manifesting service.  It only needs
         files from tm-librarian, it won't actually get run from here.
@@ -116,19 +120,17 @@ def main(args):
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
     assert sys.platform == 'linux'
+    build_config.make_config(args.config)
 
-    print(' ---- Installing dependent L4TM packages ---- ')
-    install_packages()
-
-    config_path = os.path.realpath(args['config'])
+    print(' ---- Installing extra packages ---- ')
+    install_base_packages()
 
     print(' ---- Creating workaround Python package path ---- ')
     set_python_lib()
 
     print(' ---- Creating manifest environment ---- ')
-    build_config.make_config(config_path)
     fields = build_config._manifest_env
-    _create_env(fields, ['GOLDEN_IMAGE'])
+    _create_env(fields, ignore=('GOLDEN_IMAGE',))
     golden_img_dir = os.path.dirname(build_config.settings['GOLDEN_IMAGE'])
     create_folder(golden_img_dir)
 
@@ -139,20 +141,22 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Setup arguments that should not\
-                                    be changed, unless you know what you doing.')
-    parser.add_argument('-c', '--config',
-                        help='A config.py file to be used by manifesting server.',
-                        default='./manifest_config.py')
-
-    parser.add_argument('-C', '--tmconfig',
-                        help='A config file that stores nodes topology.',
-                        default='configs/hpetmconfig.py')
+    parser = argparse.ArgumentParser(
+        description='Setup arguments intended for tmms developers only')
+    parser.add_argument(
+        '-c', '--config',
+        help='A config.py file to be used by manifesting server.',
+        default='./manifest_config.py')
+    parser.add_argument(
+        '-C', '--tmconfig',
+        help='path to TMCF, the description of an entire instance')
 
     args, _ = parser.parse_known_args()
+    args.config = os.path.realpath(args.config)
+
     errmsg = ''     # establish scope
     try:
-        main(vars(args))
+        main(args)
         raise SystemExit(0)
     except RuntimeError as err:
         errmsg = str(err)
