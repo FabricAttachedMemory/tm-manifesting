@@ -70,7 +70,7 @@ def install_packages():
     """
         Install packages required by manifesting service.
     """
-    pkg_list = ['vmdebootstrap', 'python3',
+    pkg_list = ['apt-utils', 'vmdebootstrap',
                 'python3-flask', 'python3-requests',
                 'python3-debian', 'tm-librarian']
     try:
@@ -80,11 +80,10 @@ def install_packages():
             cmd = shlex.split(cmd)
             process = subprocess.Popen(cmd, stderr=subprocess.PIPE)
             output, err = process.communicate()
-            if err:
-                errors.append(pkg)
+            if 'E:' in str(err):
+                errors.append('Faild to install [%s] : %s' % (pkg, err.decode()))
         if errors:
-            raise RuntimeError('The required packages were not installed:\n - %s' %\
-                                ', '.join(errors))
+            raise RuntimeError(''.join(errors))
     except subprocess.CalledProcessError:
         raise RuntimeError('Error occured during the install of packages.')
 
@@ -139,6 +138,6 @@ if __name__ == '__main__':
     try:
         main(vars(args))
     except RuntimeError as err:
-        raise SystemExit('Setup failed: %s' % err)
+        raise SystemExit('Setup failed:\n%s' % err)
     except Exception as err:
-        raise SystemExit('Ooops: - \n%s' % err)
+        raise SystemExit('Ooops:\n%s' % err)
