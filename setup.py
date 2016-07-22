@@ -80,8 +80,8 @@ def install_packages():
             cmd = shlex.split(cmd)
             process = subprocess.Popen(cmd, stderr=subprocess.PIPE)
             output, err = process.communicate()
-            if process.returncode is not 0:
-                errors.append('Faild to install [%s] : %s' % (pkg, err.decode()))
+            if process.returncode != 0:
+                errors.append('[%s] %s' % (pkg, err.decode()))
         if errors:
             raise RuntimeError(''.join(errors))
     except subprocess.CalledProcessError:
