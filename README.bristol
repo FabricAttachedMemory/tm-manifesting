@@ -1,49 +1,30 @@
-Quick Start to Manifesting
+Quick Start to Manifesting from Github
 
-tm-manifesting is developed on L4TM system, thus, as of today, we do not provide
-support of Manifesting services on any other distribution.
+tm-manifesting is developed on L4TM systems for use in The Machine 
+environment.  Support for any other distro, even Debian or HPE Linux,
+is optional and discretionary.
+
+===============================================================================
+        L4TM ENVIRONMENT
+
+Install L4TM on your target server (probably a ToRMS).
+
+Insure the system's packages are updated and include the following:
+
+$ sudo apt-get update
+$ sudo apt-get install python3 git tm-librarian
+
+Manifesting is dependent on Python modules from the Librarian.  You
+won't actually be running the Librarian.
 
 ===============================================================================
         MANIFESTING ENVIRONMENT: SETUP
 
-Clone latest repo from github.hpe:
+Clone the latest repo from HPE Github:
 
-git clone https://github.hpe.com/hpelinux/manifesting.git
-
-
-Make sure system is updated and Python3 is installed on the system:
-sudo apt-get update
-sudo apt-get install python3
-
-===============================================================================
-
-cd manifesting
-sudo ./setup.py
-
-===============================================================================
-Install tm-librarin.
-
-Step out of manifesting directory if still in there:
-
-cd ..
-
---------------------------------
-If Running L4TM:
-
-sudo apt install tm-librarian
-
---------------------------------
-If Runnin Debian:
-
-git clone https://github.hpe.com/hpelinux/tm-librarian.git
-
-sudo ln -s ~/tm-librarian/ /usr/lib/python3/dist-packages/tm_librarian
-
-Make sure link is valid:
-
-ls -l /usr/lib/python3/dist-packages/tm_librarian
-
-(Output must be green)
+$ git clone https://github.hpe.com/hpelinux/manifesting.git
+$ cd manifesting
+$ sudo ./setup.py
 
 ===============================================================================
         MANIFESTING ENVIRONMENT: GENERATE GOLDEN IMAGE
