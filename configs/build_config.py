@@ -25,100 +25,110 @@ import time
 
 from pdb import set_trace
 
-_mroot_field = 'MANIFESTING_ROOT'
-_tftp_root_field = 'TFTP_ROOT'
 
-_server_fields = (
-                  'TMCONFIG',
-                  'HOST',
-                  'PORT',
-                  'L4TM_MIRROR',
-                  'L4TM_RELEASE',
-                  'L4TM_AREAS'
-                  )
+class ManifestingConfiguration(object):
 
-_manifest_env = (
-                'FILESYSTEM_IMAGES',
-                'MANIFEST_UPLOADS',
-                'GOLDEN_IMAGE'
-               )
+    _mroot_field = 'MANIFESTING_ROOT'
+    _tftp_root_field = 'TFTP_ROOT'
 
-_tftp_env = (
-            'TFTP_IMAGES',
-            'TFTP_GRUB'
-           )
+    _server_fields = (
+        'TMCONFIG',
+        'HOST',
+        'PORT',
+        'L4TM_MIRROR',
+        'L4TM_RELEASE',
+        'L4TM_AREAS'
+    )
 
-_required_fields = _server_fields + (_mroot_field, _tftp_root_field)
+    _manifest_env = (
+        'FILESYSTEM_IMAGES',
+        'MANIFEST_UPLOADS',
+        'GOLDEN_IMAGE'
+    )
 
-_settings = {}
+    _tftp_env = (
+        'TFTP_IMAGES',
+        'TFTP_GRUB'
+    )
 
-def make_config(config_path):
-    """
+    _required_fields = _server_fields + (_mroot_field, _tftp_root_field)
+
+    _settings = {}
+
+    def __init__(self, flask_config_path):
+        """
         Unpack parameters of the passed config file into the local
-        variables of this module.
+        variables of this module.  It is assumed this file will then
+        be used by manifest_api.py
 
-    :param 'config_path': path to a .py config file.
-    """
-    global _settings
-    _settings = _extract_from_config(config_path)
+        :param 'flask_config_path': path to a Flask config file.
+        """
+        self._flask_config_path = flask_config_path
+        self._extract_flask_config()
 
-    # no trailing slashes
-    mroot = os.path.join(_settings['MANIFESTING_ROOT'])
-    if mroot[-1] == '/':
-        mroot = mroot[:-1]
-    
-    tftp = os.path.join(_settings['TFTP_ROOT'])
-    if tftp[-1] == '/':
-        tftp = tftp[:-1]
+        # no trailing slashes
+        mroot = os.path.join(self['MANIFESTING_ROOT'])
+        if mroot[-1] == '/':
+            mroot = mroot[:-1]
 
-    fsimages = mroot + '/sys-images'
+        tftp = os.path.join(self['TFTP_ROOT'])
+        if tftp[-1] == '/':
+            tftp = tftp[:-1]
 
-    _settings.update({
-        'MANIFESTING_ROOT':     mroot,
-        'FILESYSTEM_IMAGES':    fsimages,
-        'GOLDEN_IMAGE':         fsimages + '/golden/golden.arm.tar'
-        'MANIFEST_UPLOADS':     mroot + '/manifests',
+        fsimages = mroot + '/sys-images'
 
-        'TFTP_ROOT':            tftp,
-        'TFTP_IMAGES':          tftp + '/nodes',
-        'TFTP_GRUB':            tftp + '/boot/grub'     # architected in grub
-    return settings
+        # A few rewrites, a few new things
+        self._settings.update({
+            'MANIFESTING_ROOT':     mroot,
+            'FILESYSTEM_IMAGES':    fsimages,
+            'GOLDEN_IMAGE':         fsimages + '/golden/golden.arm.tar',
+            'MANIFEST_UPLOADS':     mroot + '/manifests',
 
+            'TFTP_ROOT':            tftp,
+            'TFTP_IMAGES':          tftp + '/nodes',
+            'TFTP_GRUB':            tftp + '/boot/grub'  # architected in grub
+        })
 
-def ratify_config(manconfig, dontcare=None):
-    '''Insure all paths specified in the config file exist.'''
-    if dontcare is None or not dontcare:
-        dontcare = ()
-    missing = []
+    def __getitem__(self, key):     # Not valid before extract_flask_config()
+        return self._settings.get(key, None)
 
-    for attr in (_mroot_field, _tftp_root_field) + _manifest_env + _tftp_env:
-        if attr in dontcare:
-            continue
-        path = manconfig.get(attr, None)
-        if path is None:
-            missing.append('Missing path key "%s"' % attr)
-        else:
-            if not os.path.isdir(path) and not os.path.isfile(path):
-                missing.append('Missing "%s" path "%s"' % (attr, path))
+    @property
+    def manifesting_keys(self):
+        return frozenset(self._manifest_env)
 
-    return missing if missing else False
+    @property
+    def tftp_keys(self):
+        return frozenset(self._tftp_env)
 
+    def _ratify(self, dontcare=None):
+        '''Insure all paths specified in the config file exist.'''
+        if dontcare is None or not dontcare:
+            dontcare = ()
+        missing = []
 
-def _extract_from_config(config_path):
-    """
-        Validate that incoming .py config file has required variables set and
-    return a dictionary of required parameters.
+        for attr in (_mroot_field, _tftp_root_field) + \
+                _manifest_env + _tftp_env:
+            if attr in dontcare:
+                continue
+            path = self[attr]
+            if path is None:
+                missing.append('Missing path key "%s"' % attr)
+            else:
+                if not os.path.isdir(path) and not os.path.isfile(path):
+                    missing.append('Missing "%s" path "%s"' % (attr, path))
 
-    :param 'config_path': path to the .py config file.
-    :return: [dict] pair of field names (keys) and path names (values).
-    """
+        return missing
 
-    flask_obj = flask.Flask(time.ctime())   # convenience routine only
-    flask_obj.config.from_pyfile(config_path)
-    result = {}
-    for f in _required_fields:
-        if f not in flask_obj.config:
-            raise ValueError('Config file missing "%s"' % f)
-        result[f] = flask_obj.config[f]
-    flask_obj = None
-    return result
+    def _extract_flask_config(self):
+        """
+        Use Flask convenience routine to parse the main config file.
+        """
+
+        flask_obj = flask.Flask(time.ctime())   # dummy name
+        flask_obj.config.from_pyfile(self._flask_config_path)
+        self._settings = {}
+        for f in self._required_fields:
+            if f not in flask_obj.config:
+                raise ValueError('Config file missing "%s"' % f)
+            self._settings[f] = flask_obj.config[f]
+        flask_obj = None

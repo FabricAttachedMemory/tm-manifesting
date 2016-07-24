@@ -12,14 +12,12 @@ import sys
 
 from pdb import set_trace
 
-from utils import utils
+from configs.build_config import ManifestingConfiguration
 
-from configs import build_config
-
-S_IFLNK = os.path.stat.S_IFLNK
+from utils.utils import create_folder
 
 
-def set_python_lib():
+def link_into_python():
     """
         Create a symlink to manifesting source code to:
     /usr/local/lib/python3.4/dist-packages/tmms so that user could import
@@ -33,6 +31,7 @@ def set_python_lib():
 
     setup_file = os.path.realpath(__file__)
     repo_path = os.path.dirname(setup_file)
+    S_IFLNK = os.path.stat.S_IFLNK
     for path in paths_to_lib:
         if path not in sys.path:
             break
@@ -55,7 +54,7 @@ def set_python_lib():
             'Can\'t find suitable path in python environment to link tmms!')
 
 
-def _create_env(fields, ignore=None):
+def _create_env(manconfig, fields, ignore=None):
     """
         Create folder tree from passed parameters that must comply with
     config/build_config/ structure. This function depends on build_config
@@ -71,19 +70,10 @@ def _create_env(fields, ignore=None):
     for field in fields:
         if field in ignore:
             continue
-        path = build_config.settings[field]
+        path = manconfig[field]
 
         print(' - ' + path)
         create_folder(path)
-
-
-def create_folder(path):
-    """ A simple wrapper around os.makedirs that skip existed folders. """
-    try:
-        if not os.path.isdir(path):
-            os.makedirs(path)
-    except OSError as e:
-        raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
 
 
 def install_base_packages():
@@ -118,25 +108,28 @@ def main(args):
     - create folders for TFTP server (dnsmasq)
     - run make_grub_cfg.py script to populate grub config files under TFTP
     """
+
+    # Before reading the config file, satisfy some preconditions
     assert os.geteuid() == 0, 'This script requires root permissions'
     assert sys.platform == 'linux'
-    build_config.make_config(args.config)
 
     print(' ---- Installing extra packages ---- ')
     install_base_packages()
 
     print(' ---- Creating workaround Python package path ---- ')
-    set_python_lib()
+    link_into_python()
+
+    manconfig = ManifestingConfiguration(args.config)
 
     print(' ---- Creating manifest environment ---- ')
-    fields = build_config._manifest_env
-    _create_env(fields, ignore=('GOLDEN_IMAGE',))
-    golden_img_dir = os.path.dirname(build_config.settings['GOLDEN_IMAGE'])
+    fields = manconfig.manifesting_keys
+    _create_env(manconfig, fields, ignore=('GOLDEN_IMAGE',))   # It's a file
+    golden_img_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
     create_folder(golden_img_dir)
 
     print(' ---- Creating TFTP environment ---- ')
-    fields = build_config._tftp_env
-    _create_env(fields)
+    fields = manconfig.tftp_keys
+    _create_env(manconfig, fields)
     print()
 
 

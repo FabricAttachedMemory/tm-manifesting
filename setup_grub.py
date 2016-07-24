@@ -50,7 +50,6 @@ class TMgrub(object):
             raise ValueError('\n'.join(tmconfig.errors))
         self.nodes = tmconfig.nodes
 
-
     def create_environment(self):
         """
             Create tftp environment: create grub config files based off
@@ -77,14 +76,11 @@ class TMgrub(object):
         with open(self.grub_cfg, 'w') as file_obj:
             file_obj.write(grub_cfg_content)
 
-
     @property
     def environment(self):
         """
-            Return dictionary of nodes' efi config path and its filesystem image
-        location (on tftp).
-        Example: { '(tftp)/boot/grub/menu.hostname' : '(tftp)/images/hostname/' }
-        Note: path is absolute.
+            Return dictionary of EFI config path and its filesystem image
+        location (on tftp).  Note: path is absolute in EFI space.
         """
         env = {}
         for node in self.nodes:
@@ -93,19 +89,18 @@ class TMgrub(object):
             env[os.path.normpath(grub_menu_file)] = os.path.normpath(node_dir)
         return env
 
-
     @staticmethod
     def grub_menu_template(node_fs):
         """
             Return grub.cfg config template that contains .format anchors:
         {node_name} - name of the node
-        {node_fs} - path (relative to TFTP server) to the node's filesystem image
-                    .cpio and .vmlinuz on tftp.
+        {node_fs} - TFTP-relative path to the node's filesystem image
+                    .cpio and .vmlinuz.
         """
         template = """set default=0
 set menu_color_highlight=white/brown
 
-menuentry 'L4TM Catapult ARM64(Node: {node_fs})' {{
+menuentry 'L4TM ARM64(Node: {node_fs})' {{
   linux (tftp){node_fs}/l4tm.vmlinuz --append root=/dev/ram0 console=ttyAMA0 acpi=force rw
   initrd (tftp){node_fs}/l4tm.cpio
 }}
@@ -113,12 +108,10 @@ fi
 """
         return template.format(node_fs=node_fs)
 
-
     def grub_cfg_template(self):
         """
-            Template string for a grub.cfg that is responsible for grub menu on
-        PXE boot. This code looks at each Node information and establish relationship
-        between its MAC address and a grub.{hostname} config file generated for it.
+            Template string for a grub.cfg that references grub menu
+        for each node on PXE boot.
         """
         header_tplt = """set gfxmode=auto
 insmod efi_gop
@@ -127,7 +120,7 @@ insmod gfxterm
 terminal_output gfxterm
 """
 
-        menu_tplt = """
+        menu_tplt_DEPRECATED = """
 if [ "$net_default_hostname" -eq "{hostname}" ];then
     configfile "(tftp){menu_cfg}"
 fi
@@ -149,11 +142,11 @@ fi
 
 def make_dir(target):
     """
-        Create a directory tree at requested location. Don't do anything if folder
+        Create a directory tree at requested location. Do nthing if folder
     already exists.
 
     :param 'target': [str] folder tree to create.
-    :return: False - folde laready exists. True - folders created. RuntimeError - couldn't create.
+    :return: True/False - folder created/already exists. Can raise RuntimeError
     """
     if os.path.isdir(target):
         return False
