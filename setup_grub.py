@@ -23,17 +23,22 @@ import sys
 
 from pdb import set_trace
 
-from configs.build_config import make_config, ratify_config
+from configs.build_config import ManifestingConfiguration
+from utils.utils import make_dir, basepath
 from tm_librarian.tmconfig import TMConfig
 
 
 class TMgrub(object):
     """
         Generate all grub grub config files under the TFTP hierarchy.
-        FS image folder is also generated in this class under
-    (tftp)/arm64/enc#/node#/ folder structure.
-        Overall grub dependency:
-    grub.cfg (knows about enc#/node# --> (tftp)/arm64/enc#/node#/kernel & FS
+        At "tftp" element of hierarchy (default /var/lib/tmms/tftp):
+        - boot/
+          grub.cfg
+          - menus/
+            nodeXX.menu (menu files)
+        -images/
+          - nodeXX/ (directories)
+            nodeXX.vmlinuz and nodeXX.cpio
     """
 
     def __init__(self, manconfig):
@@ -41,14 +46,21 @@ class TMgrub(object):
         :param 'manfconfig': dictionary with many ratified file paths
         """
 
-        self.root = manconfig['TFTP_ROOT']
+        # Absolute paths are for writing files.  _tftp_xxxx are file contents.
+        self.images_dir = manconfig['TFTP_IMAGES']
         self.grub_dir = manconfig['TFTP_GRUB']
         self.grub_cfg = self.grub_dir + '/grub.cfg'
-        self.filesystem_dir = manconfig['TFTP_IMAGES']
-        tmconfig = TMConfig(manconfig['TMCONFIG'])
-        if tmconfig.errors:
-            raise ValueError('\n'.join(tmconfig.errors))
-        self.nodes = tmconfig.nodes
+        self.grub_menu_dir = self.grub_dir + '/menus'
+        make_dir(self.grub_menu_dir)
+        # Relative to TFTP, these supply content to the files.
+        root = manconfig['TFTP_ROOT']
+        self.tftp_images_dir = basepath(self.images_dir, root)
+        self.tftp_grub_dir = basepath(self.grub_dir, root)
+        self.tftp_menu_dir = self.tftp_grub_dir + '/menus'
+
+    @property
+    def hostnames(self):
+        return ('node%02d' % n for n in range(1, 41))   # generator
 
     def create_environment(self):
         """
@@ -60,13 +72,15 @@ class TMgrub(object):
         those directries when nodes are bound.
         """
 
+        for hostname in self.hostnames:
+            # Stays empty until manifest_api does a node binding
+            tftp_node_fs = self.images_dir + '/' + hostname
+            make_dir(tftp_node_fs)
+
         for grub_menu_file, img_dir in self.environment.items():
             # each (tftp)/images/* folder and (tftp)/boot/grub/menu.hostname
-            for node in self.nodes:
-                tftp_node_fs = self.filesystem_dir + '/' + node.hostname
-                make_dir(tftp_node_fs)
 
-            grub_menu_content = self.grub_menu_template(img_dir)
+            grub_menu_content = self.grub_menu_template(hostname)
 
             with open(grub_menu_file, 'w') as file_obj:
                 file_obj.write(str(grub_menu_content))
@@ -80,33 +94,32 @@ class TMgrub(object):
     def environment(self):
         """
             Return dictionary of EFI config path and its filesystem image
-        location (on tftp).  Note: path is absolute in EFI space.
+        location (under tftp).  Note: path is absolute in EFI space.
         """
         env = {}
-        for node in self.nodes:
-            grub_menu_file = '%s/menu.%s' % (self.grub_dir, node.hostname)
-            node_dir = '%s/%s/' % (self.filesystem_dir, node.hostname)
+        for hostname in self.hostnames:
+            grub_menu_file = '%s/%s' % (self.grub_menu_dir, hostname)
+            node_dir = '%s/%s/' % (self.tftp_images_dir, hostname)
             env[os.path.normpath(grub_menu_file)] = os.path.normpath(node_dir)
         return env
 
-    @staticmethod
-    def grub_menu_template(node_fs):
+    def grub_menu_template(self, hostname):
         """
             Return grub.cfg config template that contains .format anchors:
         {node_name} - name of the node
         {node_fs} - TFTP-relative path to the node's filesystem image
                     .cpio and .vmlinuz.
         """
+        tftp_dir = '%s/%s' % (self.tftp_images_dir, hostname)
         template = """set default=0
 set menu_color_highlight=white/brown
 
-menuentry 'L4TM ARM64(Node: {node_fs})' {{
-  linux (tftp){node_fs}/l4tm.vmlinuz --append root=/dev/ram0 console=ttyAMA0 acpi=force rw
-  initrd (tftp){node_fs}/l4tm.cpio
-}}
-fi
+menuentry '{hostname} L4TM ARM64'
+  linux (tftp){tftp_dir}/l4tm.vmlinuz
+  append root=/dev/ram0 console=ttyAMA0 acpi=force rw
+  initrd (tftp){tftp_dir}/l4tm.cpio
 """
-        return template.format(node_fs=node_fs)
+        return template.format(hostname=hostname, tftp_dir=tftp_dir)
 
     def grub_cfg_template(self):
         """
@@ -120,43 +133,12 @@ insmod gfxterm
 terminal_output gfxterm
 """
 
-        menu_tplt_DEPRECATED = """
-if [ "$net_default_hostname" -eq "{hostname}" ];then
-    configfile "(tftp){menu_cfg}"
-fi
-"""
-        lines = []
-        lines.append(header_tplt)
+        lines = header_tplt.split('\n')
 
-        configfile = '%s/menu.${net_default_hostname}' % (self.grub_dir)
+        configfile = '%s/${net_default_hostname}' % (self.grub_menu_dir)
         lines.append('configfile "(tftp)%s' % configfile)
-        return '\n'.join(lines)
-
-        for node in self.nodes:
-            menu_cfg = '%s/menu.%s' % (self.grub_dir, node.hostname)
-            lines.append(menu_tplt.format(
-                hostname=node.hostname, menu_cfg=menu_cfg))
 
         return '\n'.join(lines)
-
-
-def make_dir(target):
-    """
-        Create a directory tree at requested location. Do nthing if folder
-    already exists.
-
-    :param 'target': [str] folder tree to create.
-    :return: True/False - folder created/already exists. Can raise RuntimeError
-    """
-    if os.path.isdir(target):
-        return False
-
-    try:
-        os.makedirs(target)
-    except IOError:
-        raise RuntimeError('Couldn\'t create "%s" folder!' % (target))
-
-    return True
 
 
 def main(config_file):
@@ -164,8 +146,8 @@ def main(config_file):
         Configure TFTP environment.
     """
 
-    manconfig = make_config(config_file)
-    missing = ratify_config(manconfig, dontcare=('GOLDEN_IMAGE',))
+    manconfig = ManifestingConfiguration(config_file, autoratify=False)
+    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
     if missing:
         raise RuntimeError('\n'.join(missing))
     grubby = TMgrub(manconfig)

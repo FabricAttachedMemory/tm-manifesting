@@ -1,19 +1,31 @@
 #!/urs/bin/python3 -tt
+
+import errno
 import os
 import sys
 
 
-def create_folder(path):
+def make_dir(path):
     """
-        A simple wrapper around os.makedirs that skip existed folders.
+        A simple wrapper around os.makedirs that skip existing folders.
     :param 'path': [str] Leave this routine with a (new) directory at path
     :return: None or raised error
     """
     try:
-        if not os.path.isdir(path):
-            os.makedirs(path)
+        os.makedirs(path)
     except OSError as e:
-        raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
+        if e.errno != errno.EEXIST:
+            raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
+
+
+def basepath(fullpath, leading):
+    '''Strip "leading" from "fullpath".  Certain restrictions may apply.'''
+    for p in (fullpath, leading):
+        assert p[0] == '/', '"%s" is not an absolute path' % p
+    assert fullpath.startswith(leading), \
+        '"%s" does not start with %s' % (fullpath, leading)
+    tmp = fullpath[len(leading):]
+    return tmp
 
 
 def ratify(path):

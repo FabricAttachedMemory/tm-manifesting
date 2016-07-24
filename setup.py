@@ -12,17 +12,18 @@ import sys
 
 from pdb import set_trace
 
+# Imports are relative because implicit Python path "tmms" may not exist yet.
+
 from configs.build_config import ManifestingConfiguration
 
-from utils.utils import create_folder
+from utils.utils import make_dir
 
 
 def link_into_python():
     """
-        Create a symlink to manifesting source code to:
-    /usr/local/lib/python3.4/dist-packages/tmms so that user could import
-    manifesting libraries as follows: import tmms.unittests.
-    setup.py must be at top of manifesting repo tree.
+        Create a symlink to THIS manifesting source tree under the known
+    Python hierarchy so that user could import manifesting libraries like
+    "import tmms.foobar".  Keep it simple.  setup.py must be at the top.
     """
     py_ver = 'python%d.%d' % (sys.version_info.major, sys.version_info.minor)
     tmptuple = (sys.prefix, py_ver)
@@ -31,7 +32,6 @@ def link_into_python():
 
     setup_file = os.path.realpath(__file__)
     repo_path = os.path.dirname(setup_file)
-    S_IFLNK = os.path.stat.S_IFLNK
     for path in paths_to_lib:
         if path not in sys.path:
             break
@@ -43,11 +43,11 @@ def link_into_python():
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise RuntimeError('symlink() failed: %s' % str(e))
-            if os.lstat(path).st_mode & S_IFLNK != S_IFLNK:
+            if not os.path.islink(path):
                 raise RuntimeError('Existing "%s" is not a symlink' % path)
             if os.path.realpath(path) != repo_path:
                 raise RuntimeError(
-                    'Existing "%s" symlink does not point to %s' % (
+                    'Existing symlink "%s" does not point to %s' % (
                         path, repo_path))
     else:
         raise RuntimeError(
@@ -73,7 +73,7 @@ def _create_env(manconfig, fields, ignore=None):
         path = manconfig[field]
 
         print(' - ' + path)
-        create_folder(path)
+        make_dir(path)
 
 
 def install_base_packages():
@@ -119,13 +119,13 @@ def main(args):
     print(' ---- Creating workaround Python package path ---- ')
     link_into_python()
 
-    manconfig = ManifestingConfiguration(args.config)
+    manconfig = ManifestingConfiguration(args.config, autoratify=False)
 
     print(' ---- Creating manifest environment ---- ')
     fields = manconfig.manifesting_keys
     _create_env(manconfig, fields, ignore=('GOLDEN_IMAGE',))   # It's a file
     golden_img_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
-    create_folder(golden_img_dir)
+    make_dir(golden_img_dir)
 
     print(' ---- Creating TFTP environment ---- ')
     fields = manconfig.tftp_keys

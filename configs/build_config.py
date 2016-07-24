@@ -28,10 +28,14 @@ from pdb import set_trace
 
 class ManifestingConfiguration(object):
 
-    _mroot_field = 'MANIFESTING_ROOT'
-    _tftp_root_field = 'TFTP_ROOT'
+    # An "environment" is a collection of keys for values that may be
+    # directory paths, file names, or just data.  _configfile_env must
+    # be found in the Flask configuration file.  The other _envs build
+    # on that and are hardcoded in this module.  FIXME: type tags.
 
-    _server_fields = (
+    _configfile_env = (
+        'MANIFESTING_ROOT',
+        'TFTP_ROOT',
         'TMCONFIG',
         'HOST',
         'PORT',
@@ -51,11 +55,11 @@ class ManifestingConfiguration(object):
         'TFTP_GRUB'
     )
 
-    _required_fields = _server_fields + (_mroot_field, _tftp_root_field)
+    _all_env = _configfile_env + _manifest_env + _tftp_env
 
     _settings = {}
 
-    def __init__(self, flask_config_path):
+    def __init__(self, flask_config_path, autoratify=True):
         """
         Unpack parameters of the passed config file into the local
         variables of this module.  It is assumed this file will then
@@ -85,12 +89,21 @@ class ManifestingConfiguration(object):
             'MANIFEST_UPLOADS':     mroot + '/manifests',
 
             'TFTP_ROOT':            tftp,
-            'TFTP_IMAGES':          tftp + '/nodes',
+            'TFTP_IMAGES':          tftp + '/images',
             'TFTP_GRUB':            tftp + '/boot/grub'  # architected in grub
         })
 
-    def __getitem__(self, key):     # Not valid before extract_flask_config()
+        if autoratify:
+            errors = self.ratify()
+            if errors:
+                raise ValueError('\n'.join(errors))
+
+    # Duck-type a read-only dict.  It's empty before extract_flask_config()
+    def __getitem__(self, key):
         return self._settings.get(key, None)
+
+    def keys(self):
+        return sorted(self._settings.keys())
 
     @property
     def manifesting_keys(self):
@@ -100,23 +113,27 @@ class ManifestingConfiguration(object):
     def tftp_keys(self):
         return frozenset(self._tftp_env)
 
-    def _ratify(self, dontcare=None):
-        '''Insure all paths specified in the config file exist.'''
-        if dontcare is None or not dontcare:
+    def ratify(self, dontcare=None):
+        '''Insure all keys and their assoicated data exist.'''
+        if not dontcare:
             dontcare = ()
         missing = []
-
-        for attr in (_mroot_field, _tftp_root_field) + \
-                _manifest_env + _tftp_env:
-            if attr in dontcare:
-                continue
-            path = self[attr]
+        for key in frozenset(self._all_env) - frozenset(dontcare):
+            path = self[key]
             if path is None:
-                missing.append('Missing path key "%s"' % attr)
-            else:
-                if not os.path.isdir(path) and not os.path.isfile(path):
-                    missing.append('Missing "%s" path "%s"' % (attr, path))
+                missing.append('Missing key "%s"' % key)
+                continue
+            # FIXME: tagged keys would be better
+            try:
+                if not path.startswith('/'):
+                    continue                # String but not a path
+            except AttributeError as e:     # Not a string
+                continue
 
+            if not (os.path.isdir(path) or
+                    os.path.isfile(path) or
+                    os.path.islink(path)):
+                missing.append('Missing "%s" path "%s"' % (key, path))
         return missing
 
     def _extract_flask_config(self):
@@ -127,8 +144,8 @@ class ManifestingConfiguration(object):
         flask_obj = flask.Flask(time.ctime())   # dummy name
         flask_obj.config.from_pyfile(self._flask_config_path)
         self._settings = {}
-        for f in self._required_fields:
-            if f not in flask_obj.config:
-                raise ValueError('Config file missing "%s"' % f)
-            self._settings[f] = flask_obj.config[f]
+        for key in self._configfile_env:
+            if key not in flask_obj.config:
+                raise ValueError('Config file missing "%s"' % key)
+            self._settings[key] = flask_obj.config[key]
         flask_obj = None
