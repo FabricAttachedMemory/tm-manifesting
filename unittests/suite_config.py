@@ -23,7 +23,7 @@ if hpetmconfig.errors:
 
 MANIFESTING_SERVER = 'http://localhost:31178/manifesting/api/'
 
-# TO IMPOER THIS CONFIG, MANIFESTING SERVER MUST BE RUNNING
+# TO IMPORT THIS CONFIG, MANIFESTING SERVER MUST BE RUNNING
 try:
     http_resp = requests.get(MANIFESTING_SERVER)
 except requests.exceptions.RequestException:
