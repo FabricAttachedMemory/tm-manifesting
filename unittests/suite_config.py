@@ -23,10 +23,8 @@ if hpetmconfig.errors:
 
 MANIFESTING_SERVER = 'http://localhost:31178/manifesting/api/'
 
-
-def isServerRunning(server):
-    try:
-        http_resp = requests.get(server)
-    except requests.exceptions.RequestException:
-        return False
-    return True
+# TO IMPOER THIS CONFIG, MANIFESTING SERVER MUST BE RUNNING
+try:
+    http_resp = requests.get(MANIFESTING_SERVER)
+except requests.exceptions.RequestException:
+    raise SystemExit('\n\t!!!!FAILED: Server at [%s] is not running! !!!!\n\t' % MANIFESTING_SERVER)

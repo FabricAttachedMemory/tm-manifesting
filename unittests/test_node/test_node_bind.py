@@ -11,10 +11,6 @@ from tmms.tm_cmd import tmcmd as TMCMD
 from tmms.unittests import suite_config as config
 from pdb import set_trace
 
-def setUpModule():
-    if not config.isServerRunning(config.MANIFESTING_SERVER):
-        raise SystemExit('!!!Server at [%s] is not running!!!' % config.MANIFESTING_SERVER)
-
 
 class BindNodeTest(unittest.TestCase):
 

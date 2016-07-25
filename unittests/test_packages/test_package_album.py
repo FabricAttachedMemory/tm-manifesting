@@ -10,9 +10,9 @@ from pdb import set_trace
 from tmms.tm_cmd import tmcmd
 from tmms.unittests import suite_config as config
 
-def setUpModule():
-    if not config.isServerRunning(config.MANIFESTING_SERVER):
-        raise SystemExit('!!!Server at [%s] is not running!!!' % config.MANIFESTING_SERVER)
+#def setUpModule():
+#    if not config.isServerRunning(config.MANIFESTING_SERVER):
+#        raise SystemExit('\n\t!!!Server at [%s] is not running!!!\n\t' % config.MANIFESTING_SERVER)
 
 class PackageTest(unittest.TestCase):
 
