@@ -1,10 +1,9 @@
 #/usr/bin/python3 -tt
-
-
 import requests as HTTP_REQUESTS
 import json
 from werkzeug.datastructures import FileStorage
 from pdb import set_trace
+
 
 class TmCmd():
 
