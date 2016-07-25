@@ -21,8 +21,8 @@ class FixInitTest(unittest.TestCase):
     @classmethod
     def setUp(cls):
         """
-            Emulare a filesystem image in the tmp directory with only those folders
-        and files that are manipulated by customize_node.py script.
+            Emulate a filesystem image in the tmp directory with only those
+        folders and files that are manipulated by customize_node.py script.
         """
         config.setup()
         cls.tmp_folder = config.tmp_folder
@@ -64,7 +64,7 @@ class FixInitTest(unittest.TestCase):
         wrong_fsimg = '/tmp/'
         try:
             CN.fix_init(wrong_fsimg)
-            self.assertTrue(False, 'Should have faild due to a wrong fsimg path')
+            self.assertTrue(False, 'Expected failure due to a wrong fsimg path')
         except RuntimeError:
             self.assertTrue(True)
 

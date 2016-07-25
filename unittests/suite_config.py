@@ -14,7 +14,7 @@ import tmms.tm_cmd.tmcmd as TMCMD
 
 # ------------------------------
 
-server_config = build_config.make_config(config_file)
+server_config = build_config.ManifestingConfiguration(config_file)
 tmcmd = TMCMD
 hpetmconfig = TMConfig(server_config['TMCONFIG'])
 if hpetmconfig.errors:
