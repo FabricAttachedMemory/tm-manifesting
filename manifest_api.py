@@ -1,4 +1,8 @@
 #!/usr/bin/python3 -tt
+
+# Implement The Machine Manifesting API per the software ERS.  Human-readable
+# web pages are also provided for the bulk of the official APIs.
+
 import argparse
 import glob
 import os
@@ -11,16 +15,25 @@ from jinja2.environment import create_cache
 
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
-from utils import utils
-from configs import build_config
+
+# For running from git repo, setup.py does the right thing.  True .deb
+# installation will also do the right thing.
+try:
+    from tmms.utils import utils
+    from tmms.configs.build_config import ManifestingConfiguration
+except ImportError as e:
+    raise SystemExit(
+        'Cannot find Python module "tmms"; run "setup.py" and retry.')
 
 ###########################################################################
 
+
 def parse_args():
     """ Parse system arguments set from command line."""
-    PARSER = argparse.ArgumentParser(description='Manifesting server run settings')
-    PARSER.add_argument('--config', help='Python config file to use for the server.',
-                        default='manifest_config.py')
+    PARSER = argparse.ArgumentParser(
+        description='Manifesting server run settings')
+    PARSER.add_argument('--config', help='Python (Flask) config file',
+                        default=None)
     PARSER.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
     PARSER.add_argument('--debug', help='Turn on flask debugging',
@@ -33,23 +46,16 @@ def parse_args():
 # Set config variables for future use across the blueprints.
 
 cmdline_args = parse_args()
-config = build_config.make_config(cmdline_args['config'])
+if cmdline_args['config'] is None:
+    this_file = os.path.realpath(__file__)
+    cmdline_args['config'] = os.path.dirname(this_file) + '/manifest_config.py'
 
-# ---------------- This section will be unified into one ratify()
-path_to_validate = []
-path_fields = build_config._manifest_env + build_config._tftp_env
-for field in path_fields:
-    if field not in config:
-        raise SystemExit('Config parameter %s is missing!' % field)
-    path_to_validate.append(config[field])
+try:
+    manconfig = ManifestingConfiguration(cmdline_args['config'])
+except Exception as e:
+    raise SystemExit(str(e))
 
-missing_env_path = utils.ratify(path_to_validate)
-
-if missing_env_path:
-    raise SystemExit('Missing path(s):\n' + '\n'.join(missing_env_path))
-# ---------------
-
-tmconfig = TMConfig(config['TMCONFIG'])
+tmconfig = TMConfig(manconfig['TMCONFIG'])
 if tmconfig.errors:
     raise SystemExit('Bad TMCF:\n' + '\n'.join(tmconfig.errors))
 
@@ -59,7 +65,7 @@ if tmconfig.errors:
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 mainapp = Flask('tm_manifesting', static_url_path='/static')
-mainapp.config.update(config)
+mainapp.config.update(manconfig)
 mainapp.config['tmconfig'] = tmconfig
 
 mainapp.config['API_VERSION'] = 1.0

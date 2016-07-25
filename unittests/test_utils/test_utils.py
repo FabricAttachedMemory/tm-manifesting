@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from shutil import rmtree
 
-from utils import utils
+from tmms.utils import utils
 from pdb import set_trace
 
 
@@ -32,8 +32,8 @@ class EnvironmentScriptTest(unittest.TestCase):
 
     def test_ratify_nonlist_exists(self):
         """
-            Pass path as a string to test 'singular' path validation of files and
-        dirs. Returned output must be empty list.
+            Pass path as a string to test 'singular' path validation of files
+        and dirs. Returned output must be empty list.
         """
         junk_dir = self.tmp + '/junk'
         junk_file = self.tmp + '/junk.file'
@@ -52,8 +52,8 @@ class EnvironmentScriptTest(unittest.TestCase):
 
     def test_ratify_list_exists(self):
         """
-            Path list of files and dirs path to validate. If returned list is not
-        empty - then something is wrong.
+            Path list of files and dirs path to validate. If returned list is
+        not empty - then something is wrong.
         """
         junk_dir = self.tmp + '/junk'
         junk_file = self.tmp + '/junk.file'

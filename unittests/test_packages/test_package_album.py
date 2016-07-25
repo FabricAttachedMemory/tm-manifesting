@@ -4,11 +4,11 @@
 """
 import json
 import os
-import tmcmd
 import unittest
 from pdb import set_trace
 
-import suite_config as config
+from tmms.tm_cmd import tmcmd
+from tmms.unittests import suite_config as config
 
 class PackageTest(unittest.TestCase):
 
