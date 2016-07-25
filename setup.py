@@ -1,7 +1,10 @@
 #!/usr/bin/python3 -tt
+
 import argparse
-import os
+import errno
 import json
+import os
+import os.path
 import shlex
 import shutil
 import subprocess
@@ -9,68 +12,76 @@ import sys
 
 from pdb import set_trace
 
-from utils import utils
+# Imports are relative because implicit Python path "tmms" may not exist yet.
 
-build_config = None
+from configs.build_config import ManifestingConfiguration
+
+from utils.utils import make_dir
 
 
-def set_python_lib():
+def link_into_python():
     """
-        Create a symlink to manifesting source code to:
-    /usr/local/lib/python3.4/dist-packages/tmms so that user could import
-    manifeseting libraries as follows: import tmms.unittests
+        Create a symlink to THIS manifesting source tree under the known
+    Python hierarchy so that user could import manifesting libraries like
+    "import tmms.foobar".  Keep it simple.  setup.py must be at the top.
     """
     py_ver = 'python%d.%d' % (sys.version_info.major, sys.version_info.minor)
-    paths_to_lib = ('/usr/local/lib/%s/dist-packages' % py_ver,
-                    '/%s/lib/%s/dist-packages' % (sys.prefix, py_ver))
+    tmptuple = (sys.prefix, py_ver)
+    paths_to_lib = ('%s/local/lib/%s/dist-packages' % tmptuple,
+                    '%s/lib/%s/dist-packages' % tmptuple)
 
-    manifesting_path = os.path.realpath(__file__)
-    manifesting_path = os.path.dirname(manifesting_path)    # setup script must be in top of tree
+    setup_file = os.path.realpath(__file__)
+    repo_path = os.path.dirname(setup_file)
     for path in paths_to_lib:
-        if path in sys.path:
-            path = path + '/tmms'
-            print(' - Creating a symlink from [%s] to [%s]' % (manifesting_path, path))
-            os.symlink(manifesting_path, path)
+        if path not in sys.path:
             break
+
+        path = path + '/tmms'
+        print(' - symlink [%s] -> [%s]' % (path, repo_path))
+        try:
+            os.symlink(repo_path, path)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise RuntimeError('symlink() failed: %s' % str(e))
+            if not os.path.islink(path):
+                raise RuntimeError('Existing "%s" is not a symlink' % path)
+            if os.path.realpath(path) != repo_path:
+                raise RuntimeError(
+                    'Existing symlink "%s" does not point to %s' % (
+                        path, repo_path))
     else:
-        raise RuntimeError('Can\'t find suitable path in python environment to link tmms!')
+        raise RuntimeError(
+            'Can\'t find suitable path in python environment to link tmms!')
 
 
-
-def _create_env(fields, ignore_list=[]):
+def _create_env(manconfig, fields, ignore=None):
     """
-        Create folder tree based of the list of fileds passed, that must comply
-    with config/build_config/ structure. This function dependent on build_config/
-    module and its  variables naming convention.
+        Create folder tree from passed parameters that must comply with
+    config/build_config/ structure. This function depends on build_config
+    module and its variables naming convention.
 
     :param 'fields': [list] variable names that determines path values of the
                     manifesting entities.
-    :param 'ignore_list': [list] of fields to ignore, e.g. GOLDEN_IMAGE
+    :param 'ignore': (tuple) of fields to ignore, e.g. ('GOLDEN_IMAGE', )
     """
-    print(' ---- Creating manifest and tftp environment ---- ')
+
+    if ignore is None:
+        ignore = ()
     for field in fields:
-        if field in ignore_list:
+        if field in ignore:
             continue
-        path = build_config.settings[field]
+        path = manconfig[field]
 
         print(' - ' + path)
-        create_folder(path)
+        make_dir(path)
 
 
-def create_folder(path):
-    """ A simple wrapper around os.makedirs that skip existed folders. """
-    try:
-        if not os.path.isdir(path):
-            os.makedirs(path)
-    except OSError:
-        raise RuntimeError('Failed to create %s' % (path))
-
-
-def install_packages():
+def install_base_packages():
     """
-        Install packages required by manifesting service.
+        Install packages required by manifesting service.  It only needs
+        files from tm-librarian, it won't actually get run from here.
     """
-    pkg_list = ['apt-utils', 'vmdebootstrap',
+    pkg_list = ['apt-utils', 'vmdebootstrap', 'dnsmasq',
                 'python3-flask', 'python3-requests',
                 'python3-debian', 'tm-librarian']
     try:
@@ -83,61 +94,63 @@ def install_packages():
             if process.returncode != 0:
                 errors.append('[%s] %s' % (pkg, err.decode()))
         if errors:
-            raise RuntimeError(''.join(errors))
-    except subprocess.CalledProcessError:
-        raise RuntimeError('Error occured during the install of packages.')
+            raise RuntimeError('\n'.join(errors))
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError('"%s" failed: %s' % (cmd, str(e)))
 
 
 def main(args):
     """
         Run all the functions needed to setup tm-manifesting environment:
-    - set PYTHONPATH using .pth file that have a path to the manifesting/ source code.
-    - create folders for manifesting server and manifesting tftp based of the config file
-    - run make_grub_cfg.py script to create grub config files in the tftp folder
-    - run generate_golden_image.py script to generate golden image
+    - install dependent packages (this setup script is a workaround)
+    - introduce a tmms package to Python environment via symlink
+    - create folders for manifesting files and DBs
+    - create folders for TFTP server (dnsmasq)
+    - run make_grub_cfg.py script to populate grub config files under TFTP
     """
+
+    # Before reading the config file, satisfy some preconditions
     assert os.geteuid() == 0, 'This script requires root permissions'
     assert sys.platform == 'linux'
 
-    install_packages()
+    print(' ---- Installing extra packages ---- ')
+    install_base_packages()
 
-    config_path = os.path.realpath(args['config'])
+    print(' ---- Creating workaround Python package path ---- ')
+    link_into_python()
 
-    set_python_lib()
+    manconfig = ManifestingConfiguration(args.config, autoratify=False)
 
-    from configs import build_config as BC
-    global build_config
-    build_config = BC
-    build_config.make_config(config_path)
+    print(' ---- Creating manifest environment ---- ')
+    fields = manconfig.manifesting_keys
+    _create_env(manconfig, fields, ignore=('GOLDEN_IMAGE',))   # It's a file
+    golden_img_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
+    make_dir(golden_img_dir)
 
-    print()
-    fields = build_config._manifest_env
-    _create_env(fields, ['GOLDEN_IMAGE'])
-    golden_img_dir = os.path.dirname(build_config.settings['GOLDEN_IMAGE'])
-    create_folder(golden_img_dir)
-
-    print()
-
-    fields = build_config._tftp_env
-    _create_env(fields)
+    print(' ---- Creating TFTP environment ---- ')
+    fields = manconfig.tftp_keys
+    _create_env(manconfig, fields)
     print()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Setup arguments that should not\
-                                    be changed, unless you know what you doing.')
-    parser.add_argument('-c', '--config',
-                        help='A config.py file to be used by manifesting server.',
-                        default='./manifest_config.py')
-
-    parser.add_argument('-C', '--tmconfig',
-                        help='A config file that stores nodes topology.',
-                        default='configs/hpetmconfig.py')
+    parser = argparse.ArgumentParser(
+        description='Setup arguments intended for tmms developers only')
+    parser.add_argument(
+        '-c', '--config',
+        help='A config.py file to be used by manifesting server.',
+        default='./manifest_config.py')
 
     args, _ = parser.parse_known_args()
+    args.config = os.path.realpath(args.config)
+
+    errmsg = ''     # establish scope
     try:
-        main(vars(args))
+        main(args)
+        raise SystemExit(0)
     except RuntimeError as err:
-        raise SystemExit('Setup failed:\n%s' % err)
+        errmsg = str(err)
     except Exception as err:
-        raise SystemExit('Ooops:\n%s' % err)
+        errmsg = 'UNEXPECTED ERROR: %s' % str(err)
+
+    raise SystemExit('%s\nsetup failed' % errmsg)

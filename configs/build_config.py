@@ -1,6 +1,6 @@
 """
-!!! NOTE: This script must only be used for manifest_api.py. Other use CASES
-    are NOT tested and not acounted for !!!
+!!! NOTE: This script must only be used for manifest_api.py. Other use cases
+    are NOT tested or supported !!!
 
     This module parses a python (.py) config file into local variables and
     constructs several other parameters that are useful for the manifesting
@@ -21,100 +21,133 @@ from collections import namedtuple
 import flask
 import os
 import sys
+import time
 
 from pdb import set_trace
 
-_mroot_field = 'MANIFESTING_ROOT'
-_tftp_root_field = 'TFTP_ROOT'
 
-_server_fields = (
-                  'TMCONFIG',
-                  'HOST',
-                  'PORT',
-                  'L4TM_MIRROR',
-                  'L4TM_RELEASE',
-                  'L4TM_AREAS'
-                  )
+class ManifestingConfiguration(object):
 
-_manifest_env = (
-                'FILESYSTEM_IMAGES',
-                'MANIFEST_UPLOADS',
-                'GOLDEN_IMAGE'
-               )
+    # An "environment" is a collection of keys for values that may be
+    # directory paths, file names, or just data.  _configfile_env must
+    # be found in the Flask configuration file.  The other _envs build
+    # on that and are hardcoded in this module.  FIXME: type tags.
 
-_tftp_env = (
-            'TFTP_IMAGES',
-            'TFTP_GRUB'
-           )
+    _configfile_env = (
+        'MANIFESTING_ROOT',
+        'TFTP_ROOT',
+        'TMCONFIG',
+        'HOST',
+        'PORT',
+        'L4TM_MIRROR',
+        'L4TM_RELEASE',
+        'L4TM_AREAS'
+    )
 
-_expected_fields = _server_fields + (_mroot_field, _tftp_root_field)
+    _manifest_env = (
+        'FILESYSTEM_IMAGES',
+        'MANIFEST_UPLOADS',
+        'GOLDEN_IMAGE'
+    )
 
-settings = {}
+    _tftp_env = (
+        'TFTP_IMAGES',
+        'TFTP_GRUB',
+        'DNSMASQ_CONFIGS'
+    )
 
-def make_config(config_path):
-    """
-        Unpack parameters of the passed config file into the local variables of
-    this module.
+    _all_env = _configfile_env + _manifest_env + _tftp_env
 
-    :param 'config_path': path to a .py config file.
-    """
-    global settings
-    config_path = os.path.realpath(config_path)
+    _settings = {}
 
-    settings = _extract_from_config(config_path)
+    def __init__(self, flask_config_path, autoratify=True):
+        """
+        Unpack parameters of the passed config file into the local
+        variables of this module.  It is assumed this file will then
+        be used by manifest_api.py
 
-    # no trailing slashes
-    mroot = os.path.join(settings['MANIFESTING_ROOT'])
-    if mroot[-1] == '/':
-        mroot = mroot[:-1]
-    tftp = os.path.join(settings['TFTP_ROOT'])
-    if tftp[-1] == '/':
-        tftp = tftp[:-1]
+        :param 'flask_config_path': path to a Flask config file.
+        """
+        self._flask_config_path = flask_config_path
+        self._extract_flask_config()
 
-    settings['MANIFESTING_ROOT'] = mroot
-    settings['TFTP_ROOT'] = tftp
-    settings['FILESYSTEM_IMAGES'] = mroot + '/sys-images'
-    settings['MANIFEST_UPLOADS'] = mroot + '/manifests'
-    settings['GOLDEN_IMAGE'] = settings['FILESYSTEM_IMAGES'] + '/golden/golden.arm.tar'
+        # no trailing slashes
+        mroot = os.path.join(self['MANIFESTING_ROOT'])
+        if mroot[-1] == '/':
+            mroot = mroot[:-1]
 
-    settings['TFTP_IMAGES'] = tftp + '/nodes'
-    settings['TFTP_GRUB'] = tftp + '/boot/grub'
-    return settings
+        tftp = os.path.join(self['TFTP_ROOT'])
+        if tftp[-1] == '/':
+            tftp = tftp[:-1]
 
+        fsimages = mroot + '/sys-images'
 
-def ratify_config(manconfig, dontcare=None):
-    '''Insure all paths specified in the config file exist.'''
-    if dontcare is None or not dontcare:
-        dontcare = ()
-    missing = []
+        # A few rewrites, a few new things
+        self._settings.update({
+            'MANIFESTING_ROOT':     mroot,
+            'FILESYSTEM_IMAGES':    fsimages,
+            'GOLDEN_IMAGE':         fsimages + '/golden/golden.arm.tar',
+            'MANIFEST_UPLOADS':     mroot + '/manifests',
+            'DNSMASQ_CONFIGS':      mroot + '/dnsmasq',
 
-    for attr in (_mroot_field, _tftp_root_field) + _manifest_env + _tftp_env:
-        if attr in dontcare:
-            continue
-        path = manconfig.get(attr, None)
-        if path is None:
-            missing.append('Missing path key "%s"' % attr)
-        else:
-            if not os.path.isdir(path) and not os.path.isfile(path):
-                missing.append('Missing "%s" path "%s"' % (attr, path))
+            'TFTP_ROOT':            tftp,
+            'TFTP_IMAGES':          tftp + '/images',
+            'TFTP_GRUB':            tftp + '/boot/grub',
+        })
 
-    return missing if missing else False
+        if autoratify:
+            errors = self.ratify()
+            if errors:
+                raise ValueError('\n'.join(errors))
 
+    # Duck-type a read-only dict.  It's empty before extract_flask_config()
+    def __getitem__(self, key):
+        return self._settings.get(key, None)
 
-def _extract_from_config(config_path):
-    """
-        Validate that incoming .py config file has required variables set and
-    return a dictionary of expected parameters.
+    def keys(self):
+        return sorted(self._settings.keys())
 
-    :param 'config_path': path to the .py config file.
-    :return: [dict] pair of field names (variables) that will be used with its values.
-    """
-    flask_obj = flask.Flask('dummy_flask_obj')   # Just to pars .py config into dict
-    flask_obj.config.from_pyfile(config_path)
-    result = {}
-    for expected in _expected_fields:
-        if expected not in flask_obj.config:
-            raise ValueError('Config file missing field  "%s"' % expected)
-        result[expected] = flask_obj.config[expected]
-    flask_obj = None        # Only needed it for from_object()
-    return result
+    @property
+    def manifesting_keys(self):
+        return frozenset(self._manifest_env)
+
+    @property
+    def tftp_keys(self):
+        return frozenset(self._tftp_env)
+
+    def ratify(self, dontcare=None):
+        '''Insure all keys and their associated data exist.'''
+        if not dontcare:
+            dontcare = ()
+        missing = []
+        for key in frozenset(self._all_env) - frozenset(dontcare):
+            path = self[key]
+            if path is None:
+                missing.append('Missing key "%s"' % key)
+                continue
+            # FIXME: tagged keys would be better
+            try:
+                if not path.startswith('/'):
+                    continue                # String but not a path
+            except AttributeError as e:     # Not a string
+                continue
+
+            if not (os.path.isdir(path) or
+                    os.path.isfile(path) or
+                    os.path.islink(path)):
+                missing.append('Missing "%s" target "%s"' % (key, path))
+        return missing
+
+    def _extract_flask_config(self):
+        """
+        Use Flask convenience routine to parse the main config file.
+        """
+
+        flask_obj = flask.Flask(time.ctime())   # dummy name
+        flask_obj.config.from_pyfile(self._flask_config_path)
+        self._settings = {}
+        for key in self._configfile_env:
+            if key not in flask_obj.config:
+                raise ValueError('Config file missing "%s"' % key)
+            self._settings[key] = flask_obj.config[key]
+        flask_obj = None

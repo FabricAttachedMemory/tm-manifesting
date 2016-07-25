@@ -1,99 +1,82 @@
-Quick Start to Manifesting
+Quick Start to Manifesting from Github
 
-tm-manifesting is developed on L4TM system, thus, as of today, we do not provide
-support of Manifesting services on any other distribution.
-
-===============================================================================
-        MANIFESTING ENVIRONMENT: SETUP
-
-Clone latest repo from github.hpe:
-
-git clone https://github.hpe.com/hpelinux/manifesting.git
-
-
-Make sure system is updated and Python3 is installed on the system:
-sudo apt-get update
-sudo apt-get install python3
+tm-manifesting is developed on L4TM systems for use in The Machine
+environment.  Support for any other distro, even Debian or HPE Linux,
+is optional and discretionary.
 
 ===============================================================================
+        L4TM ENVIRONMENT
 
-cd manifesting
-sudo ./setup.py
+Install L4TM on your target server (probably a ToRMS).
 
-===============================================================================
-Install tm-librarin.
+Insure the system's packages are updated and include the following packages:
 
-Step out of manifesting directory if still in there:
+$ sudo apt-get update
+$ sudo apt-get install python3 git
 
-cd ..
+Clone the latest repo from HPE Github:
 
---------------------------------
-If Running L4TM:
+$ cd some/where
+$ git clone https://github.hpe.com/hpelinux/manifesting.git
+$ cd manifesting
 
-sudo apt install tm-librarian
+All commands below need to be run from the "manifesting" directory.
 
---------------------------------
-If Runnin Debian:
+=============================================================================
+        MANIFESTING ENVIRONMENT: CONFIG FILES
 
-git clone https://github.hpe.com/hpelinux/tm-librarian.git
+TMCF (The Machine Configuration File) is NOT needed for any setup steps.
+You only need that large JSON file to actually run the API server.
 
-sudo ln -s ~/tm-librarian/ /usr/lib/python3/dist-packages/tm_librarian
+The default manifesting configuration file is configs/manifest_config.py.  
+It will be used by all commands unless they are given the --config option.
 
-Make sure link is valid:
+If you want to make changes, copy it to a different location to edit it.
+Remember to use the --config option for all the commands.  You will
+almost certainly need to change the DNSMASQ_INTERFACE option.
 
-ls -l /usr/lib/python3/dist-packages/tm_librarian
+=============================================================================
+        MANIFESTING ENVIRONMENT: PRIMARY SETUP
 
-(Output must be green)
+$ sudo ./setup.py
 
-===============================================================================
+You may see some package installation output from apt-get depending on
+the packages currently on your system.  A few operation summary lines
+will always be output.
+
+Hopefully all error messages are clear on the nature of any problem(s)
+and suggestive as to a remedy.
+
+=============================================================================
+        MANIFESTING ENVIRONMENT: GRUB CONFIGURATION
+
+$ sudo ./setup_grub.py
+
+=============================================================================
         MANIFESTING ENVIRONMENT: GENERATE GOLDEN IMAGE
-(All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
 
- At this point you can try to run manifesting server:
-sudo ./manifest_api.py
+$ sudo ./setup_golden_image.py
 
-If the command above errored out with
+=============================================================================
+        MANIFESTING: RUN API SERVER
 
-Missing path(s):
-/var/lib/tmms/sys-images/golden/golden.arm.tar
+At this point you can try to run manifesting server:
 
-Then you have to generate a golden image, by running a script with the path (without
-*.tar file, just directory tree) mentioned in the error output above:
+$ sudo ./manifest_api.py
 
-sudo ./generate_golden_image.py -d /var/lib/tmms/sys-images/golden/
+=============================================================================
+        CREATE SYSTEM SHORTCUTS TO PRIMARY MANIFESTING COMMANDS
 
-
-To verify this step, check for "golden.arm.tar" file inside the expected folder:
-
-ls /var/lib/tmms/sys-images/golden/
-
-===============================================================================
-        MANIFESTING ENVIRONMENT: tmconfig
-(All commands are relative to the manifesting source code top of tree, e.g. ~/manifesting)
-
-if running manifest_api.py causing:
-RuntimeError: Line 201: [Errno 2] No such file or directory: '/etc/tmconfig'
-
- Then place your The Machine Config json file into /etc/tmconfig e.g:
-
-sudo cp ~/my_tmconfig.json /etc/tmconfig
-
-===============================================================================
-        CREATE A SYSTEM SHORTCUT TO MANIFESTING
-
-(Optional step that make interaction with manifesting cmd line sligtly more convenient)
+(Optional steps for $PATH convenience)
 
 Create a symbolic link to tm_manifest.py to use it as if it is an installed
-application
+application.  This assumes your current working directory is the top of
+the repo clone, "manifesting".
 
-NOTE: in the next command, ~/Development/... is MY location of the cloned manifesting.
-Change it to the location where you cloned yours."/usr/local/bin/tm-manifest" stays
-the same.
+sudo ln -s $PWD/manifest_api.py /usr/local/bin/tm-manifest-server
+sudo ln -s $PWD/tm_cmd/tm_manifest.py /usr/local/bin/tm-manifest
 
-sudo ln -s ~/Development/manifesting/tm_cmd/tm_manifest.py /usr/local/bin/tm-manifest
-sudo ln -s ~/Development/manifesting/manifest_api.py /usr/local/bin/tm-manifest-server
-
-===============================================================================
+=============================================================================
 
 If you run:
 
@@ -104,7 +87,7 @@ This is equivalent to (if you were not doing symbolic links):
 
 ~/Development/manifesting/tm_cmd/tm_manifest.py help
 
--------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 
 If you run:
 
