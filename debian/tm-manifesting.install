@@ -1,0 +1,11 @@
+blueprints/ /usr/lib/python3/dist-packages/tmms/
+configs/ /usr/lib/python3/dist-packages/tmms/
+static/ /usr/lib/python3/dist-packages/tmms/
+templates/ /usr/lib/python3/dist-packages/tmms/
+tm_cmd/ /usr/lib/python3/dist-packages/tmms/
+unittests/ /usr/lib/python3/dist-packages/tmms/
+utils/ /usr/lib/python3/dist-packages/tmms/
+manifest_config.py /usr/lib/python3/dist-packages/tmms/
+README.bristol /usr/lib/python3/dist-packages/tmms/
+README /usr/lib/python3/dist-packages/tmms/
+*.py /usr/lib/python3/dist-packages/tmms/
