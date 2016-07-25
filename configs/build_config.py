@@ -135,7 +135,7 @@ class ManifestingConfiguration(object):
             if not (os.path.isdir(path) or
                     os.path.isfile(path) or
                     os.path.islink(path)):
-                missing.append('Missing "%s" path "%s"' % (key, path))
+                missing.append('Missing "%s" target "%s"' % (key, path))
         return missing
 
     def _extract_flask_config(self):
