@@ -114,7 +114,7 @@ class ManifestingConfiguration(object):
         return frozenset(self._tftp_env)
 
     def ratify(self, dontcare=None):
-        '''Insure all keys and their assoicated data exist.'''
+        '''Insure all keys and their associated data exist.'''
         if not dontcare:
             dontcare = ()
         missing = []

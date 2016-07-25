@@ -47,16 +47,19 @@ class TMgrub(object):
         """
 
         # Absolute paths are for writing files.  _tftp_xxxx are file contents.
-        self.images_dir = manconfig['TFTP_IMAGES']
-        self.grub_dir = manconfig['TFTP_GRUB']
-        self.grub_cfg = self.grub_dir + '/grub.cfg'
-        self.grub_menu_dir = self.grub_dir + '/menus'
-        make_dir(self.grub_menu_dir)
+        self.tftp_images_dir = manconfig['TFTP_IMAGES']
+        self.tftp_grub_dir = manconfig['TFTP_GRUB']
+        self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
+        make_dir(self.tftp_grub_menus_dir)
+
         # Relative to TFTP, these supply content to the files.
         root = manconfig['TFTP_ROOT']
-        self.tftp_images_dir = basepath(self.images_dir, root)
-        self.tftp_grub_dir = basepath(self.grub_dir, root)
-        self.tftp_menu_dir = self.tftp_grub_dir + '/menus'
+        self.chroot_images_dir = basepath(self.tftp_images_dir, root)
+        self.chroot_grub_dir = basepath(self.tftp_grub_dir, root)
+        self.chroot_grub_menus_dir = self.chroot_grub_dir + '/menus'
+
+        # Last but not least, the master grub config file loaded by grub
+        self.tftp_grub_cfg = self.tftp_grub_dir + '/grub.cfg'
 
     @property
     def hostnames(self):
@@ -64,53 +67,34 @@ class TMgrub(object):
 
     def create_environment(self):
         """
-            Create tftp environment: create grub config files based off
-        nodes coords, but use only "enclosure and node" values of it.
+            Create tftp environment: grub menu files based off
+        node's hostname, which is implicitly the node's physical location.
         These files are static over the lifetime of a machine instance. Then
         create filesystem image directories per these coords for PXE boot
         to pick up on boot .cpio and .vmlinuz.  manifest_api will populate
-        those directries when nodes are bound.
+        those directories when nodes are bound.
         """
 
-        for hostname in self.hostnames:
-            # Stays empty until manifest_api does a node binding
-            tftp_node_fs = self.images_dir + '/' + hostname
-            make_dir(tftp_node_fs)
-
-        for grub_menu_file, img_dir in self.environment.items():
-            # each (tftp)/images/* folder and (tftp)/boot/grub/menu.hostname
-
-            grub_menu_content = self.grub_menu_template(hostname)
-
-            with open(grub_menu_file, 'w') as file_obj:
-                file_obj.write(str(grub_menu_content))
-
-        grub_cfg_content = self.grub_cfg_template()
-
-        with open(self.grub_cfg, 'w') as file_obj:
+        grub_cfg_content = self.grub_cfg_compose()
+        with open(self.tftp_grub_cfg, 'w') as file_obj:
             file_obj.write(grub_cfg_content)
 
-    @property
-    def environment(self):
-        """
-            Return dictionary of EFI config path and its filesystem image
-        location (under tftp).  Note: path is absolute in EFI space.
-        """
-        env = {}
         for hostname in self.hostnames:
-            grub_menu_file = '%s/%s' % (self.grub_menu_dir, hostname)
-            node_dir = '%s/%s/' % (self.tftp_images_dir, hostname)
-            env[os.path.normpath(grub_menu_file)] = os.path.normpath(node_dir)
-        return env
+            tftp_node_fs = self.tftp_images_dir + '/' + hostname
+            make_dir(tftp_node_fs)
+            grub_menu_content = self.grub_menu_compose(hostname)
+            menu_fname = '%s/%s.menu' % (self.tftp_grub_menus_dir, hostname)
+            with open(menu_fname, 'w') as file_obj:
+                file_obj.write(str(grub_menu_content))
 
-    def grub_menu_template(self, hostname):
+    def grub_menu_compose(self, hostname):
         """
-            Return grub.cfg config template that contains .format anchors:
+            Return grub menu content that contains .format anchors:
         {node_name} - name of the node
         {node_fs} - TFTP-relative path to the node's filesystem image
                     .cpio and .vmlinuz.
         """
-        tftp_dir = '%s/%s' % (self.tftp_images_dir, hostname)
+        tftp_dir = '%s/%s' % (self.chroot_images_dir, hostname)
         template = """set default=0
 set menu_color_highlight=white/brown
 
@@ -121,7 +105,7 @@ menuentry '{hostname} L4TM ARM64'
 """
         return template.format(hostname=hostname, tftp_dir=tftp_dir)
 
-    def grub_cfg_template(self):
+    def grub_cfg_compose(self):
         """
             Template string for a grub.cfg that references grub menu
         for each node on PXE boot.
@@ -135,7 +119,7 @@ terminal_output gfxterm
 
         lines = header_tplt.split('\n')
 
-        configfile = '%s/${net_default_hostname}' % (self.grub_menu_dir)
+        configfile = '%s/${net_default_hostname}' % (self.chroot_grub_menus_dir)
         lines.append('configfile "(tftp)%s' % configfile)
 
         return '\n'.join(lines)
@@ -152,10 +136,9 @@ def main(config_file):
         raise RuntimeError('\n'.join(missing))
     grubby = TMgrub(manconfig)
     grubby.create_environment()
-    env = grubby.environment
-    for menu in sorted(env.keys()):
-        print('Menu:  %s\nFiles: %s\n' % (menu, env[menu]))
-    print('Master GRUB config in', grubby.grub_cfg)
+    print('Master GRUB configuration in', grubby.tftp_grub_cfg)
+    print('      Per-node grub menus in', grubby.tftp_grub_menus_dir)
+    print('      Per-node image dirs in', grubby.tftp_images_dir)
 
 
 if __name__ == '__main__':
