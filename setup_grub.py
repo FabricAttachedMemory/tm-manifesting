@@ -52,6 +52,8 @@ class TMgrub(object):
         self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
         make_dir(self.tftp_grub_menus_dir)
 
+        self.dnsmasq_dir = manconfig['DNSMASQ_CONFIGS']
+
         # Relative to TFTP, these supply content to the files.
         root = manconfig['TFTP_ROOT']
         self.chroot_images_dir = basepath(self.tftp_images_dir, root)
@@ -64,6 +66,40 @@ class TMgrub(object):
     @property
     def hostnames(self):
         return ('node%02d' % n for n in range(1, 41))   # generator
+
+    def configure_dnsmasq(self):
+        '''Plagiarized from a libvirt setup'''
+
+        with open(self.dnsmasq_dir + '/tmms.addnhosts', 'w') as f:
+            f.write('10.11.10.254	torms')
+
+        with open(self.dnsmasq_dir + '/tmms.conf', 'w') as f:
+            for line in '''
+                strict-order
+                domain=have.it.your.way
+                expand-hosts
+                pid-file=/var/run/tmms_dnsmasq.pid
+                except-interface=lo
+                bind-dynamic
+                interface=net_accessP
+                srv-host=_librarian._tcp,torms,9093
+                dhcp-range=10.11.10.254,static
+                dhcp-no-override
+                enable-tftp
+                tftp-root=/var/lib/tmms/tftp/
+                dhcp-boot=/boot/bootaarch64.efi
+                dhcp-hostsfile=/var/lib/tmms/dnsmasq/tmms.hostsfile
+                addn-hosts=/var/lib/tmms/dnsmasq/tmms.addnhosts
+            '''.split('\n'):
+                f.write(line.strip() + '\n')
+
+        with open(self.dnsmasq_dir + '/tmms.hostsfile', 'w') as f:
+            for i, hostname in enumerate(self.hostnames):
+                physloc = 'enclosure/%d/node/%d' % (
+                    (i // 10) + 1,
+                    (i % 10) + 1)
+                ip = '10.11.10.%d' % (i + 1)
+                f.write('id:%s,%s,%s\n' % (physloc, ip, hostname))
 
     def create_environment(self):
         """
@@ -86,6 +122,8 @@ class TMgrub(object):
             menu_fname = '%s/%s.menu' % (self.tftp_grub_menus_dir, hostname)
             with open(menu_fname, 'w') as file_obj:
                 file_obj.write(str(grub_menu_content))
+
+        self.configure_dnsmasq()
 
     def grub_menu_compose(self, hostname):
         """
@@ -139,6 +177,7 @@ def main(config_file):
     print('Master GRUB configuration in', grubby.tftp_grub_cfg)
     print('      Per-node grub menus in', grubby.tftp_grub_menus_dir)
     print('      Per-node image dirs in', grubby.tftp_images_dir)
+    print('             dnsmasq.conf in', grubby.dnsmasq_dir)
 
 
 if __name__ == '__main__':

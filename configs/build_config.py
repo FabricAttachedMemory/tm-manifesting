@@ -52,7 +52,8 @@ class ManifestingConfiguration(object):
 
     _tftp_env = (
         'TFTP_IMAGES',
-        'TFTP_GRUB'
+        'TFTP_GRUB',
+        'DNSMASQ_CONFIGS'
     )
 
     _all_env = _configfile_env + _manifest_env + _tftp_env
@@ -87,10 +88,11 @@ class ManifestingConfiguration(object):
             'FILESYSTEM_IMAGES':    fsimages,
             'GOLDEN_IMAGE':         fsimages + '/golden/golden.arm.tar',
             'MANIFEST_UPLOADS':     mroot + '/manifests',
+            'DNSMASQ_CONFIGS':      mroot + '/dnsmasq',
 
             'TFTP_ROOT':            tftp,
             'TFTP_IMAGES':          tftp + '/images',
-            'TFTP_GRUB':            tftp + '/boot/grub'  # architected in grub
+            'TFTP_GRUB':            tftp + '/boot/grub',
         })
 
         if autoratify:
