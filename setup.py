@@ -140,9 +140,6 @@ if __name__ == '__main__':
         '-c', '--config',
         help='A config.py file to be used by manifesting server.',
         default='./manifest_config.py')
-    parser.add_argument(
-        '-C', '--tmconfig',
-        help='path to TMCF, the description of an entire instance')
 
     args, _ = parser.parse_known_args()
     args.config = os.path.realpath(args.config)

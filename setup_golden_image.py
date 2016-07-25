@@ -1,32 +1,42 @@
 #!/usr/bin/python3 -tt
 """
-    Generate a golden image using vmdebootstrap script that was slightly modified
-for the needs of this script. Modified vmdebootstrap is in ./configs/ folder.
-Note: vmdebootstrap must be installed on the system in order for this script to work.
+    Generate a golden image using vmdebootstrap script that was slightly
+modified for the needs of manifesting. Modified vmdebootstrap is in
+./configs/ folder.  Note: "normal" vmdebootstrap must also be installed
+on the system to satisfy package dependencies.
 """
 import argparse
 import os
 import subprocess
 import shlex
 
+from pdb import set_trace
 
-def main(args):
+from configs.build_config import ManifestingConfiguration
+
+
+def main(config_file, config_vmd=None):
     """
         Generate golden image into the manifesting work directory using
         vmdebootstrap.  Return None or raise error.
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
 
-    assert os.path.isdir(args['dest']), '"%s" does not exist' % (args['dest'])
-    statvfs = os.statvfs(args['dest'])
-    assert statvfs.f_bsize * statvfs.f_bavail > (4 * (1 << 30)), \
-        'Need at least 4G on "%s"' % (args['dest'])
+    manconfig = ManifestingConfiguration(config_file, autoratify=False)
+    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
+    destfile = manconfig['GOLDEN_IMAGE']    # now I can have a KeyError
+    destdir = os.path.realpath(os.path.dirname(destfile))
+    statvfs = os.statvfs(destdir)
+    assert statvfs.f_bsize * statvfs.f_bavail > (10 * (1 << 30)), \
+        'Need at least 10G on "%s"' % (destdir)
+    if config_vmd is None:
+        config_vmd = 'configs/filesystem/golden.arm.vmd'
 
     cmd = '''./configs/vmdebootstrap --no-default-configs --hostname=GOLDEN
              --config=%s
              --mirror=%s''' % (
-                args['img_cfg'],
-                args['mirror']
+                config_vmd,
+                manconfig['L4TM_MIRROR']
              )
     cmd = shlex.split(cmd)
     status = subprocess.call(cmd)
@@ -37,31 +47,25 @@ if __name__ == '__main__':
     """
         Parse command line arguments and call main() function.
     """
-    PARSER = argparse.ArgumentParser(description='Generate golden image for nodes of The Machine.')
 
-    PARSER.add_argument('-i', '--img-cfg',
-                        help='A config file for your golden filesystem image that\
-                        will be taken by vmdebootstrap.',
-                        default='configs/filesystem/golden.arm.vmd')
+    manconfig = ManifestingConfiguration
 
-    PARSER.add_argument('-d', '--dest',
-                        help='Destination to save the image into')
+    PARSER = argparse.ArgumentParser(
+        description='Generate golden image for nodes of The Machine.')
 
-    PARSER.add_argument('-m', '--mirror',
-                        help='Repo Mirror to create image from.',
-                        default='http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm')
+    PARSER.add_argument('-c', '--config',
+                        help='Manifest API server configuration file',
+                        default='manifest_config.py')
 
-    PARSER.add_argument('--verbose',
-                        help='Make it talk.',
-                        action='store_true')
-    PARSER.add_argument('--debug',
-                        help='Turn on debugging tool.',
-                        action='store_true')
-    ARGS, _ = PARSER.parse_known_args()
+    PARSER.add_argument('--vmd',
+                        help='(DEV ONLY) alternate vmdebootstrap config',
+                        default=None)
+
+    args, _ = PARSER.parse_known_args()
 
     errmsg = ''
     try:
-        main(vars(ARGS))
+        main(args.config, args.vmd)
     except AssertionError as e:
         errmsg = str(e)
     raise SystemExit(errmsg)

@@ -25,7 +25,6 @@ from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
 from utils.utils import make_dir, basepath
-from tm_librarian.tmconfig import TMConfig
 
 
 class TMgrub(object):
