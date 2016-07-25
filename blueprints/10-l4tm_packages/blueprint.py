@@ -9,7 +9,7 @@ from debian.deb822 import Packages
 from io import BytesIO, StringIO
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, make_response
 
 _ERS_element = 'package'
 
@@ -47,6 +47,7 @@ def _webpage(name=None):
 @BP.route('/api/%ss/' % _ERS_element)       # Plurar form of the element name to list all Packages
 @BP.route('/api/%s/<name>' % _ERS_element)  # Songular - to list one package.
 def _api(name=None):
+    status_code = 200
     if name is None:
         packages = [ ]
         for pkg in _data.values():
@@ -56,18 +57,23 @@ def _api(name=None):
                 'description': pkg['Description']
             }
             packages.append(tmpdict)
-        return jsonify({ 'package': packages })
+
+        if not packages:
+            status_code = 204
+
+        return make_response(jsonify({ 'package': packages }), status_code)
 
     pkg = _data.get(name, None)
     if pkg is None:
-        return jsonify({ 'error': 'No such package "%s"' % name })
+        status_code = 404
+        return make_response(jsonify({ 'error': 'No such package "%s"' % name }), status_code)
+
     for tag in ('Depends', 'Tags'):
         if tag in pkg and False:
             set_trace()
             pkg[tag] = pkg[tag].split(', ')
-    return jsonify(pkg)
 
-    return
+    return make_response(jsonify(pkg), status_code)
 
 ###########################################################################
 
