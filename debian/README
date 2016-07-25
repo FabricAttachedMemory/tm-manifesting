@@ -1,107 +1,101 @@
-NOTE: This README was taken from PoC folder of this package.
+Quick Start to Manifesting from Github
 
-After cloning this repo:
+tm-manifesting is developed on L4TM systems for use in The Machine
+environment.  Support for any other distro, even Debian or HPE Linux,
+is optional and discretionary.
 
-1. mkdir /opt/torms
-2. move this repo to /opt/torms/manifesting
+===============================================================================
+        L4TM ENVIRONMENT
 
-Set up your PXE boot server per PXE/README.  As a result you should have
-/opt/torms/tftp containing directories whose "tree(1)" output is
+Install L4TM on your target server (probably a ToRMS).
 
-.
-├── amd64
-├── arm64
-├── ldlinux.c32 -> /usr/lib/syslinux/modules/bios/ldlinux.c32
-├── libutil.c32 -> /usr/lib/syslinux/modules/bios/libutil.c32
-├── memdisk -> /usr/lib/syslinux/memdisk
-├── menu.c32 -> /usr/lib/syslinux/modules/bios/menu.c32
-├── pxelinux.0 -> /usr/lib/PXELINUX/pxelinux.0
-├── pxelinux.cfg
-│   ├── background.png
-│   └── default
-└── vesamenu.c32 -> /usr/lib/syslinux/modules/bios/vesamenu.c32
+Insure the system's packages are updated and include the following packages:
 
-===========================================================================
-Preparing your Debian host system to install L4TM images
+$ sudo apt-get update
+$ sudo apt-get install python3 git
 
-A slightly modifed copy of the stock Debian vmdebootstrap is included
-with this repo, use it.  It differs by:
+Clone the latest repo from HPE Github:
 
-1. Keeping certain temporary artifacts in the final image
-2. Using the "packages" directive in a foreign architecture build
-3. A few extra "print" statements for tracing
+$ cd some/where
+$ git clone https://github.hpe.com/hpelinux/manifesting.git
+$ cd manifesting
 
-Your system needs to have the L4TM signing keyring installed AND use it.
+All commands below need to be run from the "manifesting" directory.
 
-wget http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm/pool/main/l/l4tm-archive-keyring/l4tm-archive-keyring_2.0.4_all.deb
+=============================================================================
+        MANIFESTING ENVIRONMENT: CONFIG FILES
 
-sudo dpkg -i l4tm-archive-keyring_2.0.4_all.deb
+TMCF (The Machine Configuration File) is NOT needed for any setup steps.
+You only need that large JSON file to actually run the API server.
 
-Someday, when vmdebootstrap supports the "--keyring" option, this won't be
-necessary.  Just for today:
+The default manifesting configuration file is configs/manifest_config.py.  
+It will be used by all commands unless they are given the --config option.
 
-$ pushd /usr/share/debootstrap/scripts
-$ sed -e 's/debian-archive-keyring/l4tm-archive-keyring/' sid | sudo tee catapult
-$ popd
+If you want to make changes, copy it to a different location to edit it.
+Remember to use the --config option for all the commands.  You will
+almost certainly need to change the DNSMASQ_INTERFACE option.
 
-===========================================================================
-Generating the VM file system image
+=============================================================================
+        MANIFESTING ENVIRONMENT: PRIMARY SETUP
 
-$ cd /opt/torms/manifesting
-$ mkdir artifacts
-$ sudo vmdebootstrap \
-  --owner=$LOGNAME --no-default-configs --config=XXXXX.vmd --hostname=pxe02
+$ sudo ./setup.py
 
-XXX is currently either "dux.jessie.vmd" or "dux.l4tm.vmd"
+You may see some package installation output from apt-get depending on
+the packages currently on your system.  A few operation summary lines
+will always be output.
 
-creates files in "artifacts": XXX.log, XXXX.img, XXXX.tar (jessie or l4tm)
+Hopefully all error messages are clear on the nature of any problem(s)
+and suggestive as to a remedy.
 
-===========================================================================
-Examining the diskless image
+=============================================================================
+        MANIFESTING ENVIRONMENT: GRUB CONFIGURATION
 
-Loopback mount the image file offset at the start of the primary ext4
-partition.  Usually this command works:
+$ sudo ./setup_grub.py
 
-$ sudo mount -oloop,ro,offset=1048576 artifacts/XXXX.img /mnt/somewhere
+=============================================================================
+        MANIFESTING ENVIRONMENT: GENERATE GOLDEN IMAGE
 
-The magic number can be seen by
+$ sudo ./setup_golden_image.py
 
-$ parted artifacts/XXXX.img unit B print
+=============================================================================
+        MANIFESTING: RUN API SERVER
 
-Don't forget to unmount before the next step.
+At this point you can try to run manifesting server:
 
-===========================================================================
-Prepping the diskless image
+$ sudo ./manifest_api.py
 
-Several files were created in the artifacts subdirectory.  XXXX.img is the
-raw file system image with a boot MBR and file system partition.  XXXX.tar
-is all the files and is of more use; unpack it with the command
+=============================================================================
+        CREATE SYSTEM SHORTCUTS TO PRIMARY MANIFESTING COMMANDS
 
-$ untar.sh XXXX.tar
+(Optional steps for $PATH convenience)
 
-to create a new directory artificats/XXXX.untar
+Create a symbolic link to tm_manifest.py to use it as if it is an installed
+application.  This assumes your current working directory is the top of
+the repo clone, "manifesting".
 
-ramdisk images are cpio archives.  To create one for diskless booting,
-along with some extra magic,
+sudo ln -s $PWD/manifest_api.py /usr/local/bin/tm-manifest-server
+sudo ln -s $PWD/tm_cmd/tm_manifest.py /usr/local/bin/tm-manifest
 
-$ cpio.sh XXXX
+=============================================================================
 
-which takes the XXXX.untar files and packages them into the proper
-CPIO archive under ../tftp/$MANIFEST_ARCH.  These files correspond to
-the menu presented by ../tftp/pxelinux.cfg/default
+If you run:
 
-===========================================================================
-Booting
+tm-manifest help
 
-Run the script diskless.sh, supplying a node number from 1-8 and a boot.cfg file:
+you should get a list of commands.
+This is equivalent to (if you were not doing symbolic links):
 
-./diskless.sh boot.cfg/arm-bios-direct.sh
+~/Development/manifesting/tm_cmd/tm_manifest.py help
 
-A QEMU session will be started with the final octet of the MAC address
-equal to the node numbber.  This will match one of the preconfigured
-addresses in the PXE/fabric_emulation.net.xml file.
+-----------------------------------------------------------------------------
 
-An SDL display window will start displaying the menu.  After choosing
-an image to boot, the terminal window will become the system console.
-That gives full scrollback of the boot messages along with a more
-flexible login screen.
+If you run:
+
+tm-manifest-server
+
+That should start a manifesting server and print out bunch of stuff on the screen.
+This is equivalent to (if you were not doing symbolic links):
+
+~/Development/manifesting/manifest_api.py
+
+===============================================================================

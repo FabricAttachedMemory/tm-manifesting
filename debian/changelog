@@ -1,5 +1,5 @@
-tm-manifesting (0.1) catapult; urgency=low
+tm-manifesting (1.0) catapult; urgency=low
 
-  * Initial release for the Manifesting solution.
+  * Initial release for the Manifesting api.
 
  -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 28 April 2016 09:12:03 -0600

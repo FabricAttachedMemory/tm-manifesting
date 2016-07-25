@@ -5,14 +5,33 @@ Maintainer: Zakhar Volchak <zakhar.volchak@hpe.com>
 XS-Requester: l4tm@groups.int.hpe.com
 Origin: HPE
 XS-Source-Origin: native
-Build-Depends: debhelper (>= 9), dh-python, python3 (>= 3.2)
-Standards-Version: 3.9.6
+Build-Depends:  debhelper (>= 9),
+                dh-python (>= 2.2),
+                python3 (>= 3.2),
+                python3-flask,
+Standards-Version: 3.9.8
 X-Python3-Version: >= 3.2
 X-Python-Version: >= 2.6
+Vcs-Git: https://github.hpe.com/hpelinux/manifesting.git
+Vcs-Browser: https://github.hpe.com/hpelinux/manifesting
 
-Package: tm-manifesting
+Package: tm-manifest-server
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}
+Depends: ${python:Depends},
+         ${misc:Depends},
+         python3,
+         python3-flask
 Recommends: attr
-Description: Manifesting RestFull API
-    A Manifesting tool for the Machine.
+Description: Manifesting Server
+ Server deamon that listens to the RestClient requests to manage TMD. For API
+ specifications read static/software-arch.pdf
+
+Package: tm-manifest
+Architecture: all
+Depends: ${python:Depends},
+         ${misc:Depends},
+         python3,
+         python3-flask
+Recommends: attr
+Description: Manifesting command line tool.
+ A command line tool for the client to interact with the manifesting server api.

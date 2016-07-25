@@ -1,4 +1,5 @@
 #!/usr/bin/make -f
+#DEBHELPER#
 
 %:
 	dh $@ --with python2,python3
