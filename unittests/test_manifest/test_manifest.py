@@ -16,6 +16,12 @@ from pdb import set_trace
 
 MANIFEST_UPLOADS = config.server_config['MANIFEST_UPLOADS']
 
+
+def setUpModule():
+    if not config.isServerRunning(config.MANIFESTING_SERVER):
+        raise SystemExit('!!!Server at [%s] is not running!!!' % config.MANIFESTING_SERVER)
+
+
 class ManifestTest(unittest.TestCase):
 
     tmcmd = None

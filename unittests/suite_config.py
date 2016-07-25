@@ -1,4 +1,5 @@
 #!/usr/bin/python3 -tt
+import requests
 import os
 import sys
 
@@ -21,3 +22,11 @@ if hpetmconfig.errors:
     raise SystemExit('Bad TMCF:\n' + '\n'.join(hpetmconfig.errors))
 
 MANIFESTING_SERVER = 'http://localhost:31178/manifesting/api/'
+
+
+def isServerRunning(server):
+    try:
+        http_resp = requests.get(server)
+    except requests.exceptions.RequestException:
+        return False
+    return True

@@ -10,6 +10,10 @@ from pdb import set_trace
 from tmms.tm_cmd import tmcmd
 from tmms.unittests import suite_config as config
 
+def setUpModule():
+    if not config.isServerRunning(config.MANIFESTING_SERVER):
+        raise SystemExit('!!!Server at [%s] is not running!!!' % config.MANIFESTING_SERVER)
+
 class PackageTest(unittest.TestCase):
 
     URL = ''
@@ -21,6 +25,7 @@ class PackageTest(unittest.TestCase):
     def setUpClass(cls):
         cls.URL = config.MANIFESTING_SERVER
         cls.tm_cmd = tmcmd.tmpkg
+
 
 
     def test_album_isInList(self):
