@@ -5,9 +5,11 @@ Maintainer: Zakhar Volchak <zakhar.volchak@hpe.com>
 XS-Requester: l4tm@groups.int.hpe.com
 Origin: HPE
 XS-Source-Origin: native
-Build-Depends: debhelper (>= 9),
+Build-Depends: python2.7,
+               debhelper (>= 9),
                dh-python,
-               python3,
+               dh-exec,
+               python3 (>= 3.2),
                python:any | python-all:any | python-dev:any | python-all-dev:any
 Standards-Version: 3.9.8
 X-Python3-Version: >= 3.2
@@ -17,9 +19,7 @@ Vcs-Browser: https://github.hpe.com/hpelinux/manifesting
 
 Package: tm-manifesting
 Architecture: all
-Depends: ${python:Depends},
-         ${misc:Depends},
-         python3
+Depends: python3 (>= 3.2)
 Recommends: attr
 Description: Manifesting Server
  Server daemon that listens to the RestClient requests to manage TMD. For API

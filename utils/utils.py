@@ -1,4 +1,4 @@
-#!/urs/bin/python3 -tt
+#!/usr/bin/python3 -tt
 
 import errno
 import os
