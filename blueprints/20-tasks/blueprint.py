@@ -1,3 +1,4 @@
+#!/usr/bin/python3 -tt
 '''L4TM Tasks'''
 
 import os
