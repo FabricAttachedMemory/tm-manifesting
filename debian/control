@@ -19,7 +19,8 @@ Vcs-Browser: https://github.hpe.com/hpelinux/manifesting
 
 Package: tm-manifesting
 Architecture: all
-Depends: python3 (>= 3.2)
+Depends: python3 (>= 3.2),
+         python3-flask (>= 0.1)
 Recommends: attr
 Description: Manifesting Server
  Server daemon that listens to the RestClient requests to manage TMD. For API
