@@ -29,10 +29,6 @@ def main(config_file, config_vmd=None):
     statvfs = os.statvfs(destdir)
     assert statvfs.f_bsize * statvfs.f_bavail > (10 * (1 << 30)), \
         'Need at least 10G on "%s"' % (destdir)
-    if config_vmd is None:
-        config_vmd = os.path.realpath(__file__)
-        config_vmd = os.path.dirname(config_vmd)
-        config_vmd = config_vmd + '/configs/filesystem/golden.arm.vmd'
 
     vmdebootstrap = os.path.realpath(__file__)
     vmdebootstrap = os.path.dirname(vmdebootstrap) + '/configs/vmdebootstrap'
