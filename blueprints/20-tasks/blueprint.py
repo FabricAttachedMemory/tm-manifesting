@@ -1,6 +1,5 @@
-#!/usr/bin/python3 -tt
+#!/usr/bin/python3 --t
 '''L4TM Tasks'''
-
 import os
 import sys
 from debian.deb822 import Packages

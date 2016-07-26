@@ -1,5 +1,4 @@
 #!/usr/bin/python3 -tt
-
 import errno
 import os
 import sys
