@@ -16,6 +16,7 @@ from pdb import set_trace
 
 MANIFEST_UPLOADS = config.server_config['MANIFEST_UPLOADS']
 
+
 class ManifestTest(unittest.TestCase):
 
     tmcmd = None
