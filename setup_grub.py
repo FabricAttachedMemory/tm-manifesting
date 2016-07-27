@@ -24,7 +24,7 @@ import time
 
 import dns.resolver as RES
 from netaddr import IPNetwork, iter_iprange, IPAddress
-from netifaces import interfaces as NIF, AF_PACKET, AF_UNIX
+import netifaces as NIF
 
 from pdb import set_trace
 
@@ -126,11 +126,25 @@ class TMgrub(object):
         '''Started from a libvirt setup'''
 
         # Legal interface? FIXME: move this to build_config
+        assert self.pxe_interface in NIF.interfaces(), \
+            'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
+        ifaceaddr = NIF.ifaddresses(self.pxe_interface).get(NIF.AF_INET, False)
+        if ifaceaddr:
+            assert len(ifaceaddr) == 1, \
+                'PXE_INTERFACE "%s" has multiple IPs assigned to it' % self.pxe_interface
+            ifaceaddr = ifaceaddr.pop()
+            self.morehosts = '%s torms' % ifaceaddr['addr']
+            self.broadcast = ifaceaddr['broadcast']
+            self.netmask = ifaceaddr['netmask']
+        else:
+            self.morehosts = '# This file left intentionally blank'
+            # other fields will be filled in by specific kludges
+
+        iface = 1
 
         # Which form is tmdomain? FIXME: move this to build_config
         elems = self.tmdomain.split(',')
         self.tmdomain = elems.pop(0)
-        self.addnhost = '# This file left intentionally blank'
 
         if not elems:           # DNS lookup for all nodes
             self.hostIPs = []
@@ -154,15 +168,15 @@ class TMgrub(object):
             except Exception as e:
                 raise RuntimeError('TMDOMAIN: cannot resolve "%s"' % FQDN)
 
-            # Kludge.  Since this is Corporate IT, assume the position
-            self.netmask = '255.255.240.0'
-            tmp = IPAddress(A.address)  # any of them will do
-            self.network = str(IPAddress(tmp.value & 0xFFFFF000))
-            self.broadcast = str(IPAddress(tmp.value | 0xFFF))
+            if not ifaceaddr:
+                # Kludge.  Since this is Corporate IT, assume the position
+                self.netmask = '255.255.240.0'
+                tmp = IPAddress(A.address)  # any of them will do
+                self.network = str(IPAddress(tmp.value & 0xFFFFF000))
+                self.broadcast = str(IPAddress(tmp.value | 0xFFF))
         else:
             assert len(elems) == 1, 'Too many CSV fields in TMDOMAIN'
             tmp = elems[0]
-            self.addnhosts = '8.8.8.8 torms'    # FIXME :-)
             if '/' in tmp:      # CIDR network
                 try:
                     network = IPNetwork(tmp)
@@ -186,25 +200,27 @@ class TMgrub(object):
                         'TMDOMAIN: illegal range notation: %s' % str(e))
                 assert len(iprange) == 40, 'TMDOMAIN IP range is too small'
                 self.hostIPs = [ str(h) for h in iprange ]
-                # Kludge.  The smallest possible netmask would be 6 bits (64)
-                # but if the range crossed boundaries...Just assume class C
-                # containment.  iprange_to_cidrs seems like it ought to help
-                # but either I don't understand what it tells me.
-                self.netmask = '255.255.255.0'
-                self.network = str(IPAddress(iprange[0].value & 0xFFFFFF00))
-                self.broadcast = str(IPAddress(iprange[0].value | 0xFF))
+                if not ifaceaddr:
+                    # Kludge.  The smallest possible netmask is 6 bits (64)
+                    # but if the range crossed boundaries...Assume class C
+                    # containment.  iprange_to_cidrs() seems like it ought
+                    # to help but it ate my brain.
+                    self.netmask = '255.255.255.0'
+                    self.network = str(IPAddress(iprange[0].value & 0xFFFFFF00))
+                    self.broadcast = str(IPAddress(iprange[0].value | 0xFF))
             else:               # Single IP address
                 try:
                     ipaddr = IPAddress(tmp)
                 except Exception as e:
                     raise RuntimeError(
                         'TMDOMAIN: illegal IP address notation: %s' % str(e))
-                # See "Kludge" comment above: assume class C or get more data
-                self.netmask = '255.255.255.0'
-                self.network = str(IPAddress(ipaddr.value & 0xFFFFFF00))
-                self.broadcast = str(IPAddress(ipaddr.value | 0xFF))
-                self.hostIPs = [
-                    str(IPAddress(ipaddr.value + i)) for i in range(40) ]
+                if not ifaceaddr:
+                    # See "Kludge" comment above: class C or get more data
+                    self.netmask = '255.255.255.0'
+                    self.network = str(IPAddress(ipaddr.value & 0xFFFFFF00))
+                    self.broadcast = str(IPAddress(ipaddr.value | 0xFF))
+                    self.hostIPs = [
+                        str(IPAddress(ipaddr.value + i)) for i in range(40) ]
 
         assert len(self.hostIPs) == 40, \
             'TMDOMAIN form only yields %d IP addresses' % len(self.hostIPs)
@@ -220,21 +236,16 @@ class TMgrub(object):
         with open(prepath + '.conf', 'w') as f:
             f.write(conf)
 
-        set_trace()
+        self.coords = [ 'enclosure/%d/node/%d' % ((i // 10) + 1, (i % 10) + 1)
+                        for i in range(40) ]
+        zipped = zip(self.coords, self.hostIPs, self.hostnames)
         with open(prepath + '.hostsfile', 'w') as f:
-            for i, hostname in enumerate(self.hostnames):
-                physloc = 'enclosure/%d/node/%d' % (
-                    (i // 10) + 1,
-                    (i % 10) + 1)
-                ip = '10.11.10.%d' % (i + 1)
-                f.write('id:%s,%s,%s\n' % (physloc, ip, hostname))
+            for h in zipped:
+                f.write('id:%s,%s,%s\n' % h)
 
         # Static assignments
-        with open(prepath + '.addnhosts', 'w') as f:
-            if self.torms:
-                f.write('%s torms' % self.torms)
-            else:
-                f.write('# This file left intentionally blank')
+        with open(prepath + '.morehosts', 'w') as f:
+            f.write(self.morehosts)
 
     def create_environment(self):
         """
@@ -312,7 +323,8 @@ def main(config_file):
     print('Master GRUB configuration in', grubby.tftp_grub_cfg)
     print('      Per-node grub menus in', grubby.tftp_grub_menus_dir)
     print('      Per-node image dirs in', grubby.tftp_images_dir)
-    print('           dnsmasq config in', grubby.dnsmasq_dir)
+    print('           dnsmasq config in %s/%s.*' % (
+        grubby.dnsmasq_dir, grubby.pxe_interface))
 
 
 if __name__ == '__main__':
