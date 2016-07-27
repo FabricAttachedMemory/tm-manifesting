@@ -1,5 +1,5 @@
+#!/usr/bin/python3 --t
 '''TM Nodes'''
-
 from glob import glob
 import json
 import os

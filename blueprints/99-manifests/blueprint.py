@@ -1,3 +1,4 @@
+#!/usr/bin/python3 --t
 '''TM Manifests'''
 import json
 import os
