@@ -42,7 +42,9 @@ class ManifestingConfiguration(object):
         'PORT',
         'L4TM_MIRROR',
         'L4TM_RELEASE',
-        'L4TM_AREAS'
+        'L4TM_AREAS',
+        'TMDOMAIN',
+        'PXE_INTERFACE'
     )
 
     _manifest_env = (
@@ -144,11 +146,18 @@ class ManifestingConfiguration(object):
         Use Flask convenience routine to parse the main config file.
         """
 
-        flask_obj = flask.Flask(time.ctime())   # dummy name
-        flask_obj.config.from_pyfile(self._flask_config_path)
+        try:
+            flask_obj = flask.Flask(time.ctime())   # dummy name
+            flask_obj.config.from_pyfile(self._flask_config_path)
+        except NameError as e:
+            raise RuntimeError('%s; should it be a string?' % str(e))
         self._settings = {}
+        missing = []
         for key in self._configfile_env:
-            if key not in flask_obj.config:
-                raise ValueError('Config file missing "%s"' % key)
-            self._settings[key] = flask_obj.config[key]
+            if key in flask_obj.config:
+                self._settings[key] = flask_obj.config[key]
+            else:
+                missing.append(key)
+        if missing:
+            raise ValueError('Config file missing "%s"' % ', '.join(missing))
         flask_obj = None
