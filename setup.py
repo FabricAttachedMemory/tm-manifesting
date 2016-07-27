@@ -81,7 +81,9 @@ def install_base_packages():
         Install packages required by manifesting service.  It only needs
         files from tm-librarian, it won't actually get run from here.
     """
-    pkg_list = ['apt-utils', 'vmdebootstrap', 'dnsmasq',
+    pkg_list = ['apt-utils', 'vmdebootstrap',
+                'dnsmasq', 'python3-dnspython',
+                'python3-netaddr', 'python3-netifaces',
                 'python3-flask', 'python3-requests',
                 'python3-debian', 'tm-librarian']
     try:
@@ -119,6 +121,7 @@ def main(args):
     print(' ---- Creating workaround Python package path ---- ')
     link_into_python()
 
+    print(' ---- Loading config file "%s" ---- ' % args.config)
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
 
     print(' ---- Creating manifest environment ---- ')
@@ -148,7 +151,7 @@ if __name__ == '__main__':
     try:
         main(args)
         raise SystemExit(0)
-    except RuntimeError as err:
+    except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
     except Exception as err:
         errmsg = 'UNEXPECTED ERROR: %s' % str(err)
