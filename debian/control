@@ -1,0 +1,28 @@
+Source: tm-manifesting
+Section: misc
+Priority: optional
+Maintainer: Zakhar Volchak <zakhar.volchak@hpe.com>
+XS-Requester: l4tm@groups.int.hpe.com
+Origin: HPE
+XS-Source-Origin: native
+Build-Depends: python2.7,
+               debhelper (>= 9),
+               dh-python,
+               dh-exec,
+               python3 (>= 3.2),
+               python:any | python-all:any | python-dev:any | python-all-dev:any
+Standards-Version: 3.9.8
+X-Python3-Version: >= 3.2
+X-Python-Version: >= 2.6
+Vcs-Git: https://github.hpe.com/hpelinux/manifesting.git
+Vcs-Browser: https://github.hpe.com/hpelinux/manifesting
+
+Package: tm-manifesting
+Architecture: all
+Depends: python3 (>= 3.2),
+         python3-flask (>= 0.1)
+Recommends: attr
+Description: Manifesting Server
+ Server daemon that listens to the RestClient requests to manage TMD. For API
+ specifications read static/software-arch.pdf
+
