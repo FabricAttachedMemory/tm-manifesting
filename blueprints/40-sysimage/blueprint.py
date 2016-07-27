@@ -1,4 +1,4 @@
-#!/usr/bin/python3 --t
+#!/usr/bin/python3 -tt
 '''System images'''
 
 from collections import defaultdict
