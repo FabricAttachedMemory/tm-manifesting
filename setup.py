@@ -113,10 +113,10 @@ def main(args):
     assert sys.platform == 'linux'
 
     print(' ---- Installing extra packages ---- ')
-    #install_base_packages()
+    install_base_packages()
 
     print(' ---- Creating workaround Python package path ---- ')
-    #link_into_python()
+    link_into_python()
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
 
