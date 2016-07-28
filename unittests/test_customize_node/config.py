@@ -1,3 +1,4 @@
+#!/usr/bin/python3 -tt
 import os
 import sys
 customize_node = os.path.realpath(__file__)

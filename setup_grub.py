@@ -332,8 +332,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate GRUB2 config files')
     parser.add_argument('--config',
                         help='Manifest API server configuration file',
-                        default='manifest_config.py')
+                        default=None)
     args, _ = parser.parse_known_args(sys.argv[1:])
+
+    if args.config is None:
+        args.config = os.path.realpath(__file__)
+        args.config = os.path.dirname(args.config) + '/manifest_config.py'
 
     msg = 0     # establish scope
     try:

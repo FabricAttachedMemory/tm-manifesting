@@ -1,3 +1,4 @@
+#!/usr/bin/python3 -tt
 """
 !!! NOTE: This script must only be used for manifest_api.py. Other use cases
     are NOT tested or supported !!!

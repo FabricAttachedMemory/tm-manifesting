@@ -110,7 +110,6 @@ def main(args):
     - create folders for TFTP server (dnsmasq)
     - run make_grub_cfg.py script to populate grub config files under TFTP
     """
-
     # Before reading the config file, satisfy some preconditions
     assert os.geteuid() == 0, 'This script requires root permissions'
     assert sys.platform == 'linux'
@@ -142,10 +141,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '-c', '--config',
         help='A config.py file to be used by manifesting server.',
-        default='./manifest_config.py')
+        default=None)
 
     args, _ = parser.parse_known_args()
-    args.config = os.path.realpath(args.config)
+    if args.config is None:
+        args.config = os.path.realpath(__file__)
+        args.config = os.path.dirname(args.config) + "/manifest_config.py"
 
     errmsg = ''     # establish scope
     try:

@@ -29,12 +29,14 @@ def main(config_file, config_vmd=None):
     statvfs = os.statvfs(destdir)
     assert statvfs.f_bsize * statvfs.f_bavail > (10 * (1 << 30)), \
         'Need at least 10G on "%s"' % (destdir)
-    if config_vmd is None:
-        config_vmd = 'configs/filesystem/golden.arm.vmd'
 
-    cmd = '''./configs/vmdebootstrap --no-default-configs --hostname=GOLDEN
+    vmdebootstrap = os.path.realpath(__file__)
+    vmdebootstrap = os.path.dirname(vmdebootstrap) + '/configs/vmdebootstrap'
+
+    cmd = '''%s --no-default-configs --hostname=GOLDEN
              --config=%s
              --mirror=%s''' % (
+                vmdebootstrap,
                 config_vmd,
                 manconfig['L4TM_MIRROR']
              )
@@ -55,13 +57,22 @@ if __name__ == '__main__':
 
     PARSER.add_argument('-c', '--config',
                         help='Manifest API server configuration file',
-                        default='manifest_config.py')
+                        default=None)
 
     PARSER.add_argument('--vmd',
                         help='(DEV ONLY) alternate vmdebootstrap config',
                         default=None)
 
     args, _ = PARSER.parse_known_args()
+
+    tmms_src_folder = os.path.realpath(__file__)
+    tmms_src_folder = os.path.dirname(tmms_src_folder)
+
+    if args.config is None:
+        args.config = tmms_src_folder + '/manifest_config.py'
+
+    if args.vmd is None:
+        args.vmd = tmms_src_folder + '/configs/filesystem/golden.arm.vmd'
 
     errmsg = ''
     try:

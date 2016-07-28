@@ -1,5 +1,5 @@
+#!/usr/bin/python3 -tt
 '''L4TM packages'''
-
 import gzip
 import os
 import requests as HTTP_REQUESTS
