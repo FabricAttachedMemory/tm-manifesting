@@ -32,6 +32,31 @@ from configs.build_config import ManifestingConfiguration
 from utils.utils import make_dir, basepath
 
 #--------------------------------------------------------------------------
+# Templates for config files
+
+_maxnodes = 40  # Revised FRD for 2016
+
+_grub_cfg_template = '''
+set gfxmode=auto
+insmod efi_gop
+insmod efi_uga
+insmod gfxterm
+terminal_output gfxterm
+
+configfile  "(tftp)%s/${net_efinet1_hostname}.menu"
+'''
+
+_grub_menu_template = '''
+set default=0
+set menu_color_highlight=white/brown
+
+menuentry '{hostname} L4TM ARM64'
+  linux (tftp){tftp_dir}/l4tm.vmlinuz
+  append root=/dev/ram0 console=ttyAMA0 acpi=force rw
+  initrd (tftp){tftp_dir}/l4tm.cpio
+'''
+
+# Main grub.cfg template was started from a libvirt NAT setup.  See also
 # https://github.com/ussjoin/piglet/blob/master/config/dnsmasq.conf
 # dnsmasq --help dhcp
 
@@ -75,6 +100,7 @@ tftp-root={tftp_root}
 '''
 
 #--------------------------------------------------------------------------
+
 
 class TMgrub(object):
     """
@@ -122,31 +148,34 @@ class TMgrub(object):
     def hostnames(self):
         return ('node%02d' % n for n in range(1, 41))   # generator
 
-    def configure_dnsmasq(self):
-        '''Started from a libvirt setup'''
+    def evaluate_tmdomain(self, ifaceaddr):
+        '''
+        manifest_config.py TTMDOMAIN variable has simple form like
+           TMDOMAIN = 'have.it.your.way'
+        By decree of the LATC) declares TMCF contains no MAC or IP addresses,
+        only hostnames.  There is only hostname to IP address binding.
+        The authoritative source for that is DNS, as set up by HPE site IT,
+        since all instances of The Machine will always be connected to
+        HPE site LAN.  Thus given the domain name, each host IP can be
+        resolved by DNS.  40 nodes must be available in DNS.
 
-        # Legal interface? FIXME: move this to build_config
-        assert self.pxe_interface in NIF.interfaces(), \
-            'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
-        ifaceaddr = NIF.ifaddresses(self.pxe_interface).get(NIF.AF_INET, False)
-        if ifaceaddr:
-            assert len(ifaceaddr) == 1, \
-                'PXE_INTERFACE "%s" has multiple IPs assigned to it' % self.pxe_interface
-            ifaceaddr = ifaceaddr.pop()
-            self.morehosts = '%s torms' % ifaceaddr['addr']
-            self.broadcast = ifaceaddr['broadcast']
-            self.netmask = ifaceaddr['netmask']
-        else:
-            self.morehosts = '# This file left intentionally blank'
-            # other fields will be filled in by specific kludges
+        In case DNS is not prepped properly :-), one extended element is
+        available in the TMDOMAIN data.  It has three variants:
+        1) Domain name,ipaddr : grab 40 IP addresses starting at ipaddr
+           TMDOMAIN = 'have.it.your.way,192.168.122.111'
+        2) Domain name,ipaddr1-ipaddr2 : grab IP addresses in inclusive range
+           TMDOMAIN = 'have.it.your.way,192.168.122.111-192.168.122.160'
+        3) Domain name,network/bits : grab 40 IPs @ start of network x.y.z.1
+           TMDOMAIN = 'have.it.your.way,10.11.10.0/24'
 
-        iface = 1
+        Only the last has a definitive netmask defined, the other two
+        assume class C.
+        '''
 
-        # Which form is tmdomain? FIXME: move this to build_config
         elems = self.tmdomain.split(',')
         self.tmdomain = elems.pop(0)
 
-        if not elems:           # DNS lookup for all nodes
+        if not elems:           # No extension == DNS lookup for all nodes
             self.hostIPs = []
             for num in range(1, 41):
                 FQDN = 'node%02d.%s' % (num, self.tmdomain)
@@ -174,9 +203,11 @@ class TMgrub(object):
                 tmp = IPAddress(A.address)  # any of them will do
                 self.network = str(IPAddress(tmp.value & 0xFFFFF000))
                 self.broadcast = str(IPAddress(tmp.value | 0xFFF))
-        else:
+
+        else:   # Extended element(s) are available
             assert len(elems) == 1, 'Too many CSV fields in TMDOMAIN'
             tmp = elems[0]
+
             if '/' in tmp:      # CIDR network
                 try:
                     network = IPNetwork(tmp)
@@ -188,27 +219,32 @@ class TMgrub(object):
                 self.broadcast = str(network.broadcast)
                 self.hostIPs = []
                 for i, h in enumerate(network.iter_hosts()):  # no broadcasts
-                    if i >= 40:
+                    if i >= _maxnodes:
                         break
                     self.hostIPs.append(str(h))
-            elif '-' in tmp:    # Inclusive range
+
+            elif '-' in tmp:    # Inclusive IP address range
                 try:
                     elems = tmp.split('-')
-                    iprange = list(iter_iprange(elems[0], elems[1]))[:40]
+                    iprange = list(
+                        iter_iprange(elems[0], elems[1]))[:_maxnodes]
                 except Exception as e:
                     raise RuntimeError(
                         'TMDOMAIN: illegal range notation: %s' % str(e))
-                assert len(iprange) == 40, 'TMDOMAIN IP range is too small'
-                self.hostIPs = [ str(h) for h in iprange ]
+                assert len(iprange) == _maxnodes, \
+                    'TMDOMAIN IP range is not %d addresses' % _maxnodes
+                self.hostIPs = [str(h) for h in iprange]
                 if not ifaceaddr:
                     # Kludge.  The smallest possible netmask is 6 bits (64)
                     # but if the range crossed boundaries...Assume class C
                     # containment.  iprange_to_cidrs() seems like it ought
                     # to help but it ate my brain.
                     self.netmask = '255.255.255.0'
-                    self.network = str(IPAddress(iprange[0].value & 0xFFFFFF00))
+                    self.network = str(
+                        IPAddress(iprange[0].value & 0xFFFFFF00))
                     self.broadcast = str(IPAddress(iprange[0].value | 0xFF))
-            else:               # Single IP address
+
+            else:   # Single IP address
                 try:
                     ipaddr = IPAddress(tmp)
                 except Exception as e:
@@ -219,16 +255,37 @@ class TMgrub(object):
                     self.netmask = '255.255.255.0'
                     self.network = str(IPAddress(ipaddr.value & 0xFFFFFF00))
                     self.broadcast = str(IPAddress(ipaddr.value | 0xFF))
-                    self.hostIPs = [
-                        str(IPAddress(ipaddr.value + i)) for i in range(40) ]
+                    self.hostIPs = [str(IPAddress(ipaddr.value + i))
+                                    for i in range(_maxnodes)]
 
-        assert len(self.hostIPs) == 40, \
+        assert len(self.hostIPs) == _maxnodes, \
             'TMDOMAIN form only yields %d IP addresses' % len(self.hostIPs)
 
         size = os.stat(self.tftp_grub_efi).st_size
         self.boot_file_size_512_blocks = size // 512
         assert self.boot_file_size_512_blocks * 512 == size, \
             'EFI file "%s" size is not a multiple of 512' % self.tftp_grub_efi
+
+    def configure_dnsmasq(self):
+
+        # Legal interface? FIXME: move this to build_config
+        assert self.pxe_interface in NIF.interfaces(), \
+            'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
+        ifaceaddr = NIF.ifaddresses(self.pxe_interface).get(NIF.AF_INET, False)
+        if ifaceaddr:
+            assert len(ifaceaddr) == 1, \
+                'PXE_INTERFACE "%s" has multiple IPs assigned to it' % \
+                self.pxe_interface
+            ifaceaddr = ifaceaddr.pop()
+            self.morehosts = '%s torms' % ifaceaddr['addr']
+            self.broadcast = ifaceaddr['broadcast']
+            self.netmask = ifaceaddr['netmask']
+        else:
+            self.morehosts = '# This file left intentionally blank'
+            # other fields will be filled in by specific kludges
+
+        self.evaluate_tmdomain(ifaceaddr)
+
         conf = _dnsmasq_conf_template.format(**vars(self))
 
         prepath = '%s/%s' % (self.dnsmasq_dir, self.pxe_interface)
@@ -236,8 +293,8 @@ class TMgrub(object):
         with open(prepath + '.conf', 'w') as f:
             f.write(conf)
 
-        self.coords = [ 'enclosure/%d/node/%d' % ((i // 10) + 1, (i % 10) + 1)
-                        for i in range(40) ]
+        self.coords = ['enclosure/%d/node/%d' % ((i // 10) + 1, (i % 10) + 1)
+                       for i in range(_maxnodes)]
         zipped = zip(self.coords, self.hostIPs, self.hostnames)
         with open(prepath + '.hostsfile', 'w') as f:
             for h in zipped:
@@ -247,9 +304,9 @@ class TMgrub(object):
         with open(prepath + '.morehosts', 'w') as f:
             f.write(self.morehosts)
 
-    def create_environment(self):
+    def create_tftp_environment(self):
         """
-            Create tftp environment: grub menu files based off
+            Create subdirectories under TFTP and add grub menu files based on
         node's hostname, which is implicitly the node's physical location.
         These files are static over the lifetime of a machine instance. Then
         create filesystem image directories per these coords for PXE boot
@@ -257,21 +314,21 @@ class TMgrub(object):
         those directories when nodes are bound.
         """
 
-        grub_cfg_content = self.grub_cfg_compose()
+        grub_cfg_content = self.compose_grub_cfg()
         with open(self.tftp_grub_cfg, 'w') as file_obj:
             file_obj.write(grub_cfg_content)
 
         for hostname in self.hostnames:
             tftp_node_fs = self.tftp_images_dir + '/' + hostname
             make_dir(tftp_node_fs)
-            grub_menu_content = self.grub_menu_compose(hostname)
+            grub_menu_content = self.compose_grub_menu(hostname)
             menu_fname = '%s/%s.menu' % (self.tftp_grub_menus_dir, hostname)
             with open(menu_fname, 'w') as file_obj:
                 file_obj.write(str(grub_menu_content))
 
         self.configure_dnsmasq()
 
-    def grub_menu_compose(self, hostname):
+    def compose_grub_menu(self, hostname):
         """
             Return grub menu content that contains .format anchors:
         {hostname} - name of the node
@@ -279,34 +336,16 @@ class TMgrub(object):
                     .cpio and .vmlinuz.
         """
         tftp_dir = '%s/%s' % (self.chroot_images_dir, hostname)
-        template = """set default=0
-set menu_color_highlight=white/brown
+        return _grub_menu_template.format(hostname=hostname, tftp_dir=tftp_dir)
 
-menuentry '{hostname} L4TM ARM64'
-  linux (tftp){tftp_dir}/l4tm.vmlinuz
-  append root=/dev/ram0 console=ttyAMA0 acpi=force rw
-  initrd (tftp){tftp_dir}/l4tm.cpio
-"""
-        return template.format(hostname=hostname, tftp_dir=tftp_dir)
-
-    def grub_cfg_compose(self):
+    def compose_grub_cfg(self):
         """
             Template string for a grub.cfg that references grub menu
         for each node on PXE boot.
         """
-        header_tplt = """set gfxmode=auto
-insmod efi_gop
-insmod efi_uga
-insmod gfxterm
-terminal_output gfxterm
-"""
 
-        lines = header_tplt.split('\n')
-
-        configfile = '%s/${net_default_hostname}' % (self.chroot_grub_menus_dir)
-        lines.append('configfile "(tftp)%s' % configfile)
-
-        return '\n'.join(lines)
+        tmp = _grub_cfg_template % self.chroot_grub_menus_dir
+        return tmp
 
 
 def main(config_file):
@@ -319,7 +358,7 @@ def main(config_file):
     if missing:
         raise RuntimeError('\n'.join(missing))
     grubby = TMgrub(manconfig)
-    grubby.create_environment()
+    grubby.create_tftp_environment()
     print('Master GRUB configuration in', grubby.tftp_grub_cfg)
     print('      Per-node grub menus in', grubby.tftp_grub_menus_dir)
     print('      Per-node image dirs in', grubby.tftp_images_dir)
@@ -338,6 +377,7 @@ if __name__ == '__main__':
     if args.config is None:
         args.config = os.path.realpath(__file__)
         args.config = os.path.dirname(args.config) + '/manifest_config.py'
+        print('Using config file', args.config)
 
     msg = 0     # establish scope
     try:
