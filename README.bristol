@@ -38,7 +38,7 @@ almost certainly need to change the DNSMASQ_INTERFACE option.
 =============================================================================
         MANIFESTING ENVIRONMENT: PRIMARY SETUP
 
-$ sudo ./setup.py
+$ sudo ./setup_environment.py
 
 You may see some package installation output from apt-get depending on
 the packages currently on your system.  A few operation summary lines

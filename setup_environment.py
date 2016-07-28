@@ -13,8 +13,10 @@ import sys
 from pdb import set_trace
 
 # Imports are relative because implicit Python path "tmms" may not exist yet.
-
-from configs.build_config import ManifestingConfiguration
+# Importing from configs.build_config will NOT work if there is no flask
+# installed on the system. Therefore, import build_config in the main() function,
+# right after the "install_base_packages()" routine is finished.
+ManifestingConfiguration = None
 
 from utils.utils import make_dir
 
@@ -119,6 +121,8 @@ def main(args):
 
     print(' ---- Creating workaround Python package path ---- ')
     #link_into_python()
+
+    from configs.build_config import ManifestingConfiguration
 
     print(' ---- Loading config file "%s" ---- ' % args.config)
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
