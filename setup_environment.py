@@ -114,11 +114,12 @@ def main(args):
     assert os.geteuid() == 0, 'This script requires root permissions'
     assert sys.platform == 'linux'
 
-    print(' ---- Installing extra packages ---- ')
-    install_base_packages()
+    if not args.packaging:
+        print(' ---- Installing extra packages ---- ')
+        install_base_packages()
 
-    print(' ---- Creating workaround Python package path ---- ')
-    link_into_python()
+        print(' ---- Creating workaround Python package path ---- ')
+        link_into_python()
 
     print(' ---- Loading config file "%s" ---- ' % args.config)
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
@@ -142,6 +143,12 @@ if __name__ == '__main__':
         '-c', '--config',
         help='A config.py file to be used by manifesting server.',
         default=None)
+    parser.add_argument(
+        '-P', '--packaging',
+        help='NOTE: Don\'t touch this flag, unless you understand that its doing!\n' +
+             'This flag ignores installation of packages and ignores creation of ' +
+             'symbolic link to the manifesting source code..',
+        action='store_true')
 
     args, _ = parser.parse_known_args()
     if args.config is None:
