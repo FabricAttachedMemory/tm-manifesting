@@ -303,7 +303,7 @@ terminal_output gfxterm
 
         lines = header_tplt.split('\n')
 
-        configfile = '%s/${net_default_hostname}' % (self.chroot_grub_menus_dir)
+        configfile = '%s/${net_efinet1_hostname}' % (self.chroot_grub_menus_dir)
         lines.append('configfile "(tftp)%s' % configfile)
 
         return '\n'.join(lines)
