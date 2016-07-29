@@ -29,7 +29,7 @@ import netifaces as NIF
 from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
-from utils.utils import make_dir, basepath
+from utils.utils import make_dir, make_symlink, basepath
 
 #--------------------------------------------------------------------------
 # Templates for config files
@@ -45,7 +45,7 @@ insmod progress
 
 terminal_output gfxterm
 
-configfile  "(tftp)%s/${net_efinet1_hostname}.menu"
+configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 '''
 
 _grub_menu_template = '''
@@ -53,10 +53,10 @@ set default=0
 set menu_color_highlight=white/brown
 progress
 
-menuentry '{hostname} L4TM ARM64'
-  linux (tftp){tftp_dir}/{hostname}.vmlinuz
-  append root=/dev/ram0 console=ttyAMA0 acpi=force rw
-  initrd (tftp){tftp_dir}/{hostname}.cpio
+menuentry '{hostname} L4TM ARM64' {{
+    linux (tftp){images_dir}/{hostname}.vmlinuz root=/dev/ram0 console=ttyAMA0 acpi=force rw
+    initrd (tftp){images_dir}/{hostname}.cpio
+}}
 '''
 
 # Main grub.cfg template was started from a libvirt NAT setup.  See also
@@ -261,14 +261,6 @@ class TMgrub(object):
                     self.hostIPs = [str(IPAddress(ipaddr.value + i))
                                     for i in range(_maxnodes)]
 
-        assert len(self.hostIPs) == _maxnodes, \
-            'TMDOMAIN form only yields %d IP addresses' % len(self.hostIPs)
-
-        size = os.stat(self.tftp_grub_efi).st_size
-        self.boot_file_size_512_blocks = size // 512
-        assert self.boot_file_size_512_blocks * 512 == size, \
-            'EFI file "%s" size is not a multiple of 512' % self.tftp_grub_efi
-
     def configure_dnsmasq(self):
 
         # Legal interface? FIXME: move this to build_config
@@ -288,6 +280,17 @@ class TMgrub(object):
             # other fields will be filled in by specific kludges
 
         self.evaluate_tmdomain(ifaceaddr)
+
+        assert len(self.hostIPs) == _maxnodes, \
+            'TMDOMAIN form yielded %d IP addresses, not %d' % (
+                len(self.hostIPs), _maxnodes)
+
+        efisource = os.path.realpath('PoC/firmware/bootaa64.efi')
+        make_symlink(efisource, self.tftp_grub_efi)
+        size = os.stat(self.tftp_grub_efi).st_size
+        self.boot_file_size_512_blocks = size // 512
+        assert self.boot_file_size_512_blocks * 512 == size, \
+            'EFI file "%s" size is not a multiple of 512' % self.tftp_grub_efi
 
         conf = _dnsmasq_conf_template.format(**vars(self))
 
@@ -332,14 +335,11 @@ class TMgrub(object):
         self.configure_dnsmasq()
 
     def compose_grub_menu(self, hostname):
-        """
-            Return grub menu content that contains .format anchors:
-        {hostname} - name of the node
-        {tftp_dir} - TFTP-relative path to the node's filesystem image
-                    .cpio and .vmlinuz.
-        """
-        tftp_dir = '%s/%s' % (self.chroot_images_dir, hostname)
-        return _grub_menu_template.format(hostname=hostname, tftp_dir=tftp_dir)
+        """Return grub menu content keyed on hostname."""
+        # Node binding places {hostname}.vmlinuz and {hostname}.cpio here
+        images_dir = '%s/%s' % (self.chroot_images_dir, hostname)
+        return _grub_menu_template.format(
+            hostname=hostname, images_dir=images_dir)
 
     def compose_grub_cfg(self):
         """
@@ -347,8 +347,7 @@ class TMgrub(object):
         for each node on PXE boot.
         """
 
-        tmp = _grub_cfg_template % self.chroot_grub_menus_dir
-        return tmp
+        return _grub_cfg_template.format(menudir=self.chroot_grub_menus_dir)
 
 
 def main(config_file):
