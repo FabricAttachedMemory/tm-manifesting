@@ -30,17 +30,18 @@ except ImportError as e:
 
 def parse_args():
     """ Parse system arguments set from command line."""
-    PARSER = argparse.ArgumentParser(
-        description='Manifesting server run settings')
-    PARSER.add_argument('--config', help='Python (Flask) config file',
-                        default=None)
-    PARSER.add_argument('--verbose', help='Make it talk.',
+    parser = argparse.ArgumentParser(
+        description='Manifesting API server runtime settings')
+    ManifestingConfiguration.parser_add_config(parser)
+    parser.add_argument('--verbose', help='Make it talk.',
                         type=int, default=0)
-    PARSER.add_argument('--debug', help='Turn on flask debugging',
+    parser.add_argument('--debug', help='Turn on flask debugging',
                         action='store_true')
-    PARSER.add_argument('--dry-run', help='No action; simulation of events.',
+    parser.add_argument('--dry-run', help='No action; simulation of events.',
                         action='store_true')
-    return vars(PARSER.parse_known_args()[0])
+    args, _ = parser.parse_known_args()
+    print('Using config file', args.config)
+    return vars(args)
 
 ###########################################################################
 # Set config variables for future use across the blueprints.
