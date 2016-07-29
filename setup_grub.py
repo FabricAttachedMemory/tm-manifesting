@@ -371,10 +371,9 @@ def main(config_file):
 if __name__ == '__main__':
     """ Parse command line arguments. """
     parser = argparse.ArgumentParser(description='Generate GRUB2 config files')
-    parser.add_argument('--config',
-                        help='Manifest API server configuration file',
-                        default=None)
+    ManifestingConfiguration.parser_add_config(parser)
     args, _ = parser.parse_known_args(sys.argv[1:])
+    print('Using config file', args.config)
 
     if args.config is None:
         args.config = os.path.realpath(__file__)
