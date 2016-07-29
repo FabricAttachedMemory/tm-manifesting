@@ -74,7 +74,7 @@ class TmNode(tm_base.TmCmd):
         assert len(target) >= 2, 'Missing argument: setnode <node coordinate> <manifest>'
         payload = '{ "manifest" :  "%s" }' % target[1]
         api_url = '%s/%s/%s' % (self.url, 'node/', target[0])
-        clean_url = os.path.normpath(api_url.split('http://')[0])
+        clean_url = os.path.normpath(api_url.split('http://')[-1])
         api_url = 'http://' + clean_url
         data = self.http_request(api_url, payload=payload)
         return self.to_json(data)

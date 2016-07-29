@@ -102,8 +102,9 @@ def main(args):
     assert os.geteuid() == 0, 'This script requires root permissions'
     assert sys.platform == 'linux'
 
-    print(' ---- Creating workaround Python package path ---- ')
-    link_into_python()
+    if not args.packaging:
+        print(' ---- Creating workaround Python package path ---- ')
+        link_into_python()
 
     print(' ---- Loading config file "%s" ---- ' % args.config)
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
@@ -121,15 +122,23 @@ def main(args):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Setup arguments intended for tmms developers only')
+    parser.add_argument(
+        '-P', '--packaging',
+        help='This flag should only be set by post-setup scripts in Debian ' +
+             'installer. Using it while trying to run from the git repo will ' +
+             'result in a non-functioning environment.\n',
+        action='store_true')
 
     # A fresh L4TM may not have some things, including flask.
     # Chicken-and-egg: flask is needed to parse config file
 
-    print(' ---- Installing base packages ---- ')
-    install_base_packages()
+    args, _ = parser.parse_known_args()
+    if not args.packaging:
+        print(' ---- Installing base packages ---- ')
+        install_base_packages()
 
-    parser = argparse.ArgumentParser(
-        description='Primary setup options')
     ManifestingConfiguration.parser_add_config(parser)
     args, _ = parser.parse_known_args()
     print('Using config file', args.config)
