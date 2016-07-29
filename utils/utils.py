@@ -17,6 +17,30 @@ def make_dir(path):
             raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
 
 
+def make_symlink(source, target):
+    '''
+    Wrap os.symlink; succeed if target exists properly.  Used in setup.
+    FIXME: get rid of def symlink_target() in 30-nodes/customize_node.
+    :param 'source': [str] path to a file to create a symbolic link from.
+    :param 'target': [str] path to the file to create a symbolic link to.
+    :return: 'None' on success or raise 'RuntimeError'
+    '''
+
+    print(' - symlink [%s] -> [%s]' % (source, target))
+    try:
+        os.symlink(source, target)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise RuntimeError('symlink(%s -> %s) failed: %s' % (
+                source, target, str(e)))
+        if not os.path.islink(target):
+            raise RuntimeError('Existing "%s" is not a symlink' % target)
+        if os.path.realpath(target) != source:
+            raise RuntimeError(
+                'Existing symlink "%s" does not point to %s' % (
+                    target, source))
+
+
 def basepath(fullpath, leading):
     '''Strip "leading" from "fullpath".  Certain restrictions may apply.'''
     for p in (fullpath, leading):
@@ -71,9 +95,8 @@ def symlink_target(source, target):
     """
         Wrapper to os.symlink to trap errors.
 
-    :param 'source': [str] path to a file to create a symbolic link from.
-    :param 'target': [str] path to the file to create a symbolic link to.
-    :return: 'None' on success or raise 'RuntimeError'
+        FIXME: THIS IS NOT IMPORTED ANYWHERE.  CAN IT BE DELETED?
+
     """
     try:
         os.symlink(source, target)

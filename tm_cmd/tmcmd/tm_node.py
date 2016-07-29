@@ -65,16 +65,16 @@ class TmNode(tm_base.TmCmd):
     def set_node(self, target, **options):
         """
     SYNOPSIS
-        setnode <node name> <manifest.json>
+        setnode <node name> <manifest>
 
     DESCRIPTION
             Select the manifest for the specified node and construct a kernel
         and root FS that the node will use the next time it boots.
         """
-        assert len(target) >= 2, 'Missing argument: setnode <manifest.json> <node coordinate>!'
-        payload = '{ "manifest" :  "%s" }' % target[0]
-        api_url = '%s/%s/%s' % (self.url, 'node/', target[1])
-        clean_url = os.path.normpath(api_url.split('http://')[1])
+        assert len(target) >= 2, 'Missing argument: setnode <node coordinate> <manifest>'
+        payload = '{ "manifest" :  "%s" }' % target[1]
+        api_url = '%s/%s/%s' % (self.url, 'node/', target[0])
+        clean_url = os.path.normpath(api_url.split('http://')[-1])
         api_url = 'http://' + clean_url
         data = self.http_request(api_url, payload=payload)
         return self.to_json(data)

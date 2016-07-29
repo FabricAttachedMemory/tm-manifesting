@@ -16,7 +16,7 @@ from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
 
-from utils.utils import make_dir
+from utils.utils import make_dir, make_symlink
 
 
 def link_into_python():
@@ -35,20 +35,8 @@ def link_into_python():
     for path in paths_to_lib:
         if path not in sys.path:
             break
-
         path = path + '/tmms'
-        print(' - symlink [%s] -> [%s]' % (path, repo_path))
-        try:
-            os.symlink(repo_path, path)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise RuntimeError('symlink() failed: %s' % str(e))
-            if not os.path.islink(path):
-                raise RuntimeError('Existing "%s" is not a symlink' % path)
-            if os.path.realpath(path) != repo_path:
-                raise RuntimeError(
-                    'Existing symlink "%s" does not point to %s' % (
-                        path, repo_path))
+        make_symlink(repo_path, path)
     else:
         raise RuntimeError(
             'Can\'t find suitable path in python environment to link tmms!')
@@ -115,9 +103,6 @@ def main(args):
     assert sys.platform == 'linux'
 
     if not args.packaging:
-        print(' ---- Installing extra packages ---- ')
-        install_base_packages()
-
         print(' ---- Creating workaround Python package path ---- ')
         link_into_python()
 
@@ -140,20 +125,24 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Setup arguments intended for tmms developers only')
     parser.add_argument(
-        '-c', '--config',
-        help='A config.py file to be used by manifesting server.',
-        default=None)
-    parser.add_argument(
         '-P', '--packaging',
         help='NOTE: Don\'t touch this flag, unless you understand that its doing!\n' +
              'This flag ignores installation of packages and ignores creation of ' +
              'symbolic link to the manifesting source code..',
         action='store_true')
 
+    # A fresh L4TM may not have some things, including flask.
+    # Chicken-and-egg: flask is needed to parse config file
+
     args, _ = parser.parse_known_args()
-    if args.config is None:
-        args.config = os.path.realpath(__file__)
-        args.config = os.path.dirname(args.config) + "/manifest_config.py"
+    if not args.packaging:
+        print(' ---- Installing base packages ---- ')
+        install_base_packages()
+
+    set_trace()
+    ManifestingConfiguration.parser_add_config(parser)
+    args, _ = parser.parse_known_args()
+    print('Using config file', args.config)
 
     errmsg = ''     # establish scope
     try:

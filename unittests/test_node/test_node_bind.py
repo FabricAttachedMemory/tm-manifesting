@@ -7,9 +7,11 @@ import os
 import unittest
 import time
 
+from pdb import set_trace
+
 from tmms.tm_cmd import tmcmd as TMCMD
 from tmms.unittests import suite_config as config
-from pdb import set_trace
+from tm_librarian.tmconfig import TMConfig
 
 
 class BindNodeTest(unittest.TestCase):
@@ -25,7 +27,7 @@ class BindNodeTest(unittest.TestCase):
         """
         """
         cls.tmcmd = TMCMD.tmnode
-        cls.tmconfig = config.hpetmconfig
+        cls.tmconfig = TMConfig('/etc/tmconfig')
         cls.coords = sorted([node.coordinate for node in cls.tmconfig.nodes])
 
         TMCMD.tmmanifest.upload(['', cls.manifest_file])
@@ -73,7 +75,7 @@ class BindNodeTest(unittest.TestCase):
         """
         """
         node = self.coords[-1]
-        args = [self.manifest, node]
+        args = [node, self.manifest]
         output = json.loads( self.tmcmd.set_node(args) )
         self.assertTrue('201' in output or '200' in output,
                 'Nor 200 nor 201 was returned on setnode: %s instead' % output.keys())

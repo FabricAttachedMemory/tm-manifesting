@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -tt
 """
-!!! NOTE: This script must only be used for manifest_api.py. Other use cases
-    are NOT tested or supported !!!
+!!! NOTE: This script must only be used for manifesting commands.
+    Other use cases are NOT tested or supported !!!
 
     This module parses a python (.py) config file into local variables and
     constructs several other parameters that are useful for the manifesting
@@ -19,7 +19,7 @@
 """
 
 from collections import namedtuple
-import flask
+import inspect
 import os
 import sys
 import time
@@ -145,6 +145,7 @@ class ManifestingConfiguration(object):
         """
         Use Flask convenience routine to parse the main config file.
         """
+        import flask    # DE102: this must come AFTER installing base packages
 
         try:
             flask_obj = flask.Flask(time.ctime())   # dummy name
@@ -161,3 +162,27 @@ class ManifestingConfiguration(object):
         if missing:
             raise ValueError('Config file missing "%s"' % ', '.join(missing))
         flask_obj = None
+
+    @staticmethod
+    def tmms_chroot(ref=1):
+        '''Relocate the apparent file path to account for symlinks.'''
+        # http://stackoverflow.com/questions/11757801/get-the-file-of-the-function-one-level-up-in-the-stack
+        # It lives here because this is a known import from the repo
+        # top-level commands setup_*.py and manifest_api.py.
+        actual = inspect.getfile(sys._getframe(ref))
+        actual = os.path.realpath(actual)
+        actual = os.path.dirname(actual)
+        return actual
+
+    @classmethod
+    def parser_add_config(cls, parser):
+        '''Search for a default config file and add --config to parser'''
+
+        config = '/etc/tmms'
+        if not os.path.isfile(config):  # Use the sample supplied with repo
+            config = cls.tmms_chroot(ref=2) + '/manifest_config.py'
+
+        parser.add_argument(
+            '-c', '--config',
+            help='Configuration file to be used by manifesting commands.\nDefault=%s' % config,
+            default=config)

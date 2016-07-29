@@ -27,22 +27,34 @@ All commands below need to be run from the "manifesting" directory.
 
 TMCF (The Machine Configuration File) is NOT needed for any setup steps.
 You only need that large JSON file to actually run the API server.
+file Supplying that file is left as an exercise for the reader, and it should
+go in the file "/etc/tmconfig" (but read on).  The Librarian also references
+/etc/tmconfig by default.
 
-The default manifesting configuration file is configs/manifest_config.py.  
-It will be used by all commands unless they are given the --config option.
+The sample manifesting configuration file supplied with the repo is 
+manifest_config.py.  Yes it is Python syntax.  No, it will most likely NOT
+work for you without customization.  Copy it to a (new) file "/etc/tmms" and
+make edits in that copy.  There are many comments in that file explaining
+the variables and their values.  By default, all the commands (setup_* and
+manifest_api.py) will look for /etc/tmms for their configuration.
 
-If you want to make changes, copy it to a different location to edit it.
-Remember to use the --config option for all the commands.  You will
-almost certainly need to change the DNSMASQ_INTERFACE option.
+You will almost certainly need to change the PXE_INTERFACE option.  You
+should also add 'main' to the L4TM_AREAS tuple.
+
+You may also keep a custom file in a custom place, like $HOME/mytmms.
+To read it, use the --config option of all commands.  You have to do it
+with all commands to get consistent results.
 
 =============================================================================
         MANIFESTING ENVIRONMENT: PRIMARY SETUP
 
-$ sudo ./setup.py
+$ sudo ./setup_environment.py
 
 You may see some package installation output from apt-get depending on
-the packages currently on your system.  A few operation summary lines
-will always be output.
+the packages currently on your system.
+
+The configuration file chosen will be display, then a summary of 
+operations performed.
 
 Hopefully all error messages are clear on the nature of any problem(s)
 and suggestive as to a remedy.
@@ -60,7 +72,7 @@ $ sudo ./setup_golden_image.py
 =============================================================================
         MANIFESTING: RUN API SERVER
 
-At this point you can try to run manifesting server:
+At this point you should be able to run the manifesting server:
 
 $ sudo ./manifest_api.py
 
@@ -76,26 +88,15 @@ the repo clone, "manifesting".
 sudo ln -s $PWD/manifest_api.py /usr/local/bin/tm-manifest-server
 sudo ln -s $PWD/tm_cmd/tm_manifest.py /usr/local/bin/tm-manifest
 
-=============================================================================
+If you run:
+
+$ sudo tm-manifest-server
+
+A manifesting API server should start and print out the API endpoints
+it serves.
 
 If you run:
 
-tm-manifest help
+$ tm-manifest help
 
-you should get a list of commands.
-This is equivalent to (if you were not doing symbolic links):
-
-~/Development/manifesting/tm_cmd/tm_manifest.py help
-
------------------------------------------------------------------------------
-
-If you run:
-
-tm-manifest-server
-
-That should start a manifesting server and print out bunch of stuff on the screen.
-This is equivalent to (if you were not doing symbolic links):
-
-~/Development/manifesting/manifest_api.py
-
-===============================================================================
+you should get a list of directives.
