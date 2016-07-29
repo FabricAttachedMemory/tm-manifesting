@@ -133,7 +133,8 @@ def bind_node_to_manifest(node_coord=None):
         assert get_node_status(node_coord) is None, 'Node is occupied. Remove binding before assigning a new one.'
 
         resp_status = 413
-        assert int(request.headers['Content-Length']) < 200, 'Content is too long! Max size is 200 characters.'
+        assert int(request.headers['Content-Length']) < 200, \
+            'Content is too long! Max size is 200 characters.'
 
         resp_status = 400       # if failed at this point, then it is a server error.
         # Validate requested manifest exists.
@@ -144,8 +145,7 @@ def bind_node_to_manifest(node_coord=None):
 
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
-        assert (manifest is not None) and node_coord in BP.node_coords, "The specified node or manifest does not exist."
-
+        assert manifest is not None, "The specified manifest does not exist."
         response = build_node(manifest, node_coord)
     except BadRequest as e:
         response = make_response(e.get_response(), resp_status)
@@ -237,7 +237,7 @@ def get_node_status(node_coord):
     :return: [dict] values that describes node's state (status, message, manifest).
              (ERS document section 8.6)
     """
-    assert node_coord in BP.node_coords, 'Unknown node coordinate. Make sure requested node is in tmconfig.json'
+    assert node_coord in BP.node_coords, 'Unknown node coordinate'
 
     node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
     status_file = node_location + '/' + 'status.json'
