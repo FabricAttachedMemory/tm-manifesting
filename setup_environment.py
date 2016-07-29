@@ -126,9 +126,9 @@ if __name__ == '__main__':
         description='Setup arguments intended for tmms developers only')
     parser.add_argument(
         '-P', '--packaging',
-        help='NOTE: Don\'t touch this flag, unless you understand that its doing!\n' +
-             'This flag ignores installation of packages and ignores creation of ' +
-             'symbolic link to the manifesting source code..',
+        help='This flag should only be set by post-setup scripts in Debian ' +
+             'installer. Using it while trying to run from the git repo will ' +
+             'result in a non-functioning environment.\n',
         action='store_true')
 
     # A fresh L4TM may not have some things, including flask.
