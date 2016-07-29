@@ -61,7 +61,7 @@ if __name__ == '__main__':
                         help='(DEV ONLY) alternate vmdebootstrap config',
                         default=None)
 
-    args, _ = PARSER.parse_known_args()
+    args, _ = parser.parse_known_args()
     print('Using config file', args.config)
 
     tmms_src_folder = os.path.realpath(__file__)
