@@ -41,6 +41,8 @@ set gfxmode=auto
 insmod efi_gop
 insmod efi_uga
 insmod gfxterm
+insmod progress
+
 terminal_output gfxterm
 
 configfile  "(tftp)%s/${net_efinet1_hostname}.menu"
@@ -49,11 +51,12 @@ configfile  "(tftp)%s/${net_efinet1_hostname}.menu"
 _grub_menu_template = '''
 set default=0
 set menu_color_highlight=white/brown
+progress
 
 menuentry '{hostname} L4TM ARM64'
-  linux (tftp){tftp_dir}/l4tm.vmlinuz
+  linux (tftp){tftp_dir}/{hostname}.vmlinuz
   append root=/dev/ram0 console=ttyAMA0 acpi=force rw
-  initrd (tftp){tftp_dir}/l4tm.cpio
+  initrd (tftp){tftp_dir}/{hostname}.cpio
 '''
 
 # Main grub.cfg template was started from a libvirt NAT setup.  See also
