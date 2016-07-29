@@ -139,7 +139,6 @@ if __name__ == '__main__':
         print(' ---- Installing base packages ---- ')
         install_base_packages()
 
-    set_trace()
     ManifestingConfiguration.parser_add_config(parser)
     args, _ = parser.parse_known_args()
     print('Using config file', args.config)
