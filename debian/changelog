@@ -2,7 +2,7 @@ tm-manifesting (1.0-1~hpelinux1) catapult; urgency=low
 
   * Initial release for l4tm distro.
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 1 August 2016 14:03:52 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Monday, 1 August 2016 14:03:52 -0600
 
 tm-manifesting (1.0) catapult; urgency=low
 
