@@ -35,6 +35,7 @@ Depends: ${misc:Depends},
          python3-requests,
          python3-debian,
          tm-librarian
+         python:any | python-all:any | python-dev:any | python-all-dev:any
 Recommends: attr
 Description: Manifesting Server
  Server daemon that listens to the RestClient requests to manage TMD. For API
