@@ -52,18 +52,17 @@ if __name__ == '__main__':
 
     manconfig = ManifestingConfiguration
 
-    PARSER = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description='Generate golden image for nodes of The Machine.')
+    ManifestingConfiguration.parser_add_config(parser)
+    args, _ = parser.parse_known_args()
 
-    PARSER.add_argument('-c', '--config',
-                        help='Manifest API server configuration file',
-                        default=None)
-
-    PARSER.add_argument('--vmd',
+    parser.add_argument('--vmd',
                         help='(DEV ONLY) alternate vmdebootstrap config',
                         default=None)
 
-    args, _ = PARSER.parse_known_args()
+    args, _ = parser.parse_known_args()
+    print('Using config file', args.config)
 
     tmms_src_folder = os.path.realpath(__file__)
     tmms_src_folder = os.path.dirname(tmms_src_folder)
