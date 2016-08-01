@@ -1,4 +1,4 @@
-tm-manifesting (1.0+l4tm1) catapult; urgency=low
+tm-manifesting (1.0-0+l4tm1) catapult; urgency=low
 
   * Initial release for l4tm distro.
 
