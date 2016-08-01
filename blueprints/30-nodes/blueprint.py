@@ -37,7 +37,6 @@ def node():
 def node_name(name=None):
     try:
         node = BP.nodes[name][0]
-        MACaddress = node.soc.socMacAddress
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
@@ -45,7 +44,7 @@ def node_name(name=None):
             manifest=_data.get(name, '(no binding)')
         )
     except Exception as e:
-        return make_response('Kaboom', 404)
+        return make_response('Kaboom: %s' % str(e), 404)
 
 ###########################################################################
 # API
