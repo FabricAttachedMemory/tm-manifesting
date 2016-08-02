@@ -127,8 +127,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '-P', '--packaging',
         help='This flag should only be set by post-setup scripts in Debian ' +
-             'installer. Using it while trying to run from the git repo will ' +
-             'result in a non-functioning environment.\n',
+             'installer. Using it while trying to run from the git repo ' +
+             'will result in a non-functioning environment.\n',
         action='store_true')
 
     # A fresh L4TM may not have some things, including flask.

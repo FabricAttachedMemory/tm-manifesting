@@ -154,7 +154,8 @@ class TMgrub(object):
             self.tftp_grub_menus_dir, self.tftp_root)
 
         grubURL = manconfig['L4TM_MIRROR'] + \
-        '/dists/catapult/main/uefi/grub2-arm64/current/grubnetaa64.efi.signed'
+            '/dists/catapult/main/uefi/grub2-arm64/' +\
+            'current/grubnetaa64.efi.signed'
         try:
             r = HTTP_REQUESTS.get(grubURL)
             assert r.status_code == 200, 'Cannot retrieve "%s"' % grubURL
