@@ -94,7 +94,7 @@ dhcp-match=TMAS-EFI,option:client-arch,11		# EFI
 dhcp-hostsfile=/var/lib/tmms/dnsmasq/{pxe_interface}.hostsfile
 addn-hosts=/var/lib/tmms/dnsmasq/{pxe_interface}.morehosts		# DNS only
 dhcp-no-override
-dhcp-boot=/boot/bootaarch64.efi
+dhcp-boot=/grub/grubnetaa.efi
 # 512-byte blocks.  TM SFW does ask but it's not done automatically
 dhcp-option-force=option:boot-file-size,{boot_file_size_512_blocks}
 
@@ -109,8 +109,9 @@ class TMgrub(object):
     """
         Generate all grub grub config files under the TFTP hierarchy.
         At "tftp" element of hierarchy (default /var/lib/tmms/tftp):
-        - boot/
+        - grub/
           grub.cfg
+	
           - menus/
             nodeXX.menu (menu files)
         -images/
