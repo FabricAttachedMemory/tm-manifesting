@@ -72,7 +72,7 @@ if __name__ == '__main__':
     if args.vmd is None:
         args.vmd = tmms_src_folder + '/configs/filesystem/golden.arm.vmd'
 
-    errmsg = ''
+    errmsg = None
     try:
         main(args.config, args.vmd)
     except AssertionError as e:

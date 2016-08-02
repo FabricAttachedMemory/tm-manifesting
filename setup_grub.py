@@ -395,7 +395,7 @@ if __name__ == '__main__':
         args.config = os.path.dirname(args.config) + '/manifest_config.py'
         print('Using config file', args.config)
 
-    msg = 0     # establish scope
+    msg = None     # establish scope
     try:
         main(args.config)
     except Exception as e:
