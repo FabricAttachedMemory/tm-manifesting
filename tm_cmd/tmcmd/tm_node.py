@@ -57,7 +57,9 @@ class TmNode(tm_base.TmCmd):
         use at next boot.
         """
         super().show(target, **options)
-        api_url = "%s%s%s" % (self.url, 'node/', self.show_name)
+        node_coord = self.show_name
+        assert node_coord.startswith('/'), 'Illegal node coordinate'
+        api_url = "%s%s%s" % (self.url, 'node/', node_coord[1:])
         data = self.http_request(api_url)
         return self.to_json(data)
 
@@ -72,8 +74,10 @@ class TmNode(tm_base.TmCmd):
         and root FS that the node will use the next time it boots.
         """
         assert len(target) >= 2, 'Missing argument: setnode <node coordinate> <manifest>'
-        payload = '{ "manifest" :  "%s" }' % target[1]
-        api_url = '%s/%s/%s' % (self.url, 'node/', target[0])
+        node_coord, manifest = target[:2]
+        assert node_coord.startswith('/'), 'Illegal node coordinate'
+        payload = '{ "manifest" :  "%s" }' % manifest
+        api_url = '%s/%s/%s' % (self.url, 'node/', node_coord[1:])
         clean_url = os.path.normpath(api_url.split('http://')[-1])
         api_url = 'http://' + clean_url
         data = self.http_request(api_url, payload=payload)
@@ -91,7 +95,7 @@ class TmNode(tm_base.TmCmd):
         available to it.
         """
         super().delete(target, **options)
-        node_coord = self.show_name
-        api_url = '%s%s/%s' % (self.url, 'node', node_coord)
+        node_coord = self.show_name     # should be legal by now
+        api_url = '%s%s/%s' % (self.url, 'node', node_coord[1:])
         data = self.http_delete(api_url)
         return self.to_json(data)
