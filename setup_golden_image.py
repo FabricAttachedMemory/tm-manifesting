@@ -36,10 +36,9 @@ def main(config_file, config_vmd=None):
     cmd = '''%s --no-default-configs --hostname=GOLDEN
              --config=%s
              --mirror=%s''' % (
-                vmdebootstrap,
-                config_vmd,
-                manconfig['L4TM_MIRROR']
-             )
+        vmdebootstrap,
+        config_vmd,
+        manconfig['L4TM_MIRROR'])
     cmd = shlex.split(cmd)
     status = subprocess.call(cmd)
     assert not status, 'vmdebootstrap failed: return status %s' % status

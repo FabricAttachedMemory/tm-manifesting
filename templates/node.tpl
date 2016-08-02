@@ -11,7 +11,7 @@ Node to manifest
 
 <dl>
     <dt>{{ node.coordinate }}</dt>
-    <dd>{{ node.soc.socMacAddress }}<br>{{ manifest }}</dd>
+    <dd>{{ node.hostname }}<br>{{ manifest }}</dd>
 <dl>
 
 </BODY>

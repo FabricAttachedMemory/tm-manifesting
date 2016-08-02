@@ -24,6 +24,8 @@ from subprocess import Popen, PIPE, CalledProcessError
 import subprocess
 from pdb import set_trace
 
+from tmms.utils.utils import make_symlink
+
 _verbose = None     # Poor man's class
 _debug = None
 
@@ -90,27 +92,6 @@ def remove_target(target):
         raise RuntimeError ('Couldn\'t remove "%s"!' % (filename))
 
 
-def symlink_target(source, target):
-    """
-        Create symlink for target from the source. Provide meaningful feadback on the screen
-    verbose option.
-
-    :param 'source': [str] path to a file to create a symbolic link from.
-    :param 'target': [str] path to the file to create a symbolic link to.
-    :param 'workdir': [str](default=None) path to change python working directory
-                    to create symbolic link. Helpful to avoid relative path issue.
-    :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
-    """
-    src_filename = slice_path(source)
-    target_filename = slice_path(target)
-    try:
-        if _verbose:
-            print(' - Creating a symlink from "%s" to "%s"...' % (src_filename, target_filename))
-        os.symlink(source, target)
-    except EnvironmentError as e:
-        raise RuntimeError ('Couldn\'t create a symlink from "%s" to "%s"!' % (src_filename, target_filename))
-
-
 def write_to_file(target, content):
     """
         Overwrite file in the targeted location with a new content.
@@ -131,8 +112,9 @@ def write_to_file(target, content):
 
 def slice_path(target, slice_ratio=2):
     """
-        Slice long path string on half (or by slice_ratio amount). Sometimes there is no need to print
-    and absolute path to a string where the first N directories are irrelavent to the user.
+        Slice long path string on half (or by slice_ratio amount). Sometimes
+        there is no need to print an absolute path to a string where the
+        first N directories are irrelavent to the user.
 
         Example: /one/two/three/four/five/ will be sliced into three/four/five/.
 
@@ -176,21 +158,19 @@ def cleanout_kernel(sys_img, kernel_dest):
 
 def fix_init(sys_img):
     """
-        Set correct symbolic link to an /init/ file from /sbin/init
+        Set correct symbolic link to a chrooted /init file from /sbin/init
 
     :param 'verbose': [bool] Make it talk.
     :param 'debug': [bool] set_trace if exception was caught.
     :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
     """
-    new_init = os.path.join(sys_img, 'init')
     try:
-        if os.path.exists(new_init):
-            remove_target(new_init)
-        with workdir(sys_img):
-            symlink_target('sbin/init', 'init')
-    except (RuntimeError, EnvironmentError) as err:
-        raise RuntimeError('Error occured while fixing /init file!\n\
-                            %s' % (err))
+        with workdir(sys_img):      # At the root
+            if os.path.exists('init'):
+                os.unlink(init)
+            make_symlink('sbin/init', 'init')
+    except (EnvironmentError) as err:
+        raise RuntimeError('Error occured while fixing /init: %s' % str(err))
 
 #===============================================================================
 

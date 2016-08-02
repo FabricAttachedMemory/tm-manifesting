@@ -7,7 +7,8 @@ import sys
 from shutil import rmtree
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, g, abort, make_response
+from flask import Blueprint, render_template, request, jsonify
+from flask import g, abort, make_response
 from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
@@ -54,7 +55,7 @@ def webpage(name=None):
 @BP.route('/%s/' % _ERS_element, methods=('POST', ))
 def webpage_upload():
     try:
-        assert int(request['Content-Length']) < 20000, 'Too big'
+        assert int(request.content_length) < 20000, 'Too big'
         file = request.files['file[]']
 
         # fname = secure_filename(file.filename)
@@ -65,9 +66,9 @@ def webpage_upload():
         # file.save(os.path.join(BP.UPLOADS, fname))
         contentstr = file.read().decode()
         m = ManifestDestiny('', '', contentstr)
-        msg = 'Overwrote' if  m.key in _data else 'Uploaded'    # before...
-        load_data()
-        return render_all(okmsg=msg + ' ' + file.filename)
+        msg = m.response.data.decode()
+        _load_data()
+        return render_all(okmsg=msg + ': ' + file.filename)
 
     except Exception as e:
         return render_all(errmsg='Upload("%s") failed: %s' %
@@ -155,12 +156,12 @@ def api_upload(prefix=''):
     in the Request.
 
     :param 'prefix': (optional) namespace path for the manifest to upload to.
-                    e.g: when prefix = futurama/world/, manifest will be uploaded
-                        into that provided folder on the server.
-                        when prefix = '' (no prefix passed), then manifest will
-                        be uploaded into root of the server's manifest uploads location.
+                    e.g: when prefix = futurama/world/, manifest will be
+                    uploaded into that provided folder on the server.
+                    when prefix = '' then manifest will be uploaded into
+                    base of the server's manifest uploads location.
     """
-    if prefix and not prefix.endswith('/'):    # No trailing slash? Not a good request!
+    if prefix and not prefix.endswith('/'):    # FIXME WHY IS THIS BAD?
         abort(404)
     try:
         assert int(request.headers['Content-Length']) < 20000, 'Too big'
@@ -174,7 +175,7 @@ def api_upload(prefix=''):
         response = manifest.response
 
     except Exception as e:
-        response = make_response('Failed to upload manifest! [Error: %s]' % str(e), 422)
+        response = make_response('Upload failed: %s' % str(e), 422)
 
     _load_data()
     return response
@@ -183,9 +184,9 @@ def api_upload(prefix=''):
 @BP.route('/api/%s/<path:manname>' % _ERS_element, methods=(('DELETE', )))
 def delete_manifest(manname=None):
     """
-        Deletes an existing manifest from the service. Note that this simply deletes the
-    manifest itself and that any nodes configured to use the manifest will continue to
-    boot using the constructed kernel and root file system.
+        Deletes an existing manifest from the service. Note that this simply
+    deletes the manifest itself and that any nodes configured to use the
+    manifest will continue to boot using the existing kernel and file system.
 
     :param 'prefix': manifest path used to create PUT manifest to a server
     :param 'manname': manifest file name
@@ -243,7 +244,10 @@ class ManifestDestiny(object):
 
     def __init__(self, dirpath, basename, contentstr=None):
         '''If contentstr is given, it is an upload, else read a file.'''
-        self.prefix = dirpath.split(BP.UPLOADS)[-1].strip('/')  # Doesnt include basename.
+        assert '/' not in basename, 'basename is not a leaf element'
+        self.basename = basename
+        # excludes basename, more like a namespace
+        self.prefix = dirpath.split(BP.UPLOADS)[-1].strip('/')
         if contentstr is not None:
             # some kind of upload, basename not used
             self.thedict = self.validate_manifest(contentstr)
@@ -263,16 +267,17 @@ class ManifestDestiny(object):
             self.manifest_file = BP.UPLOADS + '/' + self.namespace
 
             if os.path.exists(self.manifest_file):
-                self.response = make_response('An existing manifest has been replaced with the provided contents.', 200)
+                self.response = make_response(
+                    'An existing manifest has been overwritten.', 200)
             else:
-                self.response = make_response('A new manifest has been created with the provided contetnts!', 201)
+                self.response = make_response(
+                    'A new manifest has been created.', 201)
 
             os.makedirs(self.dirpath, exist_ok=True)
             with open(self.manifest_file, 'w') as f:
                 f.write(contentstr)
             return
 
-        assert '/' not in basename, 'basename is not a leaf element'
         fname = os.path.join(dirpath, basename)
 
         with open(fname, 'r') as f:
@@ -280,13 +285,10 @@ class ManifestDestiny(object):
 
         self.thedict = self.validate_manifest(self.raw)
         self.dirpath = dirpath
-        self.basename = basename
-
 
     @property
     def fullpath(self):
         return '%s/%s' % (self.dirpath, self.basename)
-
 
     @property
     def namespace(self):
@@ -295,9 +297,8 @@ class ManifestDestiny(object):
         namespace = namespace.strip('/')
         return namespace
 
-
     @property
-    def key(self):
+    def key(self):  # FIXME returns trailing slash
         return os.path.join(self.namespace, self.basename)
 
 ###########################################################################

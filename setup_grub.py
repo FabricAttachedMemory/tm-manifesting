@@ -19,6 +19,7 @@ customized FS image (.cpio file).
 
 import argparse
 import os
+import requests as HTTP_REQUESTS
 import sys
 import time
 
@@ -36,22 +37,26 @@ from utils.utils import make_dir, make_symlink, basepath
 
 _maxnodes = 40  # Revised FRD for 2016
 
+# Sometimes the EFI network is 0, sometimes 1, and I can't get
+# inline variable substitution to work.  Take the easy way out,
+# one of them will fire.
+
 _grub_cfg_template = '''
 set gfxmode=auto
 insmod efi_gop
 insmod efi_uga
 insmod gfxterm
-insmod progress
 
 terminal_output gfxterm
 
+configfile  "(tftp){menudir}/${{net_efinet0_hostname}}.menu"
 configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 '''
 
 _grub_menu_template = '''
 set default=0
 set menu_color_highlight=white/brown
-progress
+timeout 10
 
 menuentry '{hostname} L4TM ARM64' {{
     linux (tftp){images_dir}/{hostname}.vmlinuz root=/dev/ram0 console=ttyAMA0 acpi=force rw
@@ -94,7 +99,7 @@ dhcp-match=TMAS-EFI,option:client-arch,11		# EFI
 dhcp-hostsfile=/var/lib/tmms/dnsmasq/{pxe_interface}.hostsfile
 addn-hosts=/var/lib/tmms/dnsmasq/{pxe_interface}.morehosts		# DNS only
 dhcp-no-override
-dhcp-boot=/boot/bootaarch64.efi
+dhcp-boot=/grub/grubnetaa64.efi
 # 512-byte blocks.  TM SFW does ask but it's not done automatically
 dhcp-option-force=option:boot-file-size,{boot_file_size_512_blocks}
 
@@ -109,10 +114,11 @@ class TMgrub(object):
     """
         Generate all grub grub config files under the TFTP hierarchy.
         At "tftp" element of hierarchy (default /var/lib/tmms/tftp):
-        - boot/
+        - grub/
+          grubnetaa64.efi
           grub.cfg
           - menus/
-            nodeXX.menu (menu files)
+            node01.menu thru node40.menu
         -images/
           - nodeXX/ (directories)
             nodeXX.vmlinuz and nodeXX.cpio
@@ -127,10 +133,14 @@ class TMgrub(object):
         self.timestamp = time.ctime()
 
         # Absolute paths are for writing files.  tftp_xxxx are file contents.
+        # Dirs keyed from manconfig were already created.
         self.tftp_images_dir = manconfig['TFTP_IMAGES']
         self.tftp_grub_dir = manconfig['TFTP_GRUB']
         self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
         make_dir(self.tftp_grub_menus_dir)
+
+        self.tftp_grub_cfg = self.tftp_grub_dir + '/grub.cfg'
+        self.tftp_grub_efi = self.tftp_grub_dir + '/grubnetaa64.efi'
 
         self.dnsmasq_dir = manconfig['DNSMASQ_CONFIGS']
         self.pxe_interface = manconfig['PXE_INTERFACE']
@@ -140,12 +150,21 @@ class TMgrub(object):
         self.tftp_root = manconfig['TFTP_ROOT']
         self.chroot_images_dir = basepath(self.tftp_images_dir, self.tftp_root)
         self.chroot_grub_dir = basepath(self.tftp_grub_dir, self.tftp_root)
-        self.chroot_grub_menus_dir = self.chroot_grub_dir + '/menus'
+        self.chroot_grub_menus_dir = basepath(
+            self.tftp_grub_menus_dir, self.tftp_root)
 
-        # Last but not least, the master grub config file loaded by grub
-        # and the EFI executable that reads it
-        self.tftp_grub_cfg = self.tftp_grub_dir + '/grub.cfg'
-        self.tftp_grub_efi = self.tftp_root + '/boot/bootaarch64.efi'
+        grubURL = manconfig['L4TM_MIRROR'] + \
+            '/dists/catapult/main/uefi/grub2-arm64/' +\
+            'current/grubnetaa64.efi.signed'
+        try:
+            r = HTTP_REQUESTS.get(grubURL)
+            assert r.status_code == 200, 'Cannot retrieve "%s"' % grubURL
+            assert len(r.content) == int(r.headers['Content-Length']), \
+                'Length mismatch on "%s"' % grubURL
+        except Exception as e:
+            raise SystemExit(str(e))
+        with open(self.tftp_grub_efi, 'wb') as f:
+            f.write(r.content)
 
     @property
     def hostnames(self):
@@ -155,7 +174,7 @@ class TMgrub(object):
         '''
         manifest_config.py TTMDOMAIN variable has simple form like
            TMDOMAIN = 'have.it.your.way'
-        By decree of the LATC) declares TMCF contains no MAC or IP addresses,
+        By decree of the LATC, TMCF contains no MAC or IP addresses,
         only hostnames.  There is only hostname to IP address binding.
         The authoritative source for that is DNS, as set up by HPE site IT,
         since all instances of The Machine will always be connected to
@@ -285,12 +304,8 @@ class TMgrub(object):
             'TMDOMAIN form yielded %d IP addresses, not %d' % (
                 len(self.hostIPs), _maxnodes)
 
-        efisource = os.path.realpath('PoC/firmware/bootaa64.efi')
-        make_symlink(efisource, self.tftp_grub_efi)
         size = os.stat(self.tftp_grub_efi).st_size
-        self.boot_file_size_512_blocks = size // 512
-        assert self.boot_file_size_512_blocks * 512 == size, \
-            'EFI file "%s" size is not a multiple of 512' % self.tftp_grub_efi
+        self.boot_file_size_512_blocks = (size // 512) + 1
 
         conf = _dnsmasq_conf_template.format(**vars(self))
 

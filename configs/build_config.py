@@ -47,7 +47,7 @@ class ManifestingConfiguration(object):
         'PXE_INTERFACE'
     )
 
-    _manifest_env = (
+    _manifest_env = (           # New directories are keyed from here
         'FILESYSTEM_IMAGES',
         'MANIFEST_UPLOADS',
         'GOLDEN_IMAGE'
@@ -95,7 +95,7 @@ class ManifestingConfiguration(object):
 
             'TFTP_ROOT':            tftp,
             'TFTP_IMAGES':          tftp + '/images',
-            'TFTP_GRUB':            tftp + '/boot/grub',
+            'TFTP_GRUB':            tftp + '/grub',     # grub EFI "prefix"
         })
 
         if autoratify:
