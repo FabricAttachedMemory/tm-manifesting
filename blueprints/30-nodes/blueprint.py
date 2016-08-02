@@ -6,6 +6,7 @@ import os
 import sys
 import shlex
 import subprocess
+import time
 from shutil import copyfile
 from pdb import set_trace
 
@@ -129,7 +130,7 @@ def bind_node_to_manifest(node_coord=None):
     """
     try:
         resp_status = 409   # Conflict
-        assert get_node_status(node_coord) is None, 'Node is occupied. Remove binding before assigning a new one.'
+        assert get_node_status(node_coord) is None, 'Node is already bound.'
 
         resp_status = 413
         assert int(request.headers['Content-Length']) < 200, \
@@ -214,9 +215,12 @@ def build_node(manifest, node_coord):
     cmd = shlex.split(cmd)
 
     try:
-        _ = subprocess.Popen(cmd, stderr=subprocess.PIPE)
-    except subprocess.SubprocessError as err:       # TSNH =)
-        return make_response('Failed to start node binding process.', 418)
+        p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        time.sleep(1)
+        assert p.poll() is None
+    except (AssertionError, subprocess.SubprocessError) as err:       # TSNH =)
+        stdout, stderr = p.communicate()
+        return make_response('Node binding failed: %s' % stderr.decode(), 418)
 
     manifest_tftp_file = manifest.namespace.replace('/', '.')
     customize_node.copy_target_into(manifest.fullpath, tftp_node_dir + '/' + manifest_tftp_file)
