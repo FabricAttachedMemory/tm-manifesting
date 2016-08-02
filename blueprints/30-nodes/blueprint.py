@@ -35,9 +35,10 @@ def node():
 
 
 @BP.route('/%s/<path:name>' % _ERS_element)
+@BP.route('/%s//<path:name>' % _ERS_element)    # Postel's law
 def node_name(name=None):
     try:
-        node = BP.nodes[name][0]
+        node = BP.nodes['/' + name][0]
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
@@ -78,10 +79,14 @@ def get_all_bindings():
 
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('GET', ))
+@BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('GET', ))
 def get_node_bind_info(node_coord=None):
     """
         List status json of the manifest binded to the node.
     """
+    # Two rules invoke Postel's Law of liberal reception.  Either way,
+    # we need to add leading /.
+    node_coord = '/' + node_coord
     if not BP.nodes[node_coord]:
         return make_response('The specified node does not exist.', 404)
 
@@ -93,6 +98,7 @@ def get_node_bind_info(node_coord=None):
 
 
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
+@BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('DELETE', ))
 def delete_node_binding(node_coord):
     """
         Remove Node to Manifest binding. Find node's folder in the TFTP directory
@@ -101,6 +107,7 @@ def delete_node_binding(node_coord):
 
     :param 'node_coord': full node's coordinate to unbinde Manifest from.
     """
+    node_coord = '/' + node_coord
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.', 404)
 
@@ -118,16 +125,18 @@ def delete_node_binding(node_coord):
 
 ####################### API (PUT) ###############################
 
+
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('PUT', ))
+@BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('PUT', ))
 def bind_node_to_manifest(node_coord=None):
     """
         Generate a custom filesystem image for a provided node coordinate using
     a manifest specified in the request's body. The resulting FS image will be
-    placed at the server's location for PXE to pickup. This location is determined
-    by the node's hostname, e.g. tftp/arm64/hostname1/
+    placed at appropriate place under the TFTP hierarchy based on hostname.
 
-    :param 'node_coord': full node's coordinate with it's rack number, enclouse and etc.
+    :param 'node_coord': absolute machine coordinate of the node
     """
+    node_coord = '/' + node_coord
     try:
         resp_status = 409   # Conflict
         assert get_node_status(node_coord) is None, 'Node is already bound.'
@@ -136,7 +145,7 @@ def bind_node_to_manifest(node_coord=None):
         assert int(request.headers['Content-Length']) < 200, \
             'Content is too long! Max size is 200 characters.'
 
-        resp_status = 400       # if failed at this point, then it is a server error.
+        resp_status = 400
         # Validate requested manifest exists.
         contentstr = request.get_data().decode()
         req_body = request.get_json(contentstr)
@@ -159,30 +168,27 @@ def bind_node_to_manifest(node_coord=None):
 
 def build_node(manifest, node_coord):
     """
-        Build Process to Generate a custom filesystem image based of the provided manifset.
+        Generate a custom filesystem image based on the provided manifset.
 
     :param 'manifest': [cls] manifest class of the 99-manifest/blueprint.py
-    :param 'node_coord': [int\str] node number or name to generate filesystem image for.
+    :param 'node_coord': [int\str] node number or name.
     :return: flask's response data.
     """
-    sys_imgs = BP.config['FILESYSTEM_IMAGES']
     golden_tar = BP.config['GOLDEN_IMAGE']
-
     if not os.path.exists(golden_tar):
-        return make_response('Can not generate image! No "Golden Image" found!', 505)
+        return make_response('Missing "Golden Image"', 505)
 
-    # ----------------------- Variables
-    node_dir = os.path.join(sys_imgs,
-                    BP.nodes[node_coord][0].hostname)   # place to build FS image at.
-    tftp_node_dir = BP.config['TFTP_IMAGES'] + '/' +\
-                    BP.nodes[node_coord][0].hostname    # place for PXE to pickup FS img from.
-    node_hostname = BP.nodes[node_coord][0].hostname    # we except to find only one occurance of node_coord.
-    custom_tar = os.path.normpath(node_dir + '/untar/') # path for FS img 'untar' folder to mess with.
+    # each node gets its own set of dirs
+    sys_imgs = BP.config['FILESYSTEM_IMAGES']
+    hostname = BP.nodes[node_coord][0].hostname
+    build_dir = os.path.join(sys_imgs, hostname)
+    tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
+    custom_tar = os.path.normpath(build_dir + '/untar/')
 
-    response = make_response('The manifest for the specified node has been set.', 201)
+    response = make_response('The manifest has been set.', 201)
 
-    if glob(tftp_node_dir + '/*.cpio'):
-        response = make_response('The manifest for the specified node has been changed.', 200)
+    if glob(tftp_dir + '/*.cpio'):
+        response = make_response('The manifest has been changed.', 200)
 
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
@@ -190,18 +196,17 @@ def build_node(manifest, node_coord):
     # ---------------------------------
 
     try:
-        if not os.path.isdir(node_dir): # create directory to save generated img into.
-            os.makedirs(node_dir)
+        os.makedirs(build_dir, exist_ok=True)
     except (EnvironmentError):
-        return make_response('Failed to create "%s"!' % node_dir, 505)
+        return make_response('Failed to create "%s"!' % build_dir, 505)
 
-    # prepare FS environment to customize - untar into node's folder of manifesting server.
+    # start by unpacking the golden tarball
     custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
 
     build_args = {
             'fs-image' : custom_tar,
-            'hostname' : node_hostname,
-            'tftp' : tftp_node_dir,
+            'hostname' : hostname,
+            'tftp' : tftp_dir,
             'verbose' : BP.VERBOSE,
             'debug' : BP.DEBUG,
             'packages' : manifest.thedict['packages'],
@@ -211,24 +216,30 @@ def build_node(manifest, node_coord):
     cmd_args = []
     for key, val in build_args.items():
         cmd_args.append('--%s %s' % (key, val))
-    cmd = os.path.dirname(__file__) + '/node_builder/customize_node.py ' + ' '.join(cmd_args)
+    cmd = os.path.dirname(__file__) + \
+          '/node_builder/customize_node.py ' + ' '.join(cmd_args)
     cmd = shlex.split(cmd)
 
     try:
         p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
         time.sleep(1)
         assert p.poll() is None
-    except (AssertionError, subprocess.SubprocessError) as err:       # TSNH =)
+    except (AssertionError, subprocess.SubprocessError) as err:    # TSNH =)
         stdout, stderr = p.communicate()
         return make_response('Node binding failed: %s' % stderr.decode(), 418)
 
     manifest_tftp_file = manifest.namespace.replace('/', '.')
-    customize_node.copy_target_into(manifest.fullpath, tftp_node_dir + '/' + manifest_tftp_file)
+    customize_node.copy_target_into(
+        manifest.fullpath,
+        tftp_dir + '/' + manifest_tftp_file)
 
     return response
 
 ###########################################################################
+
+
 _data = None # node <-> manifest bindings
+
 
 def get_node_status(node_coord):
     """
