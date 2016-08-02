@@ -1,16 +1,31 @@
-sudo dpkg --add-architecture arm64
-sudo apt-get update
+= Prepping the ToRMS to build ARM FS images during node-manifest binding
 
-# This is NOT grub-efi:amd64, which will replace grub-pc, will
-# probably break your system.  Nor is it grub-efi-arm64, which collides
-# with grub-pc but doesn't break your system.
+  sudo dpkg --add-architecture arm64
+  sudo apt-get update
 
-sudo apt-get install grub-efi-arm64-bin
+= Prepping the ToRMS to serve ARM PXE
 
-# It gives you the auxiliary modules under /usr/lib/grub/arm64-efi/*.mods
-# to build an EFI boot manager:
+  sudo apt-get install grub-efi-arm64-bin
 
-grub-mkimage --format=arm64-efi --output=grub4tm.pxe --prefix='(pxe)/boot/grub' pxe pxecmd
+This is NOT grub-efi:amd64, which would replace grub-pc, will
+probably break your system.  Nor is it grub-efi-arm64, which collides
+with grub-pc but doesn't break your system.
+It gives you the auxiliary modules under /usr/lib/grub/arm64-efi/*.mods
+to build an EFI boot manager:
 
-# except that modules pxe and pxecmd don't exist for ARM.  net.mod does...
+grub-mkimage --format=arm64-efi --output=grub4tm.pxe \
+	--prefix='(pxe)/boot/grub' efinet ...
 
+OR: pick up the ready-to-run PXE EFI GRUB at
+
+http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm/dists/catapult/main/uefi/grub2-arm64/current/grubnetaa64.efi.signed
+
+or unpack the package
+
+apt-get download grub-efi-arm64-signed:arm64
+
+Drop the ".signed" part.  It has all the modules as built by the command
+
+debian/build-efi-images
+
+As found after "apt-get download grub2:arm64"

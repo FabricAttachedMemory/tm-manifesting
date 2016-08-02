@@ -10,6 +10,8 @@ import sys
 from importlib import import_module
 from pdb import set_trace
 
+assert os.geteuid() == 0, 'This program requires root permissions'
+
 from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
 
