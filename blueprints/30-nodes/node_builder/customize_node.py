@@ -167,7 +167,7 @@ def fix_init(sys_img):
     try:
         with workdir(sys_img):      # At the root
             if os.path.exists('init'):
-                os.unlink(init)
+                os.unlink('init')
             make_symlink('sbin/init', 'init')
     except (EnvironmentError) as err:
         raise RuntimeError('Error occured while fixing /init: %s' % str(err))
