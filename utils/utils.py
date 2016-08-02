@@ -20,7 +20,6 @@ def make_dir(path):
 def make_symlink(source, target):
     '''
     Wrap os.symlink; succeed if target exists properly.  Used in setup.
-    FIXME: get rid of def symlink_target() in 30-nodes/customize_node.
     :param 'source': [str] path to a file to create a symbolic link from.
     :param 'target': [str] path to the file to create a symbolic link to.
     :return: 'None' on success or raise 'RuntimeError'
