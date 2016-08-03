@@ -179,19 +179,21 @@ def build_node(manifest, node_coord):
         return make_response('Missing "Golden Image"', 505)
 
     # each node gets its own set of dirs
-    sys_imgs = BP.config['FILESYSTEM_IMAGES']
     hostname = BP.nodes[node_coord][0].hostname
+    sys_imgs = BP.config['FILESYSTEM_IMAGES']
     build_dir = os.path.join(sys_imgs, hostname)
     tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
-    custom_tar = os.path.normpath(build_dir + '/untar/')
 
-    response = make_response('The manifest has been set.', 201)
+    response = make_response(
+        'Manifest set; image build initiated.', 201)
 
     if glob(tftp_dir + '/*.cpio'):
-        response = make_response('The manifest has been changed.', 200)
+        response = make_response(
+            'Existing manifest changed; image re-build initiated.', 200)
 
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
+        # FIMXE: what about status.json?
         return response
     # ---------------------------------
 
@@ -200,17 +202,15 @@ def build_node(manifest, node_coord):
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
-    # start by unpacking the golden tarball
-    custom_tar = customize_node.untar(golden_tar, destination=custom_tar)
-
     build_args = {
-            'fs-image' : custom_tar,
-            'hostname' : hostname,
-            'tftp' : tftp_dir,
-            'verbose' : BP.VERBOSE,
-            'debug' : BP.DEBUG,
-            'packages' : manifest.thedict['packages'],
-            'manifest' : manifest.namespace
+            'hostname':     hostname,
+            'manifest':     manifest.namespace, # FIXME: namespace vs basename?
+            'packages':     manifest.thedict['packages'],   # FIXME: tasks?
+            'golden_tar':   golden_tar,
+            'build_dir':    build_dir,
+            'tftp_dir':     tftp_dir,
+            'verbose':      BP.VERBOSE,
+            'debug':        BP.DEBUG,
     }
 
     cmd_args = []
@@ -228,6 +228,7 @@ def build_node(manifest, node_coord):
         stdout, stderr = p.communicate()
         return make_response('Node binding failed: %s' % stderr.decode(), 418)
 
+    # FIXME: move this to customize_node
     manifest_tftp_file = manifest.namespace.replace('/', '.')
     customize_node.copy_target_into(
         manifest.fullpath,
