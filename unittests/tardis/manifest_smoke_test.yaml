@@ -1,0 +1,31 @@
+metadata:
+    maintainer:
+        - name: Zach Volchak
+          email: zakhar.volchak@hpe.com
+    notes: |
+
+infrastructure:
+    - host:
+        name: bm-test
+        deploy-from: tardis
+        deploy-options: mem:8192,cpu:2,disk:8,isoName:qa-l4tm-testing-tot-amd64.iso,dev:sda
+        deploy-type: vm
+        name: tm-vm
+
+defaults:
+    shell:
+        failaction: fail, continue
+        passaction: continue
+        rcpass: rc==0
+
+blocks:
+    install:
+        - shell: apt-get -y install gdebi
+        - shell: wget https://hlinux-jenkins.us.rdlabs.hpecorp.net/job/manifesting-sources-l4tm/ws/manifesting-orig/tm-manifesting_1.0-0+l4tm1_all.deb
+        - shell: gdebi --non-interactive tm-manifesting_1.0-0+l4tm1_all.deb
+
+test:
+- step:
+    tm-vm:
+        - deploy: tm-vm
+        - install
