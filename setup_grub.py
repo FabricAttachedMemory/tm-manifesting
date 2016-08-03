@@ -56,7 +56,7 @@ configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 _grub_menu_template = '''
 set default=0
 set menu_color_highlight=white/brown
-timeout 10
+set timeout=10
 
 menuentry '{hostname} L4TM ARM64' {{
     linux (tftp){images_dir}/{hostname}.vmlinuz root=/dev/ram0 console=ttyAMA0 acpi=force rw

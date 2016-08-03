@@ -184,26 +184,9 @@ def build_node(manifest, node_coord):
     build_dir = os.path.join(sys_imgs, hostname)
     tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
 
-    response = make_response(
-        'Manifest set; image build initiated.', 201)
-
-    if glob(tftp_dir + '/*.cpio'):
-        response = make_response(
-            'Existing manifest changed; image re-build initiated.', 200)
-
-    # ------------------------- DRY RUN
-    if BP.config['DRYRUN']:
-        # FIMXE: what about status.json?
-        return response
-    # ---------------------------------
-
-    try:
-        os.makedirs(build_dir, exist_ok=True)
-    except (EnvironmentError):
-        return make_response('Failed to create "%s"!' % build_dir, 505)
-
     build_args = {
             'hostname':     hostname,
+            'client_id':    "enclosure/1/node/1",   # FIXME
             'manifest':     manifest.namespace, # FIXME: namespace vs basename?
             'packages':     manifest.thedict['packages'],   # FIXME: tasks?
             'golden_tar':   golden_tar,
@@ -218,8 +201,27 @@ def build_node(manifest, node_coord):
         cmd_args.append('--%s %s' % (key, val))
     cmd = os.path.dirname(__file__) + \
           '/node_builder/customize_node.py ' + ' '.join(cmd_args)
-    cmd = shlex.split(cmd)
 
+    response = make_response(
+        'Manifest set; image build initiated.', 201)
+
+    if glob(tftp_dir + '/*.cpio'):
+        response = make_response(
+            'Existing manifest changed; image re-build initiated.', 200)
+
+    # ------------------------- DRY RUN
+    if BP.config['DRYRUN']:
+        print(cmd)      # Now you can cut/paste and run it by hand.
+        # FIMXE: what about status.json?
+        return response
+    # ---------------------------------
+
+    try:
+        os.makedirs(build_dir, exist_ok=True)
+    except (EnvironmentError):
+        return make_response('Failed to create "%s"!' % build_dir, 505)
+
+    cmd = shlex.split(cmd)
     try:
         p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
         time.sleep(1)

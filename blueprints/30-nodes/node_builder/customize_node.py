@@ -55,11 +55,11 @@ def _fs_sanity_check(target):
     :param 'target': [str] path about to be copied/moved/overwritten/removed
     :return: 'None' on success. Raise 'AssertionError' on problems.
     """
-    target = strip(target)
+    target = target.strip()
     assert target[0] == '/', 'Not an absolute path'
-    elems = target.split('/')
+    elems = target.split('/')[1:]   # zeroth is empty string
     assert len(elems) > 2, 'Target is a primary directory'
-    assert elems[:2] == ('var', 'lib', 'Target is not under /var/lib'
+    assert elems[:2] == ['var', 'lib'], 'Target is not under /var/lib'
 
 
 def copy_target_into(target, into):
@@ -118,8 +118,8 @@ def write_to_file(target, content):
                 print ('Writing into "%s": \n[\n%s\n]\n' % (target, content))
             file_content = '%s\n' % str(content)
             file_obj.write(file_content)
-    except (AssertionError, EnvironmentError) as e:
-        raise RuntimeError ('Couldn\'t write "%s": %s' % (target, str(e)))
+    except Exception as e:
+        raise RuntimeError ('Write "%s" failed: %s' % (target, str(e)))
 
 
 def slice_path(target, slice_ratio=2):
@@ -143,28 +143,27 @@ def slice_path(target, slice_ratio=2):
 #===============================================================================
 
 
-def cleanout_kernel(sys_img, kernel_dest):
+def cleanout_kernel(target_dir, sys_img):
     """
-        Cleanout boot/vmlinuz* and boot/initrd.img/ files from the system image directory.
-    These files are not needed for diskless boot and are just taking up extra space.
+        Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
+    These files are not needed for diskless boot.
 
-    :param 'sys_img': [str] path to the file system location to chroot to.
-    :param 'verbose': [bool] Make it talk.
-    :param 'debug': [bool] set_trace if exception was caught.
-    :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
+    :param 'kernel_dest': [str] where to move the unecessary files.
+    :param 'sys_img': [str] where to find the unecessary files.
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     boot_dir = '%s/boot/' % (sys_img)
-    vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # Get list of vmlinuz and initrd files.
-    initrd = glob('%s/initrd.img*' % (boot_dir))
-    # copy kernel files into destination location (outside of sys_img)
+    vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # one list
+    initrd = glob('%s/initrd.img*' % (boot_dir))    # two lists
     try:
-        for kernel in vmlinuz+initrd:
-            copy_into = os.path.basename(kernel)
-            copy_target_into(kernel, '%s/%s' % (kernel_dest, copy_into) )
-            remove_target(kernel)
-    except RuntimeError as err:
-        raise RuntimeError ('Errror occured while cleaning kernel!\n\
-                            %s' % (err))
+        for source in vmlinuz + initrd:            # move them all
+            # FIXME: we need a move
+            copy_into = os.path.basename(source)
+            copy_target_into(source, '%s/%s' % (target_dir, copy_into) )
+            remove_target(source)
+        return glob('%s/vmlinuz*' % (target_dir))[0]  # one item
+    except Exception as err:
+        raise RuntimeError ('Errror occured cleanout_kernel(): %s' % str(err))
 
 
 def fix_init(sys_img):
@@ -173,7 +172,7 @@ def fix_init(sys_img):
 
     :param 'verbose': [bool] Make it talk.
     :param 'debug': [bool] set_trace if exception was caught.
-    :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     try:
         with workdir(sys_img):      # At the root
@@ -187,13 +186,11 @@ def fix_init(sys_img):
 
 def cleanup_sources_list(sys_img):
     """
-        Check if /etc/apt/source.list.d/base.list file exists. If so, move it into
-    /etc/apt/sources.list, cause base.list causing troubles.
+        Check if /etc/apt/source.list.d/base.list file exists. If so, move it
+    into /etc/apt/sources.list, because base.list is causing collisions.
 
     :param 'sys_img': [str] path to the file system location to chroot to.
-    :param 'verbose': [bool] Make it talk.
-    :param 'debug': [bool] set_trace if exception was caught.
-    :return: 'None' on success. Raise 'RuntimeError' on occurance of one of the 'EnvironmentError'.
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     sources_list = '%s/etc/apt/sources.list' % sys_img
     sources_base = '%s/etc/apt/sources.list.d/base.list' % sys_img
@@ -242,6 +239,24 @@ def set_sources_areas(sources_list, areas):
 
 #===============================================================================
 
+def set_client_id(sys_img, client_id):
+    """
+        Augment dhclient configuration file
+
+    :param 'sys_img': [str] path to the file system location to mess with.
+    :param 'hostname': [str] hostname to be used for given system image.
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
+    dhclient_conf = '%s/etc/dhcp/dhclient.conf' % (sys_img)
+    try:
+        with open(dhclient_conf, 'a') as f:
+            f.write('\nsend dhcp-client-identifier "%s";\n' % client_id)
+    except Exception as err:
+        raise RuntimeError('Cannot set DHCP client ID: %s' % str(err))
+
+#===============================================================================
+
+
 def set_hostname(sys_img, hostname):
     """
         Set new hostname on the file system image.
@@ -284,10 +299,12 @@ def set_hosts(sys_img, hostname):
 
 def untar(destination, source):
     """
-        Untar source file into destination folder.
+        Untar source file into destination folder. tar.tarfile.extractall
+    will create all necessary (sub)directories.
     Note: When untaring into the existing folder to overwrite files,
     tarfile.extractall function will throw a FileExistsError
     if it can not overwrite broken symlinks of the tar'ed file.
+    Nuke it from orbit, it's the only way to be sure.
 
     :param 'destination': [str] path to where to extract target into.
     :param 'source': [str] path to a .tar file to untar.
@@ -296,33 +313,34 @@ def untar(destination, source):
 
     try:
         destination = destination + '/untar'
-        if _verbose:
-            print(' - Extracting "%s" into "%s"...' % (target, destination))
         remove_target(destination)  # succeeds even if missing
-        with tarfile.open(target) as tar_obj:
+        if _verbose:
+            print(' - Extracting "%s" into "%s"...' % (source, destination))
+        with tarfile.open(source) as tar_obj:
             tar_obj.extractall(path=destination)
         return destination
     except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
         raise RuntimeError ('Error occured while untaring "%s": %s' %
-            (target, str(err)))
+            (source, str(err)))
 
 
-def create_cpio(dest_dir, fs_dir):
+def create_cpio(dest_file, src_dir):
     """
         Get the non-boot pieces, ignoring initrd, kernel, and /boot.
 
-    :param 'dest_dir': [str] path to the folder to save .cpio file to.
-    :param 'fs_dir': [str] path to a new filesystem img to create .cpio from.
+    :param 'dest_file': [str] path to save cpio archive
+    :param 'src_dir': [str] folder to create .cpio from.
     :return: returncode of Popen() process.
     """
     try:
         if _verbose:
-            print(' - Creating "%s/cpio.sh" from "%s"... ' % (destination, target))
+            print(' - Creating %s from %s... ' % (dest_file, src_dir))
 
-        # FIXME: do a test to insure dest_dir is not a subdir of fs_dir
+        # FIXME: do a test to insure dest_dir is not a subdir of src_dir
 
+        # Skip things even though they may have been moved
         found_data = find(
-            fs_dir,
+            src_dir,
             ignore_files=['vmlinuz', 'initrd.img'],
             ignore_dirs=['boot'])
 
@@ -330,24 +348,24 @@ def create_cpio(dest_dir, fs_dir):
         cmd = shlex.split(cmd)
         cpio_stdin = '\n'.join(found_data).encode() # needed for Popen pipe.
 
-        with open(destination, 'w') as file_obj:
-            # create CPIO relative to the 'find' path, otherwise - cpio cant find directory.
-            # Note: searching outside of  untar folder results in a "full path"
-            # string (e.g. whatever/untar/boot...., instead ./boot...). This causes
-            # Kernel Panic when trying to boot such cpio file. Thus, search and
-            # generate cpio file RELATIVE to the Untar folder.
-            with workdir(fs_dir):
-                cpio_sh = Popen(cmd, stdin=PIPE, stdout=file_obj)
-                cpio_out, cpio_err = cpio_sh.communicate(input=cpio_stdin)
+        with open(dest_file, 'w') as dest_obj:
+            # create CPIO relative to the 'find' path, to avoid '/' in archive
+            # names.  Note: searching outside of  untar folder results in a
+            # "full path" string (e.g. whatever/untar/boot...., instead
+            # ./boot...). This causes Kernel Panic when trying to boot with
+            # such a cpio file.
+            with workdir(src_dir):
+                cpio = Popen(cmd, stdin=PIPE, stdout=dest_obj)
+                cpio_out, cpio_err = cpio.communicate(input=cpio_stdin)
 
         # output find data to a log file
         if _verbose:
             with open('/tmp/man_find.log', 'w') as file_obj:
-                file_obj.write('\n'.join(found_data))       # FIXME proper log
+                file_obj.write('\n'.join(found_data))   # FIXME proper log
 
     except CalledProcessError as err:
-        raise RuntimeError('Couldn\'t create cpio from "%s": %s' %
-            (fs_dir, str(e))
+        raise RuntimeError('Couldn\'t create "%s" from "%s": %s' %
+            (dest_file, src_dir, str(e)))
 
 
 def find(start_path, ignore_files=[], ignore_dirs=[]):
@@ -386,37 +404,43 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
 def install_packages(sys_img, pkg_list):
     """
         Install list of packages into the filesystem image.
-    Function will generate a bash script with a lines of "apt-get install" in it
-    that will perform an installation of the packages. Meanwhile, this function
-    will execute this script under the chrooted to "sys_img" operation. Also,
+    Function will generate a bash script with lines of "apt-get install"
+    in it.   This script is placed under the file system. Then, this function
+    will execute this script under the chrooted to "sys_img". Also,
     every action performed by generated install.sh script is logged into the
     'sys_img + "/manifesting.log"' file.
 
-    :param 'sys_img': [str] path to filesystem image location to install packages to.
+    :param 'sys_img': [str] path to filesystem image to install packages to.
     :param 'pkg_list': [list] of packages to be installed.
     """
     if _verbose:
-        print(' - Preparing to install packages"... ')
+        print(' - Installing %s... ' % pkg_list)
 
     script_header = """#!/bin/bash
 set -ue
-exec > /manifesting.log 2>&1  # /tmp/ is cleaned out of boot
+exec > /install.log 2>&1  # /tmp/ is cleaned out of boot
 apt-get update
-    """
+apt-get upgrade --assume-yes
+apt-get dist-upgrade --assume-yes
+"""
     script_file = sys_img + '/install.sh'
     with open(script_file, 'w') as file_obj:
         file_obj.write(script_header)
-        for pkg in pkg_list:
-            cmd = 'apt-get install --assume-yes ' + pkg
+        file_obj.write('\n')
+        for pkg in pkg_list.split(','):
+            cmd = 'apt-get install --assume-yes %s\n' % pkg
             file_obj.write(cmd)
 
     os.chmod(script_file, 0o744)
 
     try:
-        cmd = 'chroot %s %s ' % (sys_img, '/install.sh')
+        cmd = '/usr/sbin/chroot %s %s ' % (sys_img, '/install.sh')
         cmd = shlex.split(cmd)
+        # This can take MINUTES.  "album" pulls in about 80 dependent packages.
+        # While running, sys_image/install.log is updated.  That could be
+        # tail followed and status updated, MFT' time.
         subprocess.call(cmd)
-    except CalledProcessError as err:
+    except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
 
 #===============================================================================
@@ -459,41 +483,39 @@ def execute(args):
     }
     status_file = args.tftp_dir + '/status.json'
 
-    #  It is OK to have a big exception block, because individual exception handling
-    # is done inside those functions that would through RuntimeError (most of the
-    # time).
+    # It's a big try block because individual exception handling
+    # is done inside those functions that throw RuntimeError.
     try:
         update_status(status_file, args.manifest, 'Untar golden image')
         new_fs_dir = untar(args.build_dir, args.golden_tar)
 
         update_status(status_file, args.manifest, 'Configuration file updates')
 
-        # Use hostname
+        # Use hostname and client_id
         set_hosts(new_fs_dir, args.hostname)
         set_hostname(new_fs_dir, args.hostname)
+        set_client_id(new_fs_dir, args.client_id)
 
-        # Cleaning up kernel
-        kernel_dest = new_fs_dir.split('/')
-        kernel_dest = '/'.join(kernel_dest[:len(kernel_dest)-1])
-        kernel_dest = '%s/' % (kernel_dest)
-        cleanout_kernel(new_fs_dir, kernel_dest)
+        # Remove kernel/boot files.  This is superfluous as the find/cpio
+        # ignores them.  The kernel gets copied to tftp_dir.
+        vmlinuz_file = cleanout_kernel(args.build_dir, new_fs_dir)
 
-        # Symlink /init.  This is the magic that preserve initrd as rootfs.
+        # This is the magic that preserves initrd as rootfs.
         fix_init(new_fs_dir)
 
         # Add packages and tasks from manifest.  FIXME: what about tasks?
-        update_status(status_file, args.manifest, 'Installing packages and tasks')
-        cleanup_sources_list(new_fs_dir)
-        install_packages(new_fs_dir, args.packages)
+        if args.packages:
+            update_status(
+                status_file, args.manifest, 'Installing ' + args.packages)
+            cleanup_sources_list(new_fs_dir)
+            install_packages(new_fs_dir, args.packages)
 
-        # Create .cpio file from untar.
+        # Create .cpio file from untar.  Filename done here in case
+        # we ever want to pass it in as an option.
         update_status(status_file, args.manifest, 'Generating FS image')
-        cpio_file = '%s/%s.cpio' % (
-            os.path.dirname(args.build_dir), args.hostname)
-        create_cpio(new_fs_dir, cpio_file)
+        cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
+        create_cpio(cpio_file, new_fs_dir)
 
-        vmlinuz_file = glob(os.path.dirname(cpio_file) + '/vmlinuz*')[0]
-        # FIXME: why not use "move" instead of "copy"?
         copy_target_into(cpio_file,
             args.tftp_dir + '/' + os.path.basename(cpio_file))
         copy_target_into(vmlinuz_file,
@@ -526,15 +548,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Options to customize FS image.')
 
     parser.add_argument('--hostname',
-        help='Hostname to use for the FS image.')
+        help='Hostname to use for the FS image')
+    parser.add_argument('--client_id',
+        help='DHCP client ID in form "enclosure/X/node/Y"')
     parser.add_argument('--manifest',
         help='Manifest namespace.')
+    parser.add_argument('--golden_tar',
+        help='Location of pristine FS image tarball')
     parser.add_argument('--packages',
-        help='Extra packages to install on image')
+        help='Extra packages to install on new file system')
     parser.add_argument('--build_dir',
         help='Folder where untared FS and compressed images are built.')
     parser.add_argument('--tftp_dir',
-        help='Absolute path to the server's TFTP folder, images placed here.')
+        help='Absolute path to the server\'s TFTP folder, images placed here.')
 
     parser.add_argument('-v', '--verbose',
         help='Make it talk. Verbosity levels from 1 to 5',
