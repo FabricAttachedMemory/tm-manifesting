@@ -59,8 +59,8 @@ set menu_color_highlight=white/brown
 set timeout=10
 
 menuentry '{hostname} L4TM ARM64' {{
-    linux (tftp){images_dir}/{hostname}.vmlinuz root=/dev/ram0 console=ttyAMA0 acpi=force rw
-    initrd (tftp){images_dir}/{hostname}.cpio
+    linux (tftp){images_dir}/{hostname}.vmlinuz.gz root=/dev/ram0 console=ttyAMA0 acpi=force rw
+    initrd (tftp){images_dir}/{hostname}.cpio.gz
 }}
 '''
 

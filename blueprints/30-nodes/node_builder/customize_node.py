@@ -13,13 +13,14 @@
 import argparse
 from contextlib import contextmanager
 from glob import glob
+import gzip
 import json
 import os
 import tarfile
 import shlex
+import shutil   # explicit namespace differentiates from our custom FS routines
 import sys
-import time
-from shutil import copyfile, rmtree, copytree
+
 from subprocess import Popen, PIPE, CalledProcessError
 import subprocess
 from pdb import set_trace
@@ -65,7 +66,7 @@ def _fs_sanity_check(target):
 
 def copy_target_into(target, into):
     """
-        Wrapper around shutil.copyfile function. Main intention is to catch a
+        Wrapper around shutil.copy* functions. Main intention is to catch a
     specific exception and raise RuntimeError with a meaningful message. Also
     provides debugging and verbose options.
 
@@ -78,9 +79,9 @@ def copy_target_into(target, into):
             print(' - Copying "%s" into "%s"...' % (target, into))
         _fs_sanity_check(target)
         if os.path.isdir(target):
-            copytree(target, into) # copy directory
+            shutil.copytree(target, into) # copy directory
         else:
-            copyfile(target, into) # copy single file
+            shutil.copyfile(target, into) # copy single file
     except (AssertionError, RuntimeError, EnvironmentError) as err:
         raise RuntimeError ('Couldn\'t copy "%s" into "%s": %s' %
             (target, into, str(err)))
@@ -98,9 +99,9 @@ def remove_target(target):
             print(' - Removing "%s"...' % (target))
         _fs_sanity_check(target)
         if os.path.isdir(target):
-            rmtree(target)      # remove directory tree
+            shutil.rmtree(target)
         elif os.path.exists(target):
-            os.remove(target)   # remove single file
+            os.remove(target)
     except (AssertionError, EnvironmentError) as e:
         raise RuntimeError ('Couldn\'t remove "%s": %s' % (target, str(e)))
 
@@ -521,24 +522,37 @@ def execute(args):
         cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
         create_cpio(cpio_file, new_fs_dir)
 
-        copy_target_into(cpio_file,
-            args.tftp_dir + '/' + os.path.basename(cpio_file))
-        copy_target_into(vmlinuz_file,
-            args.tftp_dir + '/' + args.hostname + '.vmlinuz')
+        # This is just as fast as gzip standalone program and gives better
+        # error handling.  500M cpio file takes about 20 seconds for
+        # reduction to 180M (both methods, gzip command defaults to level 6).
+        # Net results:
+        # TMAS PXE is about 100M per hour; 500 seconds to uncompress 180M
+        # FAME PXE is about xxxM per hour; xxx seconds to uncompress 180M
+        # REAL HW  is about xxxM per hour; xxx seconds to uncompress 180M
+
+        cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
+        vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
 
         update_status(status_file, args.manifest, 'Compressing kernel')
-        update_status(status_file, args.manifest, 'Compressing File System')
+        with open(vmlinuz_file, 'rb') as f_in:
+            with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
-        # Free up space, but not today
+        update_status(status_file, args.manifest, 'Compressing File System')
+        with open(cpio_file, 'rb') as f_in:
+            with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        # Free up space someday, but not during active development
         # remove_target(build_dir)
 
         update_status(
             status_file, args.manifest, 'PXE files ready to boot', 'ready')
 
-    except RuntimeError as err:
+    except RuntimeError as err:     # Caught earlier and re-thrown as this
          response['status'] = 505
          response['message'] = 'Filesystem image build failed: %s' % str(err)
-    except Exception as err:    # Its OK. suppress Flask traceback
+    except Exception as err:        # Suppress Flask traceback
         response['status'] = 505
         response['message'] = 'Aye! Unexpected Server error: %s' % str(err)
 
