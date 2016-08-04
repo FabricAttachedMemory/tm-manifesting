@@ -198,7 +198,8 @@ def build_node(manifest, node_coord):
 
     cmd_args = []
     for key, val in build_args.items():
-        cmd_args.append('--%s %s' % (key, val))
+        if val is not None:     # packages and tasks
+            cmd_args.append('--%s %s' % (key, val))
     cmd = os.path.dirname(__file__) + \
           '/node_builder/customize_node.py ' + ' '.join(cmd_args)
 
@@ -224,8 +225,11 @@ def build_node(manifest, node_coord):
     cmd = shlex.split(cmd)
     try:
         p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
-        time.sleep(1)
-        assert p.poll() is None
+        # Now that everything is in subprocess, this routine is FAST.
+        # untar and gzip will take a minimum of five seconds. Be
+        # completely sure the process really had time to start.
+        time.sleep(3)
+        assert p.poll() is None     # still running
     except (AssertionError, subprocess.SubprocessError) as err:    # TSNH =)
         stdout, stderr = p.communicate()
         return make_response('Node binding failed: %s' % stderr.decode(), 418)
