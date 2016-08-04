@@ -18,7 +18,7 @@ Vcs-Git: https://github.hpe.com/hpelinux/manifesting.git
 Vcs-Browser: https://github.hpe.com/hpelinux/manifesting
 
 Package: tm-manifesting
-Architecture: all
+Architecture: amd64
 Depends: ${misc:Depends},
          dh-python,
          dh-exec,
