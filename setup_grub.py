@@ -32,6 +32,8 @@ from pdb import set_trace
 from configs.build_config import ManifestingConfiguration
 from utils.utils import make_dir, make_symlink, basepath
 
+from tm_librarian.tmconfig import TMConfig
+
 #--------------------------------------------------------------------------
 # Templates for config files
 
@@ -131,6 +133,7 @@ class TMgrub(object):
 
         self.user = os.getlogin()
         self.timestamp = time.ctime()
+        self.tmconfig = TMConfig(manconfig['TMCONFIG'])
 
         # Absolute paths are for writing files.  tftp_xxxx are file contents.
         # Dirs keyed from manconfig were already created.
@@ -152,6 +155,10 @@ class TMgrub(object):
         self.chroot_grub_dir = basepath(self.tftp_grub_dir, self.tftp_root)
         self.chroot_grub_menus_dir = basepath(
             self.tftp_grub_menus_dir, self.tftp_root)
+
+        # This file is also in the Debian package "grub-efi-arm64-signed"
+        # (w/ appropriate revision) but Linn Crosetto keeps it here.
+        # The grub-mkimage command is in the source deb under build/xxxx
 
         grubURL = manconfig['L4TM_MIRROR'] + \
             '/dists/catapult/main/uefi/grub2-arm64/' +\
@@ -314,7 +321,10 @@ class TMgrub(object):
         with open(prepath + '.conf', 'w') as f:
             f.write(conf)
 
-        self.coords = ['enclosure/%d/node/%d' % ((i // 10) + 1, (i % 10) + 1)
+        # AA programs MFW with "rack prefix".  MFW appends EncNum/X/Node/Y.
+        # The rack enumerator and "Enclosure" locator are omitted.  Maybe.
+        nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[0].coordinate
+        self.coords = [nodefmt % ((i // 10) + 1, (i % 10) + 1)
                        for i in range(_maxnodes)]
         zipped = zip(self.coords, self.hostIPs, self.hostnames)
         with open(prepath + '.hostsfile', 'w') as f:
@@ -371,7 +381,7 @@ def main(config_file):
     """
 
     manconfig = ManifestingConfiguration(config_file, autoratify=False)
-    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
+    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
     if missing:
         raise RuntimeError('\n'.join(missing))
     grubby = TMgrub(manconfig)

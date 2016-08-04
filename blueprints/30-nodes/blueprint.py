@@ -180,10 +180,13 @@ def build_node(manifest, node_coord):
 
     # each node gets its own set of dirs
     hostname = BP.nodes[node_coord][0].hostname
-    client_id = 'enclosure' + node_coord.split('EncNum')[1].lower()
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     build_dir = os.path.join(sys_imgs, hostname)
     tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
+
+    # See setup_grub.py on client ID.  Trust me.
+    rack_prefix = node_coord.split('Enclosure')[0]
+    client_id = rack_prefix + 'EncNum' + node_coord.split('EncNum')[1]
 
     build_args = {
             'hostname':     hostname,
