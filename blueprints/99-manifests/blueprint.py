@@ -96,7 +96,7 @@ def listall():
     return make_response(msg, status_code)
 
 
-@BP.route('/api/%s/' % _ERS_element)
+# @BP.route('/api/%s/' % _ERS_element) MAKES DUPLICATE RULE???  unittests pass
 @BP.route('/api/%s/<path:manname>' % _ERS_element)
 def show_manifest_json(manname='/'):
     """

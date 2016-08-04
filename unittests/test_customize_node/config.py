@@ -7,8 +7,8 @@ customize_node = '%s/../../blueprints/30-nodes/node_builder/' % (customize_node)
 sys.path.append(customize_node)
 import customize_node as CN
 
-tmp_folder = "/tmp/UNITTEST_CUSTOMNODE/"
-fs_img = "/tmp/UNITTEST_CUSTOMNODE/fs_img/"
+tmp_folder = "/tmp/UNITTEST_CUSTOMNODE"
+fs_img = "/tmp/UNITTEST_CUSTOMNODE/fs_img"
 
 
 def setup():
@@ -24,8 +24,9 @@ def setup():
     os.makedirs(fs_img)
 
     fs_dirtree = ['boot/', 'etc/', 'etc/apt/sources.list.d/', 'sbin/']
-    fs_files = ['boot/initrd.img-4.3.0-3-arm64-l4tm',
-                'boot/vmlinuz-4.3.0-3-arm64-l4tm',
+    # FIXME: hardcoded constants have to be kept in sync in two files
+    fs_files = ['boot/initrd.img-4.5.0-3-arm64-l4tm-tmas',
+                'boot/vmlinuz-4.5.0-3-arm64-l4tm-tmas',
                 'etc/hosts',
                 'etc/hostname',
                 'sbin/init',

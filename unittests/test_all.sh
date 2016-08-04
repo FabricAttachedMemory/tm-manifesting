@@ -20,7 +20,6 @@ do
     if [[ $test_file == *"$IGNORE"* ]];then
         echo "Ignoring -> $test_file"
     else
-        echo "Running -> $test_file"
-        `python3 $test_file`
+        python3 $test_file
     fi
 done
