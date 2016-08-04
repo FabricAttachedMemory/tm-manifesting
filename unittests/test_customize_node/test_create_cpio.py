@@ -39,7 +39,7 @@ class CreateCpioTest(unittest.TestCase):
         """
         """
         cpio_file = '%s/fs_img.cpio' % self.tmp_folder
-        CN.create_cpio(self.fs_img, cpio_file)
+        CN.create_cpio(cpio_file, self.fs_img)
         self.assertTrue(os.path.exists(cpio_file), 'cpio file was not created!')
 
 
