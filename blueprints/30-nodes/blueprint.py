@@ -180,14 +180,15 @@ def build_node(manifest, node_coord):
 
     # each node gets its own set of dirs
     hostname = BP.nodes[node_coord][0].hostname
+    client_id = 'enclosure' + node_coord.split('EncNum')[1].lower()
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     build_dir = os.path.join(sys_imgs, hostname)
     tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
 
     build_args = {
             'hostname':     hostname,
-            'client_id':    "enclosure/1/node/1",   # FIXME
-            'manifest':     manifest.namespace, # FIXME: namespace vs basename?
+            'client_id':    client_id,
+            'manifest':     manifest.namespace, # FIXME: basename?
             'packages':     manifest.thedict['packages'],   # FIXME: tasks?
             'golden_tar':   golden_tar,
             'build_dir':    build_dir,
@@ -212,6 +213,7 @@ def build_node(manifest, node_coord):
 
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
+        response.set_data(response.get_data().decode() + ' (DRY RUN)')
         print(cmd)      # Now you can cut/paste and run it by hand.
         # FIMXE: what about status.json?
         return response
