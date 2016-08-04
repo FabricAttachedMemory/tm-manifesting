@@ -90,15 +90,18 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
 
     def test_symlink_target(self):
         """
-            Touch a test file inside the test directorty(self.tmp_folder) and
-        try to create a new symlink inside it folder using customize_node.symlink_target.
+            Touch a test file inside the test directorty(self.tmp_folder)
+        and try to create a new symlink inside it folder using
+        customize_node.symlink_target.  DEPRECATED
         """
+        self.assertTrue(True, 'DEPRECATED')
+        return
         test_file = '%s/test_symlink_file.orig' % self.tmp_folder
         test_file_new = '%s.linked' % test_file
         self.touch_file(test_file)
 
         CN.symlink_target(test_file, test_file_new)
-        self.assertTrue(os.path.exists(test_file_new), 
+        self.assertTrue(os.path.exists(test_file_new),
                 'Target "%s" was not linked into "%s"!' % (test_file, test_file_new))
 
 
