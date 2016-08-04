@@ -34,16 +34,15 @@ _debug = None
 @contextmanager
 def workdir(path):
     """
-        Change script's work directory to perform a set of operation. Set original
-    directory back when done.
+        Change script's work directory to perform a set of operation.
+    Set original directory back when done.
     """
     try:
         orig_dir = os.getcwd()
         os.chdir(path)
         yield
     except OSError as e:
-        raise RuntimeError('Couldn\'t change working directory in "%s": %s' %
-            (path, str(e)))
+        raise RuntimeError('os.chdir(%s) failed: %s' % (path, str(e)))
     finally:
         os.chdir(orig_dir)
 
@@ -55,6 +54,8 @@ def _fs_sanity_check(target):
     :param 'target': [str] path about to be copied/moved/overwritten/removed
     :return: 'None' on success. Raise 'AssertionError' on problems.
     """
+    if os.geteuid():    # Not root?  Trust the FS
+        return
     target = target.strip()
     assert target[0] == '/', 'Not an absolute path'
     elems = target.split('/')[1:]   # zeroth is empty string
@@ -146,7 +147,8 @@ def slice_path(target, slice_ratio=2):
 def cleanout_kernel(target_dir, sys_img):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
-    These files are not needed for diskless boot.
+    These files are not needed for diskless boot.  Move them to target_dir
+    for future use.
 
     :param 'kernel_dest': [str] where to move the unecessary files.
     :param 'sys_img': [str] where to find the unecessary files.
@@ -161,7 +163,10 @@ def cleanout_kernel(target_dir, sys_img):
             copy_into = os.path.basename(source)
             copy_target_into(source, '%s/%s' % (target_dir, copy_into) )
             remove_target(source)
-        return glob('%s/vmlinuz*' % (target_dir))[0]  # one item
+        # I want to return the kernel I found and moved.   In an error
+        # condition (such as one of the unit tests) it may not be there.
+        vmlinuz =  glob('%s/vmlinuz*' % (target_dir))
+        return vmlinuz[0] if vmlinuz else None
     except Exception as err:
         raise RuntimeError ('Errror occured cleanout_kernel(): %s' % str(err))
 
