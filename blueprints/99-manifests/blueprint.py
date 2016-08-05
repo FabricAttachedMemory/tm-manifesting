@@ -231,7 +231,6 @@ class ManifestDestiny(object):
         molegal = legal.union(frozenset(('comment', '_comment')))
         illegal = list(keys - molegal - frozenset((_UPFROM, )))
         assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
-        assert m['tasks'] or m['packages'], 'empty manifest'
 
         nosuch = BP.mainapp.blueprints['package'].filter(m['packages'])
         assert not nosuch, 'no such package(s) ' + ', '.join(nosuch)

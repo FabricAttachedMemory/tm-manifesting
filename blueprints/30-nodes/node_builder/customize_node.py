@@ -433,9 +433,10 @@ apt-get dist-upgrade --assume-yes
     with open(script_file, 'w') as file_obj:
         file_obj.write(script_header)
         file_obj.write('\n')
-        for pkg in pkg_list.split(','):
-            cmd = 'apt-get install --assume-yes %s\n' % pkg
-            file_obj.write(cmd)
+        if pkg_list is not None:
+            for pkg in pkg_list.split(','):
+                cmd = 'apt-get install --assume-yes %s\n' % pkg
+                file_obj.write(cmd)
 
     os.chmod(script_file, 0o744)
 
@@ -510,11 +511,12 @@ def execute(args):
         fix_init(new_fs_dir)
 
         # Add packages and tasks from manifest.  FIXME: what about tasks?
-        if args.packages:
-            update_status(
-                status_file, args.manifest, 'Installing ' + args.packages)
-            cleanup_sources_list(new_fs_dir)
-            install_packages(new_fs_dir, args.packages)
+        # Even if empty, it does an apt-get update/upgrade/dist-upgrade
+        # in case golden image has gone stale.
+        update_status(
+            status_file, args.manifest, 'Installing ' + str(args.packages))
+        cleanup_sources_list(new_fs_dir)
+        install_packages(new_fs_dir, args.packages)
 
         # Create .cpio file from untar.  Filename done here in case
         # we ever want to pass it in as an option.
@@ -565,6 +567,8 @@ def execute(args):
 if __name__ == '__main__':
     """ Parse commind line arguments and pass it directly into execute() function. """
     parser = argparse.ArgumentParser(description='Options to customize FS image.')
+
+    # Default default value is "None"
 
     parser.add_argument('--hostname',
         help='Hostname to use for the FS image')

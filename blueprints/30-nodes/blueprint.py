@@ -188,11 +188,15 @@ def build_node(manifest, node_coord):
     rack_prefix = node_coord.split('Enclosure')[0]
     client_id = rack_prefix + 'EncNum' + node_coord.split('EncNum')[1]
 
+    packages = manifest.thedict['packages']     # FIXME: tasks?
+    if not len(packages):
+        packages = None
+
     build_args = {
             'hostname':     hostname,
             'client_id':    client_id,
             'manifest':     manifest.namespace, # FIXME: basename?
-            'packages':     manifest.thedict['packages'],   # FIXME: tasks?
+            'packages':     packages,
             'golden_tar':   golden_tar,
             'build_dir':    build_dir,
             'tftp_dir':     tftp_dir,
