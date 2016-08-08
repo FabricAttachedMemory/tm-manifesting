@@ -11,3 +11,5 @@ manifest_config.py  usr/lib/python3/dist-packages/tmms/
 README.bristol      usr/lib/python3/dist-packages/tmms/
 README              usr/lib/python3/dist-packages/tmms/
 *.py                usr/lib/python3/dist-packages/tmms/
+systemd/systemd_tmms-server             usr/default/tm-manifest-server
+systemd/systemd_tmms-server.service     lib/systemd/system/tm-manifest-server.service
