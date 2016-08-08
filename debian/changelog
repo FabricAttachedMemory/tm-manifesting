@@ -1,6 +1,7 @@
 tm-manifesting (1.2-0+l4tm1) catapult; urgency=low
 
-  * Addimg systemd support for the tm-manifest-server
+  * Adding systemd support for the tm-manifest-server
+  * Adding arm binaries
 
  -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 8 August 2016 16:02:07 -0600
 
