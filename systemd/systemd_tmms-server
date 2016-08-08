@@ -1,0 +1,3 @@
+# Arguments to run manifesting-server with.
+# Check manifesting_api.py -h for more available arguments.
+OPT_ARGS=''

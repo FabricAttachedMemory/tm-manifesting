@@ -1,0 +1,11 @@
+[Unit]
+Description=TheMachine Manifesting API Server
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+EnvironmentFile=-/etc/default/tmms-server
+ExecStart=/usr/local/bin/tm-manifest-server $OPT_ARGS
+
+[Install]
+WantedBy=multi-user.target
