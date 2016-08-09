@@ -34,8 +34,7 @@ Depends: ${misc:Depends},
          python3-flask,
          python3-requests,
          python3-debian,
-         tm-librarian,
-         python2 => python | python-all | python-dev | python-all-dev
+         tm-librarian
 Recommends: attr
 Description: Manifesting Server
  Server daemon that listens to the RestClient requests to manage TMD. For API
