@@ -1,0 +1,78 @@
+.TH tm-manifest-api "8" "2016" "The Machine" "Manifesting API Server"
+
+.SH NAME
+tm-manifesting \- The Machine Manifesting API package.
+
+
+.SH DESCRIPTION
+ \fBtm-manifesting\fP is developed on L4TM systems for use in The Machine
+environment.  Support for any other distro, even Debian or HPE Linux,
+is optional and discretionary.
+
+
+.SH HOW TO USE (instructions)
+ Step 1: sudo tm-manifest-grub
+    - This step generates a TFTP environment
+
+ Step 2: sudo tm-manifest-golden
+    - Might take more than 10 minutes to run.
+    - This will generate a Golden Image inside the /var/lib/tmms/sys-images/golden/
+     by default that will be picked up by Manifesting Server to generate file system
+     images for the nodes based of the requested manifest.
+
+ Step 3: systemd start tm-manifest-server
+    - This will start a manifesting server as a systemd process.
+
+    If you want to keep tm-manifesting-server in the terminal process, then run:
+    sudo tm-manifest-server
+
+ At this point you can start sending API request to your "localhost:port" server.
+
+
+.SH Default Environment
+    \fB/var/lib/tmms/\fP - Manifesting Server working environment. Uploaded
+manifests; node's filesystem images; tftp and pxe...
+    \fB/var/lib/tmms/tftp/\fP - TFTP environment and PXE service used by Manifesting
+api to server Nodes.
+    \fB/usr/lib/python3/dist-packages/tmms/\fP - Manifesting API source code.
+    \fB/etc/tmconfig\fP - The Machine gigantic config file with all the nodes
+coords and other The Machine informationl
+    \fB/etc/tmms/\fP - Config file for the Manifesting API.
+    \fB/usr/lib/python3/dist-packages/tmms/manifes_config.py\fP - Default Server's
+config file.
+
+
+\fP
+.SH OPTIONS
+.PP
+
+.TP
+\fBtm-manifest-grub\fR
+ A setup script that sets up tftp (grub, pxe) environment for manifesting service.
+ Check \fbman tm-manifest-grub\fR for details.
+
+.TP
+\fBtm-manifest-golden\fR
+ A setup script that generates \fBGolden Image\fR using vmdebootstrap debian tool.
+ Check \fbman tm-manifest-golden\fR for details.
+
+.TP
+\fBtm-manifes-server\fR
+ Manifesting API Server that listens to client's requests.
+This process can be started as a systemd process: systemd start tm-manifest-server.
+or as a terminal process: sudo tm-manifest-server.
+ Check \fbman tm-manifest-server\fR for details.
+
+.TP
+\fBtm-manifest\fR
+ Manifesting Command Line client tool.
+ Check \fbman tm-manifest\fR for details.
+
+
+\fP
+.SH FILES
+ Server is using /etc/tmms config file that is intended to be customizible by the
+user if needed per manifesting instance
+
+.SH BUGS
+None that we know of.  Today.  Between noon and 1 pm.
