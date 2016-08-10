@@ -139,7 +139,7 @@ def check_version(*args, **kwargs):
 
 @mainapp.after_request
 def version(response):
-    response.headers['Content-Type'] += ';version=%s' % mainapp.config['API_VERSION']
+    response.headers['Content-Type'] = 'application/json;version=%s' % mainapp.config['API_VERSION']
     return response
 
 ###########################################################################
