@@ -334,10 +334,18 @@ class TMgrub(object):
         nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[0].coordinate
         self.coords = [nodefmt % ((i // 10) + 1, (i % 10) + 1)
                        for i in range(_maxnodes)]
-        zipped = zip(self.coords, self.hostIPs, self.hostnames)
+        self.MACs = ['52:54:48:50:45:%02d' % (i + 1)
+                       for i in range(_maxnodes)]
         with open(prepath + '.hostsfile', 'w') as f:
+            zipped = zip(self.coords, self.hostIPs, self.hostnames)
             for h in zipped:
                 f.write('id:%s,%s,%s\n' % h)
+            # TM SFW will not run under QEMU/FAME.   Fall back to MAC-based
+            # assignments (since we own the MACs in this case).
+            f.write('# FAME/QEMU MAC assistance for generic EFI FW\n')
+            zipped = zip(self.MACs, self.hostIPs, self.hostnames)
+            for h in zipped:
+                f.write('%s,%s,%s\n' % h)
 
         # Static assignments
         with open(prepath + '.morehosts', 'w') as f:
