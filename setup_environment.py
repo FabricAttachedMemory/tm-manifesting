@@ -69,7 +69,7 @@ def install_base_packages():
         Install packages required by manifesting service.  It only needs
         files from tm-librarian, it won't actually get run from here.
     """
-    pkg_list = ['apt-utils', 'vmdebootstrap',
+    pkg_list = ['apt-utils', 'vmdebootstrap', 'grub-efi-arm64-bin',
                 'dnsmasq', 'python3-dnspython',
                 'python3-netaddr', 'python3-netifaces',
                 'python3-flask', 'python3-requests',
