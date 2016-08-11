@@ -144,9 +144,11 @@ class TMgrub(object):
         # Absolute paths are for writing files.  tftp_xxxx are file contents.
         # Dirs keyed from manconfig were already created.
         self.tftp_images_dir = manconfig['TFTP_IMAGES']
-        self.tftp_grub_dir = manconfig['TFTP_GRUB']
+        self.tftp_grub_dir = manconfig['TFTP_GRUB']     # already created
         self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
         make_dir(self.tftp_grub_menus_dir)
+        make_symlink(   # Present all EFI modules to grub for "insmod"
+            '/usr/lib/grub/arm64-efi', self.tftp_grub_dir + '/arm64-efi')
 
         self.tftp_grub_cfg = self.tftp_grub_dir + '/grub.cfg'
         self.tftp_grub_efi = self.tftp_grub_dir + '/grubnetaa64.efi'
