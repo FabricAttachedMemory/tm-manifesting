@@ -1,4 +1,4 @@
-tm-manifesting (1.1-0+l4tm1) catapult; urgency=low
+tm-manifesting (1.2-0+l4tm1) catapult; urgency=low
 
   * Adding systemd support for the tm-manifest-server
   * Adding arm binaries
@@ -7,7 +7,16 @@ tm-manifesting (1.1-0+l4tm1) catapult; urgency=low
   * Support leading slashes of node coordinate string
   * Fixing unittests, config files and general error checking
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 10 August 2016 16:27:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 11 August 2016 10:22:07 -0600
+
+tm-manifesting (1.1-0+l4tm1) catapult; urgency=low
+
+  * Support only amd64 arch
+  * General api bug fix
+  * Support leading slashes of node coordinate string
+  * Fixing unittests, config files and general error checking
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 4 August 2016 12:42:07 -0600
 
 tm-manifesting (1.0-0+l4tm1) catapult; urgency=low
 
