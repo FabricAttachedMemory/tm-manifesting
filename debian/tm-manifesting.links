@@ -2,3 +2,5 @@ usr/lib/python3/dist-packages/tmms/manifest_api.py          usr/bin/tm-manifest-
 usr/lib/python3/dist-packages/tmms/tm_cmd/tm_manifest.py    usr/bin/tm-manifest
 usr/lib/python3/dist-packages/tmms/setup_golden_image.py    usr/bin/tm-manifest-golden
 usr/lib/python3/dist-packages/tmms/setup_grub.py            usr/bin/tm-manifest-grub
+usr/lib/python3/dist-packages/tmms/systemd/systemd_tmms-server.service      lib/systemd/system/tm-manifest-server.service
+usr/lib/python3/dist-packages/tmms/systemd/systemd_tmms-server              usr/default/tm-manifest-server
