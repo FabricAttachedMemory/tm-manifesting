@@ -39,17 +39,23 @@ from tm_librarian.tmconfig import TMConfig
 
 _maxnodes = 40  # Revised FRD for 2016
 
+# bootnetaa64.efi is compiled with most modules, such as all_video.   A few
+# (like videoinfo) might be needed, so the modules directory will be supplied.
 # Sometimes the EFI network is 0, sometimes 1, and I can't get
 # inline variable substitution to work.  Take the easy way out,
 # one of them will fire.
 
 _grub_cfg_template = '''
-set gfxmode=auto
-insmod efi_gop
-insmod efi_uga
-insmod gfxterm
+# Command/data prefix is (tftp)/grub; module prefix is (tftp)/grub/arm64-efi
+# so "insmod videoinfo" just works.
 
+set gfxmode=auto
+set gfxmodepayload=text
+set linux_gfx_mode=text
+
+# Fails on TMAS, no video modes per "videoinfo"
 terminal_output gfxterm
+background_image "(tftp)/grub/manifest.jpg"
 
 configfile  "(tftp){menudir}/${{net_efinet0_hostname}}.menu"
 configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
