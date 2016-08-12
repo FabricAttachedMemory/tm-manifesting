@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+TMMS_DIR=/usr/lib/python3/dist-packages/tmms/
+
+if [ -d "$TMMS_DIR" ]; then
+    echo "Removing dist-packages/tmms/ with a postrm script..."
+    rm -r $TMMS_DIR
+fi
