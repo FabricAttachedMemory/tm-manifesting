@@ -1,2 +1,3 @@
 tm-manifesting: python-script-but-no-python-dep usr/lib/python3/dist-packages/tmms/configs/vmdebootstrap
 tm-manifesting: image-file-in-usr-lib usr/lib/python3/dist-packages/tmms/static/manifest.jpg
+tm-manifesting: service-file-is-not-a-file lib/systemd/system/tm-manifest-server.service

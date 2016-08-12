@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 EnvironmentFile=-/etc/default/tm-manifest-server
-ExecStart=/usr/local/bin/tm-manifest-server $OPT_ARGS
+ExecStart=/usr/bin/tm-manifest-server $OPT_ARGS
 
 [Install]
 WantedBy=multi-user.target
