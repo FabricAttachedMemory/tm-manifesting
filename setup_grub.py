@@ -34,26 +34,42 @@ from utils.utils import make_dir, make_symlink, basepath
 
 from tm_librarian.tmconfig import TMConfig
 
-#--------------------------------------------------------------------------
-# Templates for config files
-
 _maxnodes = 40  # Revised FRD for 2016
 
+###########################################################################
+# Templates for config files
+
+# /boot/grub.cfg ----------------------------------------------------------
+# bootnetaa64.efi is compiled with most modules, such as all_video.   A few
+# (like videoinfo) might be needed, so the modules directory will be supplied.
 # Sometimes the EFI network is 0, sometimes 1, and I can't get
 # inline variable substitution to work.  Take the easy way out,
 # one of them will fire.
 
 _grub_cfg_template = '''
-set gfxmode=auto
-insmod efi_gop
-insmod efi_uga
-insmod gfxterm
+# Command/data prefix is (tftp)/grub; module prefix is (tftp)/grub/arm64-efi
+# so "insmod videoinfo" just works.
 
+set gfxmode=auto
+set gfxmodepayload=text
+set linux_gfx_mode=text
+
+# Fails on TMAS, no video modes per "videoinfo"
 terminal_output gfxterm
+background_image "(tftp)/grub/manifest.jpg"
 
 configfile  "(tftp){menudir}/${{net_efinet0_hostname}}.menu"
 configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 '''
+
+# /grub/menus/nodeXX.menu -------------------------------------------------
+# First cut was "root=/dev/ram0" but that invokes (old, inflexible) ramfs
+# behavior.  "mount" claims that / is type rootfs (a special kind of tmpfs)
+# but "df /" is nothing but zeroes.  From 2013:
+# https://lwn/net/Articles/559176/ says don't specify root= but DO specify
+# rootfstype=tmpfs (assumes CONFIG_TMPFS). df is now happy, although mount
+# claims / is type rootfs.  As it turns out, specifying neither root= or
+# rootfstype= works just fine.
 
 _grub_menu_template = '''
 set default=0
@@ -61,11 +77,12 @@ set menu_color_highlight=white/brown
 set timeout=10
 
 menuentry '{hostname} L4TM ARM64' {{
-    linux (tftp){images_dir}/{hostname}.vmlinuz.gz root=/dev/ram0 console=ttyAMA0 acpi=force rw
+    linux (tftp){images_dir}/{hostname}.vmlinuz.gz console=ttyAMA0 acpi=force rw
     initrd (tftp){images_dir}/{hostname}.cpio.gz
 }}
 '''
 
+# .../dnsmasq/<INTERFACE>.conf and more -----------------------------------
 # Main grub.cfg template was started from a libvirt NAT setup.  See also
 # https://github.com/ussjoin/piglet/blob/master/config/dnsmasq.conf
 # dnsmasq --help dhcp
@@ -138,9 +155,11 @@ class TMgrub(object):
         # Absolute paths are for writing files.  tftp_xxxx are file contents.
         # Dirs keyed from manconfig were already created.
         self.tftp_images_dir = manconfig['TFTP_IMAGES']
-        self.tftp_grub_dir = manconfig['TFTP_GRUB']
+        self.tftp_grub_dir = manconfig['TFTP_GRUB']     # already created
         self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
         make_dir(self.tftp_grub_menus_dir)
+        make_symlink(   # Present all EFI modules to grub for "insmod"
+            '/usr/lib/grub/arm64-efi', self.tftp_grub_dir + '/arm64-efi')
 
         self.tftp_grub_cfg = self.tftp_grub_dir + '/grub.cfg'
         self.tftp_grub_efi = self.tftp_grub_dir + '/grubnetaa64.efi'
@@ -326,10 +345,18 @@ class TMgrub(object):
         nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[0].coordinate
         self.coords = [nodefmt % ((i // 10) + 1, (i % 10) + 1)
                        for i in range(_maxnodes)]
-        zipped = zip(self.coords, self.hostIPs, self.hostnames)
+        self.MACs = ['52:54:48:50:45:%02d' % (i + 1)
+                       for i in range(_maxnodes)]
         with open(prepath + '.hostsfile', 'w') as f:
+            zipped = zip(self.coords, self.hostIPs, self.hostnames)
             for h in zipped:
                 f.write('id:%s,%s,%s\n' % h)
+            # TM SFW will not run under QEMU/FAME.   Fall back to MAC-based
+            # assignments (since we own the MACs in this case).
+            f.write('# FAME/QEMU MAC assistance for generic EFI FW\n')
+            zipped = zip(self.MACs, self.hostIPs, self.hostnames)
+            for h in zipped:
+                f.write('%s,%s,%s\n' % h)
 
         # Static assignments
         with open(prepath + '.morehosts', 'w') as f:

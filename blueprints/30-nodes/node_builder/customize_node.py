@@ -185,10 +185,23 @@ def fix_init(sys_img):
             if os.path.exists('init'):
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
-    except (EnvironmentError) as err:
+    except Exception as err:
         raise RuntimeError('Error occured while fixing /init: %s' % str(err))
 
 #===============================================================================
+# setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME
+# rootfs needs some kind of TLC to show up in df.
+
+def fix_rootfs(sys_img):
+    try:
+        with workdir(sys_img):      # At the root
+            with open('etc/fstab', 'w') as f:    # no leading slash!!!
+                f.write('proc /proc proc defaults 0 0\n')
+    except Exception as e:
+        raise RuntimeError('Error occured while fixing rootfs: %s' % str(e))
+
+#===============================================================================
+
 
 def cleanup_sources_list(sys_img):
     """
@@ -509,6 +522,7 @@ def execute(args):
 
         # This is the magic that preserves initrd as rootfs.
         fix_init(new_fs_dir)
+        fix_rootfs(new_fs_dir)
 
         # Add packages and tasks from manifest.  FIXME: what about tasks?
         # Even if empty, it does an apt-get update/upgrade/dist-upgrade
