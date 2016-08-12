@@ -35,10 +35,18 @@ L4TM_RELEASE = 'catapult'
 L4TM_AREAS = ( 'contrib', 'non-free' )
 
 # NIC connected to the node network on which DHCP and TFTP will be served
-# (usually something like ethX)
-PXE_INTERFACE = 'net_accessP'
+# (usually something like ethX).  A value of 'None' suppresses all network
+# configuration, firewalls, and PXE setup.  The manifesting API will
+# still work, you just can't boot any images.  After changing this
+# you need to (re)-run setup_grub.py.
+PXE_INTERFACE = 'None'
 
-# Domain name for nodes in this instance.  Forty nodes are configured,
+# Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
+# in their place.  Values are "None" (user has powerful iptables fu),
+# "DHCP" (provides DHCP firewall) and "DHCPNAT" (DHCP firewall plus NAT).
+PXE_FIREWALL = 'None'
+
+# Domain name for nodes in this instance.  Forty nodes are configured
 # meaning TMMS must generate a list of 40 IP addresses.  Four formats
 # exist for this variable:
 # 1. Domain name only.  Example:
