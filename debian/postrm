@@ -7,3 +7,8 @@ if [ -d "$TMMS_DIR" ]; then
     echo "Removing dist-packages/tmms/ with a postrm script..."
     rm -r $TMMS_DIR
 fi
+
+if [ -e "/etc/tmms" ]; then
+    echo "Removing /etc/tmms"
+    rm /etc/tmms
+fi

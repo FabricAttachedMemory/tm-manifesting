@@ -5,3 +5,7 @@ set -e
 /usr/lib/python3/dist-packages/tmms/setup_environment.py -P
 
 systemctl daemon-reload
+
+if [ ! -e "/etc/tmms" ]; then
+    cp /usr/lib/python3/dist-packages/tmms/manifest_config.py /etc/tmms
+fi
