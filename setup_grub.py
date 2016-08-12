@@ -34,11 +34,12 @@ from utils.utils import make_dir, make_symlink, basepath
 
 from tm_librarian.tmconfig import TMConfig
 
-#--------------------------------------------------------------------------
-# Templates for config files
-
 _maxnodes = 40  # Revised FRD for 2016
 
+###########################################################################
+# Templates for config files
+
+# /boot/grub.cfg ----------------------------------------------------------
 # bootnetaa64.efi is compiled with most modules, such as all_video.   A few
 # (like videoinfo) might be needed, so the modules directory will be supplied.
 # Sometimes the EFI network is 0, sometimes 1, and I can't get
@@ -61,17 +62,27 @@ configfile  "(tftp){menudir}/${{net_efinet0_hostname}}.menu"
 configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 '''
 
+# /grub/menus/nodeXX.menu -------------------------------------------------
+# First cut was "root=/dev/ram0" but that invokes (old, inflexible) ramfs
+# behavior.  "mount" claims that / is type rootfs (a special kind of tmpfs)
+# but "df /" is nothing but zeroes.  From 2013:
+# https://lwn/net/Articles/559176/ says don't specify root= but DO specify
+# rootfstype=tmpfs (assumes CONFIG_TMPFS). df is now happy, although mount
+# claims / is type rootfs.  As it turns out, specifying neither root= or
+# rootfstype= works just fine.
+
 _grub_menu_template = '''
 set default=0
 set menu_color_highlight=white/brown
 set timeout=10
 
 menuentry '{hostname} L4TM ARM64' {{
-    linux (tftp){images_dir}/{hostname}.vmlinuz.gz root=/dev/ram0 console=ttyAMA0 acpi=force rw
+    linux (tftp){images_dir}/{hostname}.vmlinuz.gz console=ttyAMA0 acpi=force rw
     initrd (tftp){images_dir}/{hostname}.cpio.gz
 }}
 '''
 
+# .../dnsmasq/<INTERFACE>.conf and more -----------------------------------
 # Main grub.cfg template was started from a libvirt NAT setup.  See also
 # https://github.com/ussjoin/piglet/blob/master/config/dnsmasq.conf
 # dnsmasq --help dhcp
