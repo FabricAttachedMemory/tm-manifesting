@@ -42,6 +42,7 @@ def webpage(name=None):
 @BP.route('/api/%ss/' % _ERS_element)       # Plural form of element name to query all tasks
 @BP.route('/api/%s/<name>' % _ERS_element)  # Singular - to get one task.
 def api(name=None):
+    _load_data()
     if name is None:
         tasks = [ ]
         for task in _data.values():
@@ -76,11 +77,27 @@ def _load_data(mainapp):
         _data.update(dict((task['Task'], task) for task in tmp))
 
 
+def _lookup(task_name, key=None):
+    return _data.get(task_name, None)
+
+
+def _packages(task_name):
+    task = _lookup(task_name)
+    if not task:
+        return None
+    # Clean out new line in the beginning and end of the task['Key'] string.
+    # Strip each package name of the task['Key'] list...
+    packages = [pkg.strip() for pkg in task['Key'].strip().split('\n')]
+    return packages
+
+
 def _filter(tasks):    # Maybe it's time for a class
     return [ task for task in tasks if task not in _data ]
 
 
 def register(mainapp):  # take what you like and leave the rest
     BP.filter = _filter     # So manifest can see it
+    BP.lookup = _lookup
+    BP.get_packages = _packages
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _load_data(mainapp)

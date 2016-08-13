@@ -188,7 +188,13 @@ def build_node(manifest, node_coord):
     rack_prefix = node_coord.split('Enclosure')[0]
     client_id = rack_prefix + 'EncNum' + node_coord.split('EncNum')[1]
 
-    packages = manifest.thedict['packages']     # FIXME: tasks?
+    packages = manifest.thedict['packages']
+    # Add packages listed in each Task specified in the manifest
+    for task in manifest.thedict['tasks']:
+        task_pkgs = BP.blueprints['task'].get_packages(task)
+        if task_pkgs:
+            packages.extend(task_pkgs)
+
     if not len(packages):
         packages = None
 
