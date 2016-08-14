@@ -401,12 +401,12 @@ class TMgrub(object):
         return _grub_cfg_template.format(menudir=self.chroot_grub_menus_dir)
 
 
-def main(config_file):
+def main(args):     # FIXME: running from __main__ is broken
     """
         Configure TFTP environment.
     """
 
-    manconfig = ManifestingConfiguration(config_file, autoratify=False)
+    manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
     if missing:
         raise RuntimeError('\n'.join(missing))
@@ -417,10 +417,6 @@ def main(config_file):
     print('      Per-node image dirs in', grubby.tftp_images_dir)
     print('           dnsmasq config in %s/%s.*' % (
         grubby.dnsmasq_dir, grubby.pxe_interface))
-
-def add_cmdline_args(parser):
-    '''Can be included by super-script "setup.py"'''
-    pass
 
 if __name__ == '__main__':
     """ Parse command line arguments. """

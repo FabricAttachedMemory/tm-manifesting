@@ -14,32 +14,9 @@ from pdb import set_trace
 
 # Imports are relative because implicit Python path "tmms" may not exist yet.
 
-from configs.build_config import ManifestingConfiguration
+from tmms.configs.build_config import ManifestingConfiguration
 
-from utils.utils import make_dir, make_symlink
-
-
-def link_into_python():
-    """
-        Create a symlink to THIS manifesting source tree under the known
-    Python hierarchy so that user could import manifesting libraries like
-    "import tmms.foobar".  Keep it simple.  setup.py must be at the top.
-    """
-    py_ver = 'python%d.%d' % (sys.version_info.major, sys.version_info.minor)
-    tmptuple = (sys.prefix, py_ver)
-    paths_to_lib = ('%s/local/lib/%s/dist-packages' % tmptuple,
-                    '%s/lib/%s/dist-packages' % tmptuple)
-
-    setup_file = os.path.realpath(__file__)
-    repo_path = os.path.dirname(setup_file)
-    for path in paths_to_lib:
-        if path not in sys.path:
-            break
-        path = path + '/tmms'
-        make_symlink(repo_path, path)
-    else:
-        raise RuntimeError(
-            'Can\'t find suitable path in python environment to link tmms!')
+from tmms.utils.utils import make_dir, make_symlink
 
 
 def _create_env(manconfig, fields, ignore=None):
@@ -98,14 +75,6 @@ def main(args):
     - create folders for TFTP server (dnsmasq)
     - run make_grub_cfg.py script to populate grub config files under TFTP
     """
-    # Before reading the config file, satisfy some preconditions
-    assert os.geteuid() == 0, 'This script requires root permissions'
-    assert sys.platform == 'linux'
-
-    if not args.packaging:
-        print(' ---- Creating workaround Python package path ---- ')
-        link_into_python()
-
     print(' ---- Loading config file "%s" ---- ' % args.config)
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
 
@@ -121,25 +90,13 @@ def main(args):
     print()
 
 
-def add_cmdline_args(parser):
-    '''Can be included by super-script "setup.py"'''
-    parser.add_argument(
-        '-P', '--packaging',
-        help='This flag should only be set by post-setup scripts in Debian ' +
-             'installer. Using it while trying to run from the git repo ' +
-             'will result in a non-functioning environment.\n',
-        action='store_true')
-
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Setup arguments intended for tmms developers only')
-    add_cmdline_args(parser)
+
+    from ..setup import parse_cmdline_args
 
     # A fresh L4TM may not have some things, including flask.
     # Chicken-and-egg: flask is needed to parse config file
 
-    args, _ = parser.parse_known_args()
     if not args.packaging:
         print(' ---- Installing base packages ---- ')
         install_base_packages()
