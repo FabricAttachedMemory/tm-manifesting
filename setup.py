@@ -1,5 +1,7 @@
 #!/usr/bin/python3 -tt
 
+# Grab all possible arguments for all possible sub-scripts and do them (all).
+
 import argparse
 import errno
 import json
@@ -16,27 +18,20 @@ from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
 
-from utils.utils import make_dir, make_symlink
-
-
-def main(args):
-    pass
+from utils.setup_environment import add_cmdline_args as aca1, main as main1
+from utils.setup_networking import add_cmdline_args as aca2, main as main2
+from utils.setup_golden_image import add_cmdline_args as aca3, main as main3
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Setup arguments intended for tmms developers only')
-    parser.add_argument(
-        '-P', '--packaging',
-        help='This flag should only be set by post-setup scripts in Debian ' +
-             'installer. Using it while trying to run from the git repo ' +
-             'will result in a non-functioning environment.\n',
-        action='store_true')
+    set_trace()
+    aca1(parser)
+    aca2(parser)
+    aca3(parser)
 
-    # A fresh L4TM may not have some things, including flask.
-    # Chicken-and-egg: flask is needed to parse config file
-
-    args, _ = parser.parse_known_args()
+    args, argvleft = parser.parse_known_args()
     try:
         main(args)
         raise SystemExit(0)

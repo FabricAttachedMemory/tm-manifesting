@@ -44,6 +44,11 @@ def main(config_file, config_vmd=None):
     assert not status, 'vmdebootstrap failed: return status %s' % status
 
 
+def add_cmdline_args(parser):
+    '''Can be included by super-script "setup.py"'''
+    pass
+
+
 if __name__ == '__main__':
     """
         Parse command line arguments and call main() function.

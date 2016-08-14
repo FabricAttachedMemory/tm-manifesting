@@ -121,15 +121,20 @@ def main(args):
     print()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Setup arguments intended for tmms developers only')
+def add_cmdline_args(parser):
+    '''Can be included by super-script "setup.py"'''
     parser.add_argument(
         '-P', '--packaging',
         help='This flag should only be set by post-setup scripts in Debian ' +
              'installer. Using it while trying to run from the git repo ' +
              'will result in a non-functioning environment.\n',
         action='store_true')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Setup arguments intended for tmms developers only')
+    add_cmdline_args(parser)
 
     # A fresh L4TM may not have some things, including flask.
     # Chicken-and-egg: flask is needed to parse config file

@@ -180,7 +180,7 @@ class ManifestingConfiguration(object):
 
         config = '/etc/tmms'
         if not os.path.isfile(config):  # Use the sample supplied with repo
-            config = cls.tmms_chroot(ref=2) + '/manifest_config.py'
+            config = cls.tmms_chroot(ref=2) + '/tmms'
 
         parser.add_argument(
             '-c', '--config',
