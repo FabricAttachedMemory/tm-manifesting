@@ -48,15 +48,14 @@ def link_into_python():
 
 
 def parse_cmdline_args():
-    parser = argparse.ArgumentParser(
-        description='Setup arguments intended for tmms developers only')
-
     config = '/etc/tmms'
     if not os.path.isfile(config):  # Use the sample supplied with repo
         config = os.path.dirname(os.path.realpath(__file__)) + '/tmms'
     assert os.path.isfile(config), 'This is very bad'
     print('Using config file %s' % config)
 
+    parser = argparse.ArgumentParser(
+        description='Setup arguments intended for tmms developers only')
     parser.add_argument(
         '-c', '--config',
         help='Configuration file to be used by manifesting commands.\nDefault=%s' % config,
@@ -71,33 +70,38 @@ def parse_cmdline_args():
         '-v', '--verbose',
         help='Make me talk',
         action='store_true')
-    args, argvleft = parser.parse_known_args()
-
+    parser.add_argument(
+        'actions', nargs='*',
+        help='optional action(s)',
+        default=('all',))
+    args = parser.parse_args()
+    assert os.geteuid() == 0, 'You must be root'
     if not args.packaging:
         link_into_python()
 
-    return args, argvleft
+    legal = ('environment', 'networking', 'golden_image')   # order matters
+    if 'all' in args.actions:
+        actions = legal
+    else:
+        for a in args.actions:
+            assert a in legal, 'Illegal action "%s"' % a
+        actions = tuple(args.actions)
+    del args.actions
+    return args, actions
 
 
 if __name__ == '__main__':
-    assert os.geteuid() == 0, 'You must be root'
-    assert sys.platform == 'linux', 'I see no Tux here'
-    args, argvleft = parse_cmdline_args()
-
     try:
-        if not argvleft:                # Do them all
-            setup_environment(args)     # Must come first
-            setup_networking(args)
-            setup_golden_image(args)
-        else:
-            if argvleft[0] == 'environment':
+        assert sys.platform == 'linux', 'I see no Tux here'
+        args, actions = parse_cmdline_args()
+        set_trace()
+        for a in actions:
+            if a == 'environment':
                 setup_environment(args)
-            elif argvleft[0] == 'networking':
+            elif a == 'networking':
                 setup_networking(args)
-            elif argvleft[0].startswith('golden'):
+            elif a == 'golden_image':
                 setup_golden_image(args)
-            else:
-                raise RuntimeError('Illegal directive "%s"' % argvleft[0])
         raise SystemExit(0)
     except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
