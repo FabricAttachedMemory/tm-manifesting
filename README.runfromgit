@@ -43,7 +43,7 @@ The sample manifesting configuration file supplied with the repo is
 "tmms".  Yes it is Python syntax.  No, it will most likely NOT
 work for you without customization.  Copy it to a (new) file "/etc/tmms" and
 make edits in that copy.  There are many comments in that file explaining
-the variables and their values.  By default, all the commands (setup_* and
+the variables and their values.  By default, all the commands (setup.py* and
 manifest_api.py) will look for /etc/tmms for their configuration.
 
 You will almost certainly need to change the PXE_INTERFACE option.  You
@@ -54,12 +54,13 @@ To read it, use the --config option of all commands.  You have to do it
 with all commands to get consistent results.
 
 =============================================================================
-        MANIFESTING SETUP: ENVIRONMENT
+        MANIFESTING SETUP: FIRST TIME
 
-$ sudo ./setup.py [ all | environment | networking | golden_image ]
+$ sudo ./setup.py [ all ]
 
 By default (no arguments), or specifying "all", setup.py will start the 
-first of several phases of setup, and proceed through all of them.
+first of several phases of setup, and proceed through all of them.  That
+is the recommended invocation.
 
 You may see some package installation output from apt-get depending on
 the packages currently on your system.
@@ -79,6 +80,16 @@ PXE_INTERFACE: no such interface "net_accessP"
 means you need to set PXE_INTERFACE to the NIC which is actually connected
 to your nodes.  No, all permutations of error messages will not be listed.
 If you get confused, ask for help.
+
+=============================================================================
+        MANIFESTING SETUP: ENVIRONMENT
+
+This is the first step of setup.   It may be explicitly invoked via
+
+$ sudo ./setup.py environment
+
+It creates the overall directory structure needed to support other
+configuration steps.
 
 =============================================================================
         MANIFESTING SETUP: NETWORKING

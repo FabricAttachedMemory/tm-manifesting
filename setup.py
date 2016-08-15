@@ -1,6 +1,7 @@
 #!/usr/bin/python3 -tt
 
 # Grab all possible arguments for all possible sub-scripts and do them (all).
+# Defer importation until last moment as there are order dependencies.
 
 import argparse
 import errno
@@ -18,10 +19,6 @@ from pdb import set_trace
 # I think this will break if run from configs?
 
 from utils.utils import make_symlink
-
-from configs.setup_environment import main as setup_environment
-from configs.setup_networking import main as setup_networking
-from configs.setup_golden_image import main as setup_golden_image
 
 
 def link_into_python():
@@ -104,11 +101,14 @@ if __name__ == '__main__':
             actions = args.extra
         for a in actions:
             if a == 'environment':
-                setup_environment(args)
+                import configs.setup_environment
+                setup_environment.main(args)
             elif a == 'networking':
-                setup_networking(args)
+                configs.setup_networking
+                setup_networking.main(args)
             elif a == 'golden_image':
-                setup_golden_image(args)
+                import configs.setup_golden_image
+                setup_golden_image.main(args)
         raise SystemExit(0)
     except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
