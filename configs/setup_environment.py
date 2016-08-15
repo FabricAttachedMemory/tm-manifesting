@@ -1,6 +1,5 @@
 #!/usr/bin/python3 -tt
 
-import argparse
 import errno
 import json
 import os
@@ -12,11 +11,11 @@ import sys
 
 from pdb import set_trace
 
-# Imports are relative because implicit Python path "tmms" may not exist yet.
+# Imports are relative to parent directory with setup.py because implicit
+# Python path "tmms" may not exist yet.
 
-from tmms.configs.build_config import ManifestingConfiguration
-
-from tmms.utils.utils import make_dir, make_symlink
+from configs.build_config import ManifestingConfiguration
+from utils.utils import make_dir
 
 
 def _create_env(manconfig, fields, ignore=None):
@@ -94,23 +93,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-
-    from ..setup import parse_cmdline_args
-
-    # A fresh L4TM may not have some things, including flask.
-    # Chicken-and-egg: flask is needed to parse config file
-
-    ManifestingConfiguration.parser_add_config(parser)
-    args, _ = parser.parse_known_args()
-    print('Using config file', args.config)
-
-    errmsg = ''     # establish scope
-    try:
-        main(args)
-        raise SystemExit(0)
-    except (AssertionError, RuntimeError, ValueError) as err:
-        errmsg = str(err)
-    except Exception as err:
-        errmsg = 'UNEXPECTED ERROR: %s' % str(err)
-
-    raise SystemExit('%s\nsetup failed' % errmsg)
+    # Not worth working around this
+    raise SystemExit('Can only be run from top-level setup.py')

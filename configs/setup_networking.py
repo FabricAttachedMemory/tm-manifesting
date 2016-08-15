@@ -1,20 +1,19 @@
 #!/usr/bin/python3 -tt
 """
     Create TFTP environment for nodes to pick up custom FS images.
-Each node must have its on grub menu, kernel (vmlinuz), and FS image (cpio)
-under the TFTP server.  This script generates the grub menu files plus
-a single master grub.cfg which is originally downloaded by grub.efi.
+This script generates node-specific the grub menu files plus a single master
+grub.cfg.  It also generates config files for the PXE server "dnsmasq".
 
-    Details: A node boots and system firmware (SFW) downloads (via TFTP)
-a single file, the bootloader which is grub.efi.  Grub turns around and
-grabs its master grub.cfg file.  All nodes will use this same grub.cfg.
-grub.cfg content is based on the DHCP "ClientID" option, as opposed to
-the traditional MAC address.  The ClientID contains the node's physical
-location (enclosure and node number).  This is evaluated by grub to
-choose a specific "menu" file.  Grub menu file is generated per each
-node and is stored as env#/grub.node# file which represent each known
-node coord. That menu specifies the precise kernel file (vmlinuz) and
-customized FS image (.cpio file).
+Details: SFW constructs a ClientID based on the node's physical coordinates.
+That ClientID is passed in a DHCP request.  The DHCP server (dnsmasq) looks
+up an IP address and hostname based on ClientID.  The DHCP response also
+includes a TFTP server (also dnsmasq) from which to obtain a boot loader.
+
+SFW downloads (via TFTP) a single file, the bootloader which is "grub".
+Grub turns around and TFTPs the master grub.cfg file common to all nodes.
+grub.cfg evaluates the hostname of the running node to choose a menu file.
+That menu specifies the precise kernel file (vmlinuz) and customized FS image
+(.cpio file) for the node.
 """
 
 import argparse
@@ -29,10 +28,13 @@ import netifaces as NIF
 
 from pdb import set_trace
 
+from tm_librarian.tmconfig import TMConfig
+
+# Imports are relative to parent directory with setup.py because implicit
+# Python path "tmms" may not exist yet.
+
 from configs.build_config import ManifestingConfiguration
 from utils.utils import make_dir, make_symlink, basepath
-
-from tm_librarian.tmconfig import TMConfig
 
 _maxnodes = 40  # Revised FRD for 2016
 
@@ -401,11 +403,10 @@ class TMgrub(object):
         return _grub_cfg_template.format(menudir=self.chroot_grub_menus_dir)
 
 
-def main(args):     # FIXME: running from __main__ is broken
+def main(args):
     """
         Configure TFTP environment.
     """
-
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
     if missing:
@@ -418,21 +419,7 @@ def main(args):     # FIXME: running from __main__ is broken
     print('           dnsmasq config in %s/%s.*' % (
         grubby.dnsmasq_dir, grubby.pxe_interface))
 
+
 if __name__ == '__main__':
-    """ Parse command line arguments. """
-    parser = argparse.ArgumentParser(description='Generate GRUB2 config files')
-    ManifestingConfiguration.parser_add_config(parser)
-    args, _ = parser.parse_known_args(sys.argv[1:])
-    print('Using config file', args.config)
-
-    if args.config is None:
-        args.config = os.path.realpath(__file__)
-        args.config = os.path.dirname(args.config) + '/manifest_config.py'
-        print('Using config file', args.config)
-
-    msg = None     # establish scope
-    try:
-        main(args.config)
-    except Exception as e:
-        msg = str(e)
-    raise SystemExit(msg)
+    # Not worth working around this
+    raise SystemExit('Can only be run from top-level setup.py')

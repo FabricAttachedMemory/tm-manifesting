@@ -47,7 +47,7 @@ def link_into_python():
             'Can\'t find suitable path in python environment to link tmms!')
 
 
-def parse_cmdline_args():
+def parse_cmdline_args(extra_args_msg):
     config = '/etc/tmms'
     if not os.path.isfile(config):  # Use the sample supplied with repo
         config = os.path.dirname(os.path.realpath(__file__)) + '/tmms'
@@ -58,8 +58,16 @@ def parse_cmdline_args():
         description='Setup arguments intended for tmms developers only')
     parser.add_argument(
         '-c', '--config',
-        help='Configuration file to be used by manifesting commands.\nDefault=%s' % config,
+        help='Configuration file to be used.\nDefault=%s' % config,
         default=config)
+    parser.add_argument(
+        '--debug',
+        help='Turn on flask debugging.',
+        action='store_true')
+    parser.add_argument(
+        '--dry-run',
+        help='No action; simulation of events.',
+        action='store_true')
     parser.add_argument(
         '-P', '--packaging',
         help='This flag should only be set by post-setup scripts in Debian ' +
@@ -68,32 +76,32 @@ def parse_cmdline_args():
         action='store_true')
     parser.add_argument(
         '-v', '--verbose',
-        help='Make me talk',
+        help='Make me talk more.',
         action='store_true')
     parser.add_argument(
-        'actions', nargs='*',
-        help='optional action(s)',
-        default=('all',))
+        'extra', nargs='*',
+        help=extra_args_msg,
+        default=())
     args = parser.parse_args()
-    assert os.geteuid() == 0, 'You must be root'
-    if not args.packaging:
-        link_into_python()
-
-    legal = ('environment', 'networking', 'golden_image')   # order matters
-    if 'all' in args.actions:
-        actions = legal
-    else:
-        for a in args.actions:
-            assert a in legal, 'Illegal action "%s"' % a
-        actions = tuple(args.actions)
-    del args.actions
-    return args, actions
+    assert os.geteuid() == 0, 'You must be root'    # after parse check
+    return args
 
 
 if __name__ == '__main__':
     try:
         assert sys.platform == 'linux', 'I see no Tux here'
-        args, actions = parse_cmdline_args()
+        args = parse_cmdline_args(
+            'setup action(s):\n   "all", "environment", "networking", "golden_image"')
+        if not args.packaging:
+            link_into_python()
+
+        legal = ('environment', 'networking', 'golden_image')  # order matters
+        if not args.extra or 'all' in args.extra:
+            actions = legal
+        else:
+            for a in args.extra:
+                assert a in legal, 'Illegal action "%s"' % a
+            actions = args.extra
         for a in actions:
             if a == 'environment':
                 setup_environment(args)

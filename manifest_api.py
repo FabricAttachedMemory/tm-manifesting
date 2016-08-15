@@ -21,40 +21,21 @@ from tm_librarian.tmconfig import TMConfig
 # For running from git repo, setup.py does the right thing.  True .deb
 # installation will also do the right thing.
 try:
+    from tmms.setup import parse_cmdline_args
     from tmms.utils import utils
     from tmms.configs.build_config import ManifestingConfiguration
 except ImportError as e:
     raise SystemExit(
         'Cannot find Python module "tmms"; run "setup.py" and retry.')
 
-###########################################################################
-
-
-def parse_args():
-    """ Parse system arguments set from command line."""
-    parser = argparse.ArgumentParser(
-        description='Manifesting API server runtime settings')
-    ManifestingConfiguration.parser_add_config(parser)
-    parser.add_argument('--verbose', help='Make it talk.',
-                        type=int, default=0)
-    parser.add_argument('--debug', help='Turn on flask debugging',
-                        action='store_true')
-    parser.add_argument('--dry-run', help='No action; simulation of events.',
-                        action='store_true')
-    args, _ = parser.parse_known_args()
-    print('Using config file', args.config)
-    return vars(args)
 
 ###########################################################################
 # Set config variables for future use across the blueprints.
 
-cmdline_args = parse_args()
-if cmdline_args['config'] is None:
-    this_file = os.path.realpath(__file__)
-    cmdline_args['config'] = os.path.dirname(this_file) + '/manifest_config.py'
+cmdline_args = parse_cmdline_args('n/a')
 
 try:
-    manconfig = ManifestingConfiguration(cmdline_args['config'])
+    manconfig = ManifestingConfiguration(cmdline_args.config)
 except Exception as e:
     raise SystemExit(str(e))
 
@@ -74,9 +55,9 @@ mainapp.config['tmconfig'] = tmconfig
 mainapp.config['API_VERSION'] = 1.0
 mainapp.config['url_prefix'] = '/manifesting'
 mainapp.config['VERBOSE'] = \
-    cmdline_args['verbose'] if sys.stdin.isatty() else 0
-mainapp.config['DEBUG'] = cmdline_args['debug'] and sys.stdin.isatty()
-mainapp.config['DRYRUN'] = cmdline_args['dry_run']
+    cmdline_args.verbose if sys.stdin.isatty() else 0
+mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
+mainapp.config['DRYRUN'] = cmdline_args.dry_run
 
 ###########################################################################
 # Must come after mainapp setup because Mobius
