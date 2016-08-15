@@ -25,7 +25,7 @@ def make_symlink(source, target):
     :return: 'None' on success or raise 'RuntimeError'
     '''
 
-    print(' - symlink [%s] -> [%s]' % (source, target))
+    # print(' - symlink [%s] -> [%s]' % (source, target))
     try:
         os.symlink(source, target)
     except OSError as e:
