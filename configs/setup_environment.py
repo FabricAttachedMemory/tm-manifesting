@@ -45,11 +45,13 @@ def install_base_packages():
         Install packages required by manifesting service.  It only needs
         files from tm-librarian, it won't actually get run from here.
     """
+    print(' ---- Adding ARM64 architecture via apt-get update ---- ')
     ret, stdout = subprocess.getstatusoutput('dpkg --add-architecture arm64')
     assert not ret, '"dpkg --add-architecture arm64" failed'
     ret, stdout = subprocess.getstatusoutput('apt-get update')
     assert not ret, '"apt-get update" failed'
 
+    print(' ---- Installing base packages ---- ')
     pkg_list = ['apt-utils', 'vmdebootstrap', 'grub-efi-arm64-bin',
                 'dnsmasq', 'python3-dnspython',
                 'python3-netaddr', 'python3-netifaces',
@@ -79,7 +81,6 @@ def main(args):
     - create folders for PXE server (dnsmasq)
     """
     if not args.packaging:
-        print(' ---- Installing base packages ---- ')
         install_base_packages()
 
     print(' ---- Loading config file "%s" ---- ' % args.config)

@@ -312,7 +312,7 @@ class TMgrub(object):
         # Try to carry on in the face of errors.  dnsmasq may not start but
         # manifest_api should still run.
         try:
-            assert self.pxe_interface not in NIF.interfaces(), \
+            assert self.pxe_interface in NIF.interfaces(), \
                 'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
             ifaceaddr = NIF.ifaddresses(
                 self.pxe_interface).get(NIF.AF_INET, False)
@@ -325,6 +325,7 @@ class TMgrub(object):
                 self.broadcast = ifaceaddr['broadcast']
                 self.netmask = ifaceaddr['netmask']
         except Exception as e:
+            print(str(e))
             ifaceaddr = None
             self.morehosts = '# /etc/tmms[PXE_INTERFACE] was invalid and so am I'
 
@@ -334,6 +335,10 @@ class TMgrub(object):
         assert len(self.hostIPs) == _maxnodes, \
             'TMDOMAIN form yielded %d IP addresses, not %d' % (
                 len(self.hostIPs), _maxnodes)
+
+        if ifaceaddr is None:
+            self.pxe_interface = None
+            return
 
         size = os.stat(self.tftp_grub_efi).st_size
         self.boot_file_size_512_blocks = (size // 512) + 1
@@ -419,8 +424,12 @@ def main(args):
     print('Master GRUB configuration in', grubby.tftp_grub_cfg)
     print('      Per-node grub menus in', grubby.tftp_grub_menus_dir)
     print('      Per-node image dirs in', grubby.tftp_images_dir)
-    print('           dnsmasq config in %s/%s.*' % (
-        grubby.dnsmasq_dir, grubby.pxe_interface))
+    if grubby.pxe_interface is None:
+        print(
+            'dnsmasq config has been suppressed. Fix /etc/tmms[PXE_INTERFACE]')
+    else:
+        print('           dnsmasq config in %s/%s.*' % (
+            grubby.dnsmasq_dir, grubby.pxe_interface))
 
 
 if __name__ == '__main__':
