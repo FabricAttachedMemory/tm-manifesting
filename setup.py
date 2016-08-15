@@ -94,7 +94,6 @@ if __name__ == '__main__':
     try:
         assert sys.platform == 'linux', 'I see no Tux here'
         args, actions = parse_cmdline_args()
-        set_trace()
         for a in actions:
             if a == 'environment':
                 setup_environment(args)

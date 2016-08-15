@@ -72,9 +72,12 @@ def main(args):
     - install dependent packages (this setup script is a workaround)
     - introduce a tmms package to Python environment via symlink
     - create folders for manifesting files and DBs
-    - create folders for TFTP server (dnsmasq)
-    - run make_grub_cfg.py script to populate grub config files under TFTP
+    - create folders for PXE server (dnsmasq)
     """
+    if not args.packaging:
+        print(' ---- Installing base packages ---- ')
+        install_base_packages()
+
     print(' ---- Loading config file "%s" ---- ' % args.config)
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
 
@@ -96,10 +99,6 @@ if __name__ == '__main__':
 
     # A fresh L4TM may not have some things, including flask.
     # Chicken-and-egg: flask is needed to parse config file
-
-    if not args.packaging:
-        print(' ---- Installing base packages ---- ')
-        install_base_packages()
 
     ManifestingConfiguration.parser_add_config(parser)
     args, _ = parser.parse_known_args()
