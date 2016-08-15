@@ -31,8 +31,8 @@ describes the topology of an instance of The Machine.  Every instance needs
 its own custom file.  Creation of that file is outside the scope of
 manifesting.
 
-TMCF is NOT needed for any setup steps listed below.  You only need TMCF
-to actually run the API server "manifest_api.py".   When you get your
+TMCF is needed for most of the setup steps listed below.  You also need
+TMCF to actually run the API server "manifest_api.py".   When you get your
 file you should save it in the default location /etc/tmconfig.  Note:
 the Librarian also uses this file.
 
@@ -40,17 +40,17 @@ the Librarian also uses this file.
         MANIFESTING SETUP: MANIFESTING CONFIGURATION FILE
 
 The sample manifesting configuration file supplied with the repo is 
-"tmms".  Yes it is Python syntax.  No, it will most likely NOT
-work for you without customization.  Copy it to a (new) file "/etc/tmms" and
+"tmms".  Yes, it is Python syntax.  No, it will most likely NOT work
+for you without customization.  Copy it to a (new) file "/etc/tmms" and
 make edits in that copy.  There are many comments in that file explaining
-the variables and their values.  By default, all the commands (setup.py* and
-manifest_api.py) will look for /etc/tmms for their configuration.
+the variables and their values.  By default, all the commands (setup.py
+and manifest_api.py) will look for /etc/tmms for their configuration.
 
 You will almost certainly need to change the PXE_INTERFACE option.  You
 should also add 'main' to the L4TM_AREAS tuple.
 
 You may also keep a custom file in a custom place, like $HOME/mytmms.
-To read it, use the --config option of all commands.  You have to do it
+To use it, invoke all commands with --config.  You have to do it
 with all commands to get consistent results.
 
 =============================================================================
@@ -60,7 +60,7 @@ $ sudo ./setup.py [ all ]
 
 By default (no arguments), or specifying "all", setup.py will start the 
 first of several phases of setup, and proceed through all of them.  That
-is the recommended invocation.
+is the recommended invocation.  The phases are discussed below.
 
 You may see some package installation output from apt-get depending on
 the packages currently on your system.
@@ -84,12 +84,13 @@ If you get confused, ask for help.
 =============================================================================
         MANIFESTING SETUP: ENVIRONMENT
 
-This is the first step of setup.   It may be explicitly invoked via
+This is the first phase of "setup.py all".   It may be explicitly invoked via
 
 $ sudo ./setup.py environment
 
 It creates the overall directory structure needed to support other
-configuration steps.
+configuration steps.  If this phase is not done first, the other phases
+will probably fail.
 
 =============================================================================
         MANIFESTING SETUP: NETWORKING

@@ -247,7 +247,7 @@ class TMgrub(object):
             except Exception as e:
                 raise RuntimeError('TMDOMAIN: cannot resolve "%s"' % FQDN)
 
-            if not ifaceaddr:
+            if ifaceaddr is None:
                 # Kludge.  Since this is Corporate IT, assume the position
                 self.netmask = '255.255.240.0'
                 tmp = IPAddress(A.address)  # any of them will do
@@ -284,7 +284,7 @@ class TMgrub(object):
                 assert len(iprange) == _maxnodes, \
                     'TMDOMAIN IP range is not %d addresses' % _maxnodes
                 self.hostIPs = [str(h) for h in iprange]
-                if not ifaceaddr:
+                if ifaceaddr is None:
                     # Kludge.  The smallest possible netmask is 6 bits (64)
                     # but if the range crossed boundaries...Assume class C
                     # containment.  iprange_to_cidrs() seems like it ought
@@ -300,7 +300,7 @@ class TMgrub(object):
                 except Exception as e:
                     raise RuntimeError(
                         'TMDOMAIN: illegal IP address notation: %s' % str(e))
-                if not ifaceaddr:
+                if ifaceaddr is None:
                     # See "Kludge" comment above: class C or get more data
                     self.netmask = '255.255.255.0'
                     self.network = str(IPAddress(ipaddr.value & 0xFFFFFF00))
@@ -309,23 +309,26 @@ class TMgrub(object):
                                     for i in range(_maxnodes)]
 
     def configure_dnsmasq(self):
+        # Try to carry on in the face of errors.  dnsmasq may not start but
+        # manifest_api should still run.
+        try:
+            assert self.pxe_interface not in NIF.interfaces(), \
+                'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
+            ifaceaddr = NIF.ifaddresses(
+                self.pxe_interface).get(NIF.AF_INET, False)
+            if ifaceaddr:
+                assert len(ifaceaddr) == 1, \
+                    'PXE_INTERFACE "%s" has multiple IPs assigned to it' % \
+                    self.pxe_interface
+                ifaceaddr = ifaceaddr.pop()
+                self.morehosts = '%s torms' % ifaceaddr['addr']
+                self.broadcast = ifaceaddr['broadcast']
+                self.netmask = ifaceaddr['netmask']
+        except Exception as e:
+            ifaceaddr = None
+            self.morehosts = '# /etc/tmms[PXE_INTERFACE] was invalid and so am I'
 
-        # Legal interface? FIXME: move this to build_config
-        assert self.pxe_interface in NIF.interfaces(), \
-            'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
-        ifaceaddr = NIF.ifaddresses(self.pxe_interface).get(NIF.AF_INET, False)
-        if ifaceaddr:
-            assert len(ifaceaddr) == 1, \
-                'PXE_INTERFACE "%s" has multiple IPs assigned to it' % \
-                self.pxe_interface
-            ifaceaddr = ifaceaddr.pop()
-            self.morehosts = '%s torms' % ifaceaddr['addr']
-            self.broadcast = ifaceaddr['broadcast']
-            self.netmask = ifaceaddr['netmask']
-        else:
-            self.morehosts = '# This file left intentionally blank'
-            # other fields will be filled in by specific kludges
-
+        # Fill in other fields, maybe with SWAG kludges
         self.evaluate_tmdomain(ifaceaddr)
 
         assert len(self.hostIPs) == _maxnodes, \
@@ -355,7 +358,7 @@ class TMgrub(object):
         # about duplicate IPs and skips the second set.
         zipped = zip(self.MACs, self.coords, self.hostIPs, self.hostnames)
         with open(prepath + '.hostsfile', 'w') as f:
-            f.write('# FAME/QEMU MACs,ClientID,IP address, hostname\n')
+            f.write('# FAME/QEMU MAC,ClientID,IP address, hostname\n')
             for h in zipped:
                 f.write('%s,id:%s,%s,%s\n' % h)
 

@@ -35,11 +35,11 @@ L4TM_RELEASE = 'catapult'
 L4TM_AREAS = ( 'contrib', 'non-free' )
 
 # NIC connected to the node network on which DHCP and TFTP will be served
-# (usually something like ethX).  A value of 'None' suppresses all network
-# configuration, firewalls, and PXE setup.  The manifesting API will
-# still work, you just can't boot any images.  After changing this
-# you need to (re)-run setup_grub.py.
-PXE_INTERFACE = 'None'
+# (usually something like ethX).  If the interface cannot be found, network
+# the PXE server will NOT be started.  The manifesting API will
+# still work, you just can't boot any images.  After changing this value
+# you need to (re)-run "setup.py networking".
+PXE_INTERFACE = 'NoSuchInterfaceUnlessYouAreBOFH'
 
 # Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
 # in their place.  Values are "None" (user has powerful iptables fu),
