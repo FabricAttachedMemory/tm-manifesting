@@ -45,6 +45,11 @@ def install_base_packages():
         Install packages required by manifesting service.  It only needs
         files from tm-librarian, it won't actually get run from here.
     """
+    ret, stdout = subprocess.getstatusoutput('dpkg --add-architecture arm64')
+    assert not ret, '"dpkg --add-architecture arm64" failed'
+    ret, stdout = subprocess.getstatusoutput('apt-get update')
+    assert not ret, '"apt-get update" failed'
+
     pkg_list = ['apt-utils', 'vmdebootstrap', 'grub-efi-arm64-bin',
                 'dnsmasq', 'python3-dnspython',
                 'python3-netaddr', 'python3-netifaces',
