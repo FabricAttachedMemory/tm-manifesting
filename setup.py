@@ -4,13 +4,8 @@
 # Defer importation until last moment as there are order dependencies.
 
 import argparse
-import errno
-import json
 import os
 import os.path
-import shlex
-import shutil
-import subprocess
 import sys
 
 from pdb import set_trace
@@ -101,15 +96,17 @@ if __name__ == '__main__':
             actions = args.extra
         for a in actions:
             if a == 'environment':
-                import configs.setup_environment
+                from configs import setup_environment
                 setup_environment.main(args)
             elif a == 'networking':
-                configs.setup_networking
+                from configs import setup_networking
                 setup_networking.main(args)
             elif a == 'golden_image':
-                import configs.setup_golden_image
+                from configs import setup_golden_image
                 setup_golden_image.main(args)
         raise SystemExit(0)
+    except (ImportError, NameError) as err:
+        errmsg = 'First run "setup.py all" or "setup.py environment"'
     except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
     except Exception as err:
