@@ -2,10 +2,10 @@
 #DEBHELPER#
 set -e
 
-/usr/lib/python3/dist-packages/tmms/setup_environment.py -P
+/usr/lib/python3/dist-packages/tmms/setup.py environment -P
 
 systemctl daemon-reload
 
 if [ ! -e "/etc/tmms" ]; then
-    cp /usr/lib/python3/dist-packages/tmms/manifest_config.py /etc/tmms
+    cp /usr/lib/python3/dist-packages/tmms/tmms /etc/tmms
 fi
