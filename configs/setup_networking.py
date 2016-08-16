@@ -236,7 +236,6 @@ class TMgrub(object):
                     raise RuntimeError('TMDOMAIN: cannot resolve "%s"' % FQDN)
                 A = next(iter(answer))
                 self.hostIPs.append(A.address)
-                pass
 
             # Oh yeah...
             try:
@@ -311,6 +310,7 @@ class TMgrub(object):
     def configure_dnsmasq(self):
         # Try to carry on in the face of errors.  dnsmasq may not start but
         # manifest_api should still run.
+        self.morehosts = '# /etc/tmms[PXE_INTERFACE] was invalid and so am I'
         try:
             assert self.pxe_interface in NIF.interfaces(), \
                 'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
@@ -321,13 +321,15 @@ class TMgrub(object):
                     'PXE_INTERFACE "%s" has multiple IPs assigned to it' % \
                     self.pxe_interface
                 ifaceaddr = ifaceaddr.pop()
-                self.morehosts = '%s torms' % ifaceaddr['addr']
+                self.addr = ifaceaddr['addr']
                 self.broadcast = ifaceaddr['broadcast']
                 self.netmask = ifaceaddr['netmask']
+                # Check the __doc__ string for this class
+                self.network = IPNetwork(self.addr + '/' + self.netmask)
+                self.morehosts = '%s torms' % self.addr
         except Exception as e:
             print(str(e))
             ifaceaddr = None
-            self.morehosts = '# /etc/tmms[PXE_INTERFACE] was invalid and so am I'
 
         # Fill in other fields, maybe with SWAG kludges
         self.evaluate_tmdomain(ifaceaddr)
@@ -352,7 +354,7 @@ class TMgrub(object):
 
         # AA programs MFW with "rack prefix".  MFW appends EncNum/X/Node/Y.
         # The rack enumerator and "Enclosure" locator are omitted.  Maybe.
-        nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[0].coordinate
+        nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[1].coordinate
         self.coords = [nodefmt % ((i // 10) + 1, (i % 10) + 1)
                        for i in range(_maxnodes)]
         # TM SFW will not run under QEMU/FAME.   Fall back to MAC-based

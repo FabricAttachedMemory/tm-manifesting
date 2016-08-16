@@ -13,7 +13,8 @@ from pdb import set_trace
 from flask import Blueprint, render_template, request, jsonify, make_response
 from werkzeug.exceptions import BadRequest
 
-from .node_builder import customize_node # programmatic import in main requires this
+# programmatic import in main requires this form
+from .node_builder import customize_node
 
 _ERS_element = 'node'
 
@@ -52,12 +53,13 @@ def node_name(name=None):
 # API
 # See blueprint registration in manifest_api.py, these are relative paths
 
+
 @BP.route('/api/%ss/' % _ERS_element, methods=('GET', ))
 def get_all_nodes():
     """
         List all nodes coordinates known to the server.
     """
-    response = jsonify( { 'nodes' : list(BP.node_coords) } )
+    response = jsonify({'nodes': list(BP.node_coords)})
     response.status_code = 200
     return response
 
@@ -65,15 +67,17 @@ def get_all_nodes():
 @BP.route('/api/%s/' % _ERS_element, methods=('GET', ))
 def get_all_bindings():
     """
-        List all node binded to a manifest with its status (ready, building or error).
+        List all nodes, their manifest bindings, and status
+        (ready, building or error).
     """
     nodes_info = _load_data()
-    if not nodes_info:              # FIXME: This is not a correct indentification of the node binding
-        response = jsonify( { 'No Content' : 'There are no manifests associated with any nodes.' } )
+    if not nodes_info:  # FIXME: This is not a correct id of the node binding
+        response = jsonify({
+            'No Content': 'There are no manifests associated with any nodes.'})
         response.status_code = 204
         return response
 
-    response = jsonify( { 'mappings' : nodes_info } )
+    response = jsonify({'mappings': nodes_info})
     response.status_code = 200
     return response
 
@@ -82,7 +86,7 @@ def get_all_bindings():
 @BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('GET', ))
 def get_node_bind_info(node_coord=None):
     """
-        List status json of the manifest binded to the node.
+        List status json of the manifest bound to the node.
     """
     # Two rules invoke Postel's Law of liberal reception.  Either way,
     # we need to add leading /.
@@ -101,9 +105,9 @@ def get_node_bind_info(node_coord=None):
 @BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('DELETE', ))
 def delete_node_binding(node_coord):
     """
-        Remove Node to Manifest binding. Find node's folder in the TFTP directory
-    by its hostname and clean out the content. Thus, on the next node reboot, it
-    will be not served by the TFTP.
+        Remove Node to Manifest binding. Find node's folder in the TFTP
+    directory by its hostname and clean out the content. Thus the next
+    reboot will fail.
 
     :param 'node_coord': full node's coordinate to unbinde Manifest from.
     """
@@ -111,15 +115,16 @@ def delete_node_binding(node_coord):
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.', 404)
 
-    node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
-    if not os.path.isdir(node_location):        # Paranoia. That should never happened.
+    node_location = BP.config['TFTP_IMAGES'] + '/' + \
+        BP.nodes[node_coord][0].hostname
+    if not os.path.isdir(node_location):  # Paranoia
         return make_response('TFT doesn\'t serve requested node.', 404)
 
     try:
         for node_file in glob(node_location + '/*'):
             os.remove(node_file)
     except OSError as err:
-        return make_response('Failed to delete binding due to OSError:\n%s' % err, 500)
+        return make_response('Failed to delete binding: %s' % err, 500)
 
     return make_response('Successful cleanup.', 204)
 
@@ -130,9 +135,10 @@ def delete_node_binding(node_coord):
 @BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('PUT', ))
 def bind_node_to_manifest(node_coord=None):
     """
-        Generate a custom filesystem image for a provided node coordinate using
-    a manifest specified in the request's body. The resulting FS image will be
-    placed at appropriate place under the TFTP hierarchy based on hostname.
+        Generate a custom filesystem image for a provided node coordinate
+    using a manifest specified in the request's body. The resulting FS image
+    will be placed at appropriate place under the TFTP hierarchy based on
+    hostname.
 
     :param 'node_coord': absolute machine coordinate of the node
     """
@@ -199,15 +205,15 @@ def build_node(manifest, node_coord):
         packages = None
 
     build_args = {
-            'hostname':     hostname,
-            'client_id':    client_id,
-            'manifest':     manifest.namespace, # FIXME: basename?
-            'packages':     packages,
-            'golden_tar':   golden_tar,
-            'build_dir':    build_dir,
-            'tftp_dir':     tftp_dir,
-            'verbose':      BP.VERBOSE,
-            'debug':        BP.DEBUG,
+        'hostname':     hostname,
+        'client_id':    client_id,
+        'manifest':     manifest.namespace,     # FIXME: basename?
+        'packages':     packages,
+        'golden_tar':   golden_tar,
+        'build_dir':    build_dir,
+        'tftp_dir':     tftp_dir,
+        'verbose':      BP.VERBOSE,
+        'debug':        BP.DEBUG,
     }
 
     cmd_args = []
@@ -215,7 +221,7 @@ def build_node(manifest, node_coord):
         if val is not None:     # packages and tasks
             cmd_args.append('--%s %s' % (key, val))
     cmd = os.path.dirname(__file__) + \
-          '/node_builder/customize_node.py ' + ' '.join(cmd_args)
+        '/node_builder/customize_node.py ' + ' '.join(cmd_args)
 
     response = make_response(
         'Manifest set; image build initiated.', 201)
@@ -260,7 +266,7 @@ def build_node(manifest, node_coord):
 ###########################################################################
 
 
-_data = None # node <-> manifest bindings
+_data = None    # node <-> manifest bindings
 
 
 def get_node_status(node_coord):
@@ -270,12 +276,13 @@ def get_node_status(node_coord):
     about the Node binding status that Comply with ERS specs (Section 8.6)
 
     :param 'node_coord': [str] noode full coordinate string.
-    :return: [dict] values that describes node's state (status, message, manifest).
-             (ERS document section 8.6)
+    :return: [dict] values that describes node's state
+        (status, message, manifest)  (ERS document section 8.6)
     """
     assert node_coord in BP.node_coords, 'Unknown node coordinate'
 
-    node_location = BP.config['TFTP_IMAGES'] + '/' + BP.nodes[node_coord][0].hostname
+    node_location = BP.config['TFTP_IMAGES'] + '/' + \
+        BP.nodes[node_coord][0].hostname
     status_file = node_location + '/' + 'status.json'
     if not os.path.isdir(node_location):
         return None
@@ -288,7 +295,7 @@ def get_node_status(node_coord):
         with open(status_file, 'r') as file_obj:
             status = json.loads(file_obj.read())
     except ValueError as err:       # TCNH =)
-        status['message'] = 'Failed to parse status file. Exception Error: %s ' % str(err)
+        status['message'] = 'Failed to parse status file: %s ' % str(err)
         status['manifest'] = 'unknown'
         status['status'] = 'error'
 
@@ -300,8 +307,8 @@ def _load_data():
         Scan tftp/images folder for known hostnames and read its status.json
     file. Save this data into a dictionary and return it to the user.
 
-    :return: [dict] node_coordinate - node_status key value pair of the current
-            status of the nodes.
+    :return: [dict] node_coordinate - node_status key value pair of the
+        current status of the nodes.
     """
     result = {}
     for node in BP.nodes:
@@ -324,7 +331,7 @@ def register(mainapp):  # take what you like and leave the rest
     # Do some shortcuts
     global _data
     BP.config = mainapp.config
-    BP.nodes = BP.config['tmconfig'].nodes
+    BP.nodes = BP.config['tmconfig'].allNodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
