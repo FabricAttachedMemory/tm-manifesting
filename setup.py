@@ -1,7 +1,9 @@
 #!/usr/bin/python3 -tt
 
-# Grab all possible arguments for all possible sub-scripts and do them (all).
-# Defer importation until last moment as there are order dependencies.
+# This script can be called directly (for use after git clone) or indirectly
+# during dh_helper package builds.  Defer local imports until last moment
+# as there are order dependencies.  Grab all possible arguments for all
+# possible sub-scripts and do them (all).
 
 import argparse
 import os
@@ -9,11 +11,6 @@ import os.path
 import sys
 
 from pdb import set_trace
-
-# Imports are relative because implicit Python path "tmms" may not exist yet.
-# I think this will break if run from configs?
-
-from utils.utils import make_symlink
 
 
 def link_into_python():
@@ -40,6 +37,7 @@ def link_into_python():
 
 
 def parse_cmdline_args(extra_args_msg):
+    '''There are no import dependencies here.'''
     config = '/etc/tmms'
     if not os.path.isfile(config):  # Use the sample supplied with repo
         config = os.path.dirname(os.path.realpath(__file__)) + '/tmms'
@@ -79,13 +77,32 @@ def parse_cmdline_args(extra_args_msg):
     return args
 
 
+def try_dh_helper(args):
+    '''If the directive is a dh_helper keyword, process this and EXIT.'''
+    if len(args.extra) != 1:
+        return
+    legal = ('clean', 'install')
+    if args.extra[0] not in legal:
+        return
+    action = args.extra.pop()
+    print('And here is where Zach performs magic, and makes -P disappear!')
+    raise SystemExit(0)
+
+
 if __name__ == '__main__':
     try:
         assert sys.platform == 'linux', 'I see no Tux here'
         args = parse_cmdline_args(
             'setup action(s):\n   "all", "environment", "networking", "golden_image"')
-        if not args.packaging:
-            link_into_python()
+
+        try_dh_helper(args)     # Does not return if packaging called me
+
+        # Imports are relative because implicit Python path "tmms" may not
+        # exist yet.  I think this will break if run from configs?
+
+        from utils.utils import make_symlink
+
+        link_into_python()
 
         legal = ('environment', 'networking', 'golden_image')  # order matters
         if not args.extra or 'all' in args.extra:
