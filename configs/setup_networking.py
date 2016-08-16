@@ -325,7 +325,6 @@ class TMgrub(object):
                 self.broadcast = ifaceaddr['broadcast']
                 self.netmask = ifaceaddr['netmask']
                 # Check the __doc__ string for this class
-                set_trace()
                 self.network = IPNetwork(self.addr + '/' + self.netmask)
                 self.morehosts = '%s torms' % self.addr
         except Exception as e:
@@ -355,7 +354,7 @@ class TMgrub(object):
 
         # AA programs MFW with "rack prefix".  MFW appends EncNum/X/Node/Y.
         # The rack enumerator and "Enclosure" locator are omitted.  Maybe.
-        nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[0].coordinate
+        nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[1].coordinate
         self.coords = [nodefmt % ((i // 10) + 1, (i % 10) + 1)
                        for i in range(_maxnodes)]
         # TM SFW will not run under QEMU/FAME.   Fall back to MAC-based
