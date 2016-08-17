@@ -28,7 +28,11 @@ class BindNodeTest(unittest.TestCase):
         """
         cls.tmcmd = TMCMD.tmnode
         cls.tmconfig = TMConfig('/etc/tmconfig')
-        cls.coords = sorted([node.coordinate for node in cls.tmconfig.nodes])
+        try:
+            cls.coords = sorted([node.coordinate for node in cls.tmconfig.nodes])
+        except Exception:
+            cls.coords = sorted([node.coordinate for node in cls.tmconfig.allNodes])
+
 
         TMCMD.tmmanifest.upload(['', cls.manifest_file])
         output = cls.tmcmd.show([cls.coords[1]])
