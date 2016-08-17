@@ -76,11 +76,6 @@ def parse_cmdline_args(extra_args_msg):
              'installer. Using it while trying to run from the git repo ' +
              'will result in a non-functioning environment.\n',
         action='store_true')
-
-    parser.add_argument('clean', nargs='?', help='dh_python3 argument. Not Implemented.')
-    parser.add_argument('build', nargs='?', help='dh_python3 argument. Not Implemented.')
-    parser.add_argument('-a', help='dh_python3 argument.', action='store_true')
-
     parser.add_argument(
         '-v', '--verbose',
         help='Make me talk more.',
