@@ -333,7 +333,7 @@ def register(mainapp):  # take what you like and leave the rest
     BP.config = mainapp.config
     try:
         BP.nodes = BP.config['tmconfig'].allNodes
-    except Exception as err:
+    except Exception:
         BP.nodes = BP.config['tmconfig'].nodes
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
     BP.blueprints = mainapp.blueprints
