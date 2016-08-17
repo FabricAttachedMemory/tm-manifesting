@@ -1,4 +1,4 @@
-#!/usr/bin/python3 -tt
+#!/usr/bin/python3
 '''TM Nodes'''
 from glob import glob
 import json
@@ -335,7 +335,6 @@ def register(mainapp):  # take what you like and leave the rest
         BP.nodes = BP.config['tmconfig'].allNodes
     except Exception:
         BP.nodes = BP.config['tmconfig'].nodes
-
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup

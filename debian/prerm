@@ -1,0 +1,13 @@
+#!/bin/sh
+#DEBHELPER#
+set -e
+
+bin/systemctl stop tm-manifest-server
+bin/systemctl disable tm-manifest-server
+
+rm /lib/systemd/system/tm-manifest-server.service
+rm /usr/default/tm-manifest-server
+
+systemctl daemon-reload
+
+exit 0

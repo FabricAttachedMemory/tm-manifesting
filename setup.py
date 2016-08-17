@@ -36,8 +36,20 @@ def link_into_python():
             'Can\'t find suitable path in python environment to link tmms!')
 
 
+def try_dh_helper(args):
+    '''If the directive is a dh_helper keyword, process this and EXIT.'''
+    #if len(args.extra) != 1:
+    #    return
+    legal = ('clean', 'install', 'build')
+    if args[0] not in legal:
+        return
+    action = args.pop()
+    raise SystemExit()
+
+
 def parse_cmdline_args(extra_args_msg):
     '''There are no import dependencies here.'''
+
     config = '/etc/tmms'
     if not os.path.isfile(config):  # Use the sample supplied with repo
         config = os.path.dirname(os.path.realpath(__file__)) + '/tmms'
@@ -77,25 +89,13 @@ def parse_cmdline_args(extra_args_msg):
     return args
 
 
-def try_dh_helper(args):
-    '''If the directive is a dh_helper keyword, process this and EXIT.'''
-    if len(args.extra) != 1:
-        return
-    legal = ('clean', 'install')
-    if args.extra[0] not in legal:
-        return
-    action = args.extra.pop()
-    print('And here is where Zach performs magic, and makes -P disappear!')
-    raise SystemExit(0)
-
-
 if __name__ == '__main__':
     try:
-        assert sys.platform == 'linux', 'I see no Tux here'
+        try_dh_helper(sys.argv[1:])     # Does not return if packaging called me
+        assert 'linux' in sys.platform, 'I see no Tux here (%s)' % sys.platform
         args = parse_cmdline_args(
             'setup action(s):\n   "all", "environment", "networking", "golden_image"')
 
-        try_dh_helper(args)     # Does not return if packaging called me
 
         # Imports are relative because implicit Python path "tmms" may not
         # exist yet.  I think this will break if run from configs?

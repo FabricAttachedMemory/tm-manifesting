@@ -1,0 +1,55 @@
+.TH tm-manifest-server "8" "2016" "The Machine" "Manifesting API Server"
+
+.SH NAME
+tm-manifest-server \- Control the Manifesting service of an instance of The Machine
+
+.SH SYNOPSIS
+\fBtm-manifest-server\fP [options] <directive> [arguments]
+
+.SH DESCRIPTION
+\fBtm-manifest-server\fP is an api server that is responsible for listening to
+client's requests.
+
+
+.SH DIRECTIVES
+
+\fP
+.SH OPTIONS
+.PP
+
+.TP
+\fB-?\fR
+Print a synopsis of all options and hints
+
+.TP
+\fB-d\fR
+Turn on debugging
+
+.TP
+\fB-v\fR
+Make it talk
+
+.TP
+\fBgolden_image\fR
+Generate a golden image based of the provided /etc/tmms config file. This is needed
+for the major manifesting node binding functionality. May take more than 10 minutes
+for the script to finish.
+
+.TP
+\fBenvironment\fR
+Create a manifesting environment on the system based of the default tmms config.
+
+.TP
+\fBnetworking\fR
+Setup networking infrastructure that includes dhcp (dnsmasq) configuration, grub
+config file generation and other environmental structure configuration.
+
+
+\fP
+.SH FILES
+Server is using \fB/etc/tmms\fR config file that is intended to be customizible by the
+user if needed per manifesting instance
+\fBolden Image\fR files - /var/lib/tmms/sys-images/golden/
+
+.SH BUGS
+None that we know of.  Today.  Between noon and 1 pm.

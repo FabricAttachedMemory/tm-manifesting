@@ -4,8 +4,8 @@ Requires=network-online.target
 After=network-online.target
 
 [Service]
-EnvironmentFile=-/etc/default/tmms-server
-ExecStart=/usr/local/bin/tm-manifest-server $OPT_ARGS
+EnvironmentFile=-/etc/default/tm-manifest-server
+ExecStart=/usr/bin/tm-manifest-server $OPT_ARGS
 
 [Install]
 WantedBy=multi-user.target

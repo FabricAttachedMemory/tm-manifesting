@@ -1,4 +1,4 @@
-#!/usr/bin/python3 -tt
+#!/usr/bin/python3
 '''L4TM packages'''
 import gzip
 import os
