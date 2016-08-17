@@ -2,7 +2,7 @@
 #DEBHELPER#
 set -e
 
-/usr/lib/python3/dist-packages/tmms/setup.py environment -P
+#/usr/lib/python3/dist-packages/tmms/setup.py environment -P
 
 systemctl daemon-reload
 

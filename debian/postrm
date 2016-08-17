@@ -1,4 +1,5 @@
 #!/bin/bash
+#DEBHELPER#
 set -e
 
 TMMS_DIR=/usr/lib/python3/dist-packages/tmms/

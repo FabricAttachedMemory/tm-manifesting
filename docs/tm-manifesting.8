@@ -11,16 +11,16 @@ is optional and discretionary.
 
 
 .SH HOW TO USE (instructions)
- Step 1: sudo tm-manifest-grub
-    - This step generates a TFTP environment
+ Step 1: Get a \fBhpetmconfig.json\fR config file that contains nodes topology and place
+it into \fB/etc/hpeconfig\fR
 
- Step 2: sudo tm-manifest-golden
-    - Might take more than 10 minutes to run.
-    - This will generate a Golden Image inside the /var/lib/tmms/sys-images/golden/
-     by default that will be picked up by Manifesting Server to generate file system
-     images for the nodes based of the requested manifest.
+ Step 2: Make sure \fB/etc/tmms\fR config file is configured approriatly for your system.
 
- Step 3: systemd start tm-manifest-server
+ Step 3: run \fBsudo tm-manifest-setup all\fR to configure manifesting environment.
+        This might take more than 10 minutes, because it generates a golden image
+        needed for node binding routines.
+
+ Step 4: systemd start tm-manifest-server
     - This will start a manifesting server as a systemd process.
 
     If you want to keep tm-manifesting-server in the terminal process, then run:

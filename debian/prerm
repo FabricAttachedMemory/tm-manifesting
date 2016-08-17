@@ -1,5 +1,5 @@
 #!/bin/sh
-
+#DEBHELPER#
 set -e
 
 bin/systemctl stop tm-manifest-server
