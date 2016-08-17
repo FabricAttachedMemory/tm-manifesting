@@ -7,8 +7,6 @@ on the system to satisfy package dependencies.
 """
 import argparse
 import os
-import subprocess
-import shlex
 
 from pdb import set_trace
 
@@ -16,6 +14,7 @@ from pdb import set_trace
 # Python path "tmms" may not exist yet.
 
 from configs.build_config import ManifestingConfiguration
+from utils.utils import piper
 
 
 def main(args):
@@ -42,9 +41,8 @@ def main(args):
         vmdebootstrap,
         vmdconfig,
         manconfig['L4TM_MIRROR'])
-    cmd = shlex.split(cmd)
-    status = subprocess.call(cmd)
-    assert not status, 'vmdebootstrap failed: return status %s' % status
+    ret, stdout, stderr = piper(cmd)
+    assert not ret, 'vmdebootstrap failed: %s' % stderr
 
 
 if __name__ == '__main__':

@@ -17,15 +17,12 @@ import gzip
 import json
 import os
 import tarfile
-import shlex
 import shutil   # explicit namespace differentiates from our custom FS routines
 import sys
 
-from subprocess import Popen, PIPE, CalledProcessError
-import subprocess
 from pdb import set_trace
 
-from tmms.utils.utils import make_symlink
+from tmms.utils.utils import make_symlink, piper
 
 _verbose = None     # Poor man's class
 _debug = None
@@ -364,7 +361,6 @@ def create_cpio(dest_file, src_dir):
             ignore_dirs=['boot'])
 
         cmd = 'cpio --create --format \'newc\''
-        cmd = shlex.split(cmd)
         cpio_stdin = '\n'.join(found_data).encode() # needed for Popen pipe.
 
         with open(dest_file, 'w') as dest_obj:
@@ -374,15 +370,16 @@ def create_cpio(dest_file, src_dir):
             # ./boot...). This causes Kernel Panic when trying to boot with
             # such a cpio file.
             with workdir(src_dir):
-                cpio = Popen(cmd, stdin=PIPE, stdout=dest_obj)
-                cpio_out, cpio_err = cpio.communicate(input=cpio_stdin)
+                ret, cpio_out, cpio_err = piper(
+                    cmd, stdin=cpio_stdin, stdout=dest_obj)
+                assert not ret, 'cpio failed: %s' % cpio_err
 
         # output find data to a log file
         if _verbose:
             with open('/tmp/man_find.log', 'w') as file_obj:
-                file_obj.write('\n'.join(found_data))   # FIXME proper log
+                file_obj.write('\n'.join(found_data))   # FIXME proper logging
 
-    except CalledProcessError as err:
+    except Exception as err:
         raise RuntimeError('Couldn\'t create "%s" from "%s": %s' %
             (dest_file, src_dir, str(e)))
 
@@ -455,11 +452,11 @@ apt-get dist-upgrade --assume-yes
 
     try:
         cmd = '/usr/sbin/chroot %s %s ' % (sys_img, '/install.sh')
-        cmd = shlex.split(cmd)
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
-        subprocess.call(cmd)
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, 'chroot failed: %s' % stderr
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
 

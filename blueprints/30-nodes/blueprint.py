@@ -4,14 +4,14 @@ from glob import glob
 import json
 import os
 import sys
-import shlex
-import subprocess
 import time
 from shutil import copyfile
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify, make_response
 from werkzeug.exceptions import BadRequest
+
+from tmms.utils.utils import piper
 
 # programmatic import in main requires this form
 from .node_builder import customize_node
@@ -101,6 +101,15 @@ def get_node_bind_info(node_coord=None):
     return make_response(jsonify(result), 200)
 
 
+def node_coord2image_dir(node_coord):
+    '''Calculate TFTP directory for kernel/FS from node coordinate/'''
+    node_image_dir = BP.config['TFTP_IMAGES'] + '/' + \
+        BP.nodes[node_coord][0].hostname
+    assert os.path.isdir(node_image_dir), \
+        'Missing directory "%s"' % node_image_dir
+    return node_image_dir
+
+
 @BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
 @BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('DELETE', ))
 def delete_node_binding(node_coord):
@@ -109,19 +118,18 @@ def delete_node_binding(node_coord):
     directory by its hostname and clean out the content. Thus the next
     reboot will fail.
 
-    :param 'node_coord': full node's coordinate to unbinde Manifest from.
+    :param 'node_coord': full node's coordinate to unbind Manifest from.
     """
+    # Two rules invoke Postel's Law of liberal reception.  Either way,
+    # we need to add leading /.
     node_coord = '/' + node_coord
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.', 404)
 
-    node_location = BP.config['TFTP_IMAGES'] + '/' + \
-        BP.nodes[node_coord][0].hostname
-    if not os.path.isdir(node_location):  # Paranoia
-        return make_response('TFT doesn\'t serve requested node.', 404)
 
     try:
-        for node_file in glob(node_location + '/*'):
+        node_image_dir = node_coord2image_dir(node_coord)
+        for node_file in glob(node_image_dir + '/*'):
             os.remove(node_file)
     except OSError as err:
         return make_response('Failed to delete binding: %s' % err, 500)
@@ -142,7 +150,7 @@ def bind_node_to_manifest(node_coord=None):
 
     :param 'node_coord': absolute machine coordinate of the node
     """
-    node_coord = '/' + node_coord
+    node_coord = '/' + node_coord   # Postel's Law, node_coord is naked.
     try:
         resp_status = 409   # Conflict
         assert get_node_status(node_coord) is None, 'Node is already bound.'
@@ -243,15 +251,15 @@ def build_node(manifest, node_coord):
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
-    cmd = shlex.split(cmd)
     try:
-        p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
-        # Now that everything is in subprocess, this routine is FAST.
+        set_trace()
+        p = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
+        # Now that everything is in a child, this call is FAST.
         # untar and gzip will take a minimum of five seconds. Be
         # completely sure the process really had time to start.
         time.sleep(3)
         assert p.poll() is None     # still running
-    except (AssertionError, subprocess.SubprocessError) as err:    # TSNH =)
+    except Exception as err:    # TSNH =)
         stdout, stderr = p.communicate()
         return make_response('Node binding failed: %s' % stderr.decode(), 418)
 
@@ -273,32 +281,26 @@ def get_node_status(node_coord):
     """
         Scan tftp/images/{hostname} folder for "status.json" that is generated
     by node_builder/customize_node.py script. This file contatins information
-    about the Node binding status that Comply with ERS specs (Section 8.6)
+    about the Node binding status that complies with ERS specs (Section 8.6)
 
-    :param 'node_coord': [str] noode full coordinate string.
+    :param 'node_coord': [str] node full coordinate string.
     :return: [dict] values that describes node's state
-        (status, message, manifest)  (ERS document section 8.6)
+             (status, message, manifest)  (ERS document section 8.6)
+             None no status file (ie, node is unbound)
     """
-    assert node_coord in BP.node_coords, 'Unknown node coordinate'
-
-    node_location = BP.config['TFTP_IMAGES'] + '/' + \
-        BP.nodes[node_coord][0].hostname
-    status_file = node_location + '/' + 'status.json'
-    if not os.path.isdir(node_location):
-        return None
-
-    if not os.path.exists(status_file):
-        return None
-
-    status = {}
     try:
-        with open(status_file, 'r') as file_obj:
+        assert node_coord in BP.node_coords, 'Unknown node coordinate'
+        node_image_dir = node_coord2image_dir(node_coord)   # can raise
+        with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
-    except ValueError as err:       # TCNH =)
-        status['message'] = 'Failed to parse status file: %s ' % str(err)
-        status['manifest'] = 'unknown'
-        status['status'] = 'error'
-
+    except FileNotFoundError as err:
+        return None
+    except Exception as err:       # TCNH =)
+        status = {
+            'message':  'Failed to parse status file: %s ' % str(err),
+            'manifest': 'unknown',
+            'status':   'error'
+        }
     return status
 
 
