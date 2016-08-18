@@ -44,7 +44,8 @@ class ManifestingConfiguration(object):
         'L4TM_RELEASE',
         'L4TM_AREAS',
         'TMDOMAIN',
-        'PXE_INTERFACE'
+        'PXE_INTERFACE',
+        'PXE_FIREWALL'
     )
 
     _manifest_env = (           # New directories are keyed from here

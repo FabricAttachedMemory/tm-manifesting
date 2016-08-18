@@ -1,8 +1,13 @@
 #!/usr/bin/python3 -tt
+'''Every real project needs a utils module.'''
+
 import errno
 import os
+import shlex
+import shutil
 import sys
 
+from subprocess import call, Popen, PIPE
 
 def make_dir(path):
     """
@@ -101,3 +106,39 @@ def symlink_target(source, target):
         os.symlink(source, target)
     except EnvironmentError as err:
         raise RuntimeError('Couldn\'t create a symlink: %s ' % err)
+
+###########################################################################
+# Sub-process caller that returns different things based on return_process_obj:
+# False: return ret, stdout, stderr.  stdin is sent to child.  High level.
+# True:  return process data.  stdin is NOT sent to child.  Low level.
+# stdin is data to be written, versus a subprocess.CONSTANT.  If you just
+# want to start the proc and wait, set use_call.
+
+
+def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
+          use_call=False, return_process_obj=False):
+    """Pipe a command, maybe retrieve stdout/stderr, hides ugly output"""
+    try:
+        cmd = shlex.split(cmdstr)
+        assert not (use_call and return_process_obj), \
+            'Flags are mutually exclusive'
+        if return_process_obj:
+            return Popen(cmd)
+        if use_call:
+            return call(cmd), None, None
+
+        if stdin is None:
+            stdindata = None
+        else:
+            stdindata = stdin
+            stdin = PIPE
+
+        p = Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr)
+        stdout, stderr = p.communicate(stdindata)        # implicit wait()
+        ret = p.returncode
+        if ret is None:
+            ret = 0
+        return ret, stdout, stderr
+    except Exception as e:
+        raise RuntimeError('Bad piper: %s' % str(e))
+
