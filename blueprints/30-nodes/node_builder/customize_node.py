@@ -19,6 +19,7 @@ import os
 import tarfile
 import shutil   # explicit namespace differentiates from our custom FS routines
 import sys
+import time
 
 from pdb import set_trace
 
@@ -417,7 +418,7 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
 #===============================================================================
 
 
-def install_packages(sys_img, pkg_list):
+def install_packages(sys_img, pkg_list, task_list):
     """
         Install list of packages into the filesystem image.
     Function will generate a bash script with lines of "apt-get install"
@@ -433,19 +434,27 @@ def install_packages(sys_img, pkg_list):
         print(' - Installing %s... ' % pkg_list)
 
     script_header = """#!/bin/bash
+# Created %s
 set -ue
 exec > /install.log 2>&1  # /tmp/ is cleaned out of boot
 apt-get update
 apt-get upgrade --assume-yes
 apt-get dist-upgrade --assume-yes
-"""
+""" % time.ctime()
     script_file = sys_img + '/install.sh'
     with open(script_file, 'w') as file_obj:
         file_obj.write(script_header)
-        file_obj.write('\n')
+
+        file_obj.write('\n# Packages: %s\n' % pkg_list)
         if pkg_list is not None:
             for pkg in pkg_list.split(','):
                 cmd = 'apt-get install --assume-yes %s\n' % pkg
+                file_obj.write(cmd)
+
+        file_obj.write('\n# Tasks: %s\n' % task_list)
+        if task_list is not None:
+            for task in task_list.split(','):
+                cmd = 'tasksel install %s\n' % task
                 file_obj.write(cmd)
 
     os.chmod(script_file, 0o744)
@@ -455,8 +464,8 @@ apt-get dist-upgrade --assume-yes
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
-        ret, stdout, stderr = piper(cmd)
-        assert not ret, 'chroot failed: %s' % stderr
+        ret, _, _ = piper(cmd, use_call=True)
+        assert not ret, 'chroot failed: errno %d' % (ret)
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
 
@@ -521,13 +530,13 @@ def execute(args):
         fix_init(new_fs_dir)
         fix_rootfs(new_fs_dir)
 
-        # Add packages and tasks from manifest.  FIXME: what about tasks?
+        # Add packages and tasks from manifest.
         # Even if empty, it does an apt-get update/upgrade/dist-upgrade
         # in case golden image has gone stale.
         update_status(
             status_file, args.manifest, 'Installing ' + str(args.packages))
         cleanup_sources_list(new_fs_dir)
-        install_packages(new_fs_dir, args.packages)
+        install_packages(new_fs_dir, args.packages, args.tasks)
 
         # Create .cpio file from untar.  Filename done here in case
         # we ever want to pass it in as an option.
@@ -590,7 +599,9 @@ if __name__ == '__main__':
     parser.add_argument('--golden_tar',
         help='Location of pristine FS image tarball')
     parser.add_argument('--packages',
-        help='Extra packages to install on new file system')
+        help='Extra packages to "apt-get install" on new file system')
+    parser.add_argument('--tasks',
+        help='Tasks to "tasksel install" on new file system')
     parser.add_argument('--build_dir',
         help='Folder where untared FS and compressed images are built.')
     parser.add_argument('--tftp_dir',
