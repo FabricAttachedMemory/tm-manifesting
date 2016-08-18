@@ -289,7 +289,6 @@ class TMgrub(object):
             assert self.network == kludge_network, \
                 'Networking mismatch between NIC and TMDOMAIN'
         if not self.hostIPs:    # enumerator properly skips Sun broadcast
-            set_trace()
             self.hostIPs = [IPAddress(first_addr.value + i)
                                 for i in range(_maxnodes)]
             assert all(map(lambda a: a in self.network, self.hostIPs)), \
