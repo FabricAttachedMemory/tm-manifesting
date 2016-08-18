@@ -7,7 +7,7 @@ import shlex
 import shutil
 import sys
 
-from subprocess import Popen, PIPE
+from subprocess import call, Popen, PIPE
 
 def make_dir(path):
     """
@@ -112,15 +112,21 @@ def symlink_target(source, target):
 # False: return ret, stdout, stderr.  stdin is sent to child.  High level.
 # True:  return process data.  stdin is NOT sent to child.  Low level.
 # stdin is data to be written, versus a subprocess.CONSTANT.  If you just
-# want to # start the proc and handle comms/wait on your own,
-# set return_process_obj True.  Follow this lead.
+# want to start the proc and wait, set use_call.
 
 
 def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
-          return_process_obj=False):
+          use_call=False, return_process_obj=False):
     """Pipe a command, maybe retrieve stdout/stderr, hides ugly output"""
     try:
         cmd = shlex.split(cmdstr)
+        assert not (use_call and return_process_obj), \
+            'Flags are mutually exclusive'
+        if return_process_obj:
+            return Popen(cmd)
+        if use_call:
+            return call(cmd), None, None
+
         if stdin is None:
             stdindata = None
         else:
@@ -128,8 +134,6 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
             stdin = PIPE
 
         p = Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr)
-        if return_process_obj:
-            return p
         stdout, stderr = p.communicate(stdindata)        # implicit wait()
         ret = p.returncode
         if ret is None:
