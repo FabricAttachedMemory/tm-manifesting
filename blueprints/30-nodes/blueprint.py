@@ -203,20 +203,22 @@ def build_node(manifest, node_coord):
     client_id = rack_prefix + 'EncNum' + node_coord.split('EncNum')[1]
 
     packages = manifest.thedict['packages']
-    # Add packages listed in each Task specified in the manifest
-    for task in manifest.thedict['tasks']:
-        task_pkgs = BP.blueprints['task'].get_packages(task)
-        if task_pkgs:
-            packages.extend(task_pkgs)
-
-    if not len(packages):
-        packages = None
+    if packages:
+        packages = ','.join(packages)
+    else:
+        packages = None     # sentinel for following loop
+    tasks = manifest.thedict['tasks']
+    if tasks:
+        tasks = ','.join(tasks)
+    else:
+        tasks = None     # sentinel for following loop
 
     build_args = {
         'hostname':     hostname,
         'client_id':    client_id,
         'manifest':     manifest.namespace,     # FIXME: basename?
         'packages':     packages,
+        'tasks':        tasks,
         'golden_tar':   golden_tar,
         'build_dir':    build_dir,
         'tftp_dir':     tftp_dir,
@@ -226,7 +228,7 @@ def build_node(manifest, node_coord):
 
     cmd_args = []
     for key, val in build_args.items():
-        if val is not None:     # packages and tasks
+        if val is not None:     # packages and tasks, default is None
             cmd_args.append('--%s %s' % (key, val))
     cmd = os.path.dirname(__file__) + \
         '/node_builder/customize_node.py ' + ' '.join(cmd_args)
@@ -252,7 +254,6 @@ def build_node(manifest, node_coord):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
     try:
-        set_trace()
         p = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
         # Now that everything is in a child, this call is FAST.
         # untar and gzip will take a minimum of five seconds. Be
