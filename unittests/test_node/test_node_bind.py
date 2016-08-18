@@ -80,37 +80,49 @@ class BindNodeTest(unittest.TestCase):
         """
         node = self.coords[-1]
         args = [node, self.manifest]
-        output = json.loads( self.tmcmd.set_node(args) )
+
+        # Hey, Herry Volchak: insure it's unbound before binding and whining.
+        output = json.loads(self.tmcmd.delete([node, ]))
+        self.assertTrue('204' in output,
+            'Expected 204 after unsetnode: %s instead' % output)
+
+        output = json.loads(self.tmcmd.set_node(args))
         self.assertTrue('201' in output or '200' in output,
-                'Nor 200 nor 201 was returned on setnode: %s instead' % output.keys())
+            'Neither 200 nor 201 was returned on setnode: %s instead' % output)
 
         time.sleep(5)
-        status = json.loads( self.tmcmd.show([node]) )
+        status = json.loads(self.tmcmd.show([node]))
 
         self.assertTrue('200' in status,
-                        'Status not 200 while building: %s' % status.keys())
+            'Status not 200 while building: %s' % status.keys())
 
         status = status['200']
 
         self.assertTrue(self.node_status_fields(status),
-                'Node status while building does not comply: %s' % status['status'])
-        self.assertTrue(status['status'] == 'building', 'Node is not building??')
+            'Illegal status while building image: %s' % status['status'])
+
+        # Don't know why interpolation doesn't work in-situ
+        msg = '%s: expected status "building", got "%s" (%s)' % (
+            node, status['status'], status['message'])
+        self.assertTrue(status['status'] == 'building', msg)
 
         while status['status'] == 'building':
-            status = json.loads( self.tmcmd.show([node]) )
+            status = json.loads(self.tmcmd.show([node]))
             self.assertTrue('200' in status,
-                        'Status not 200 while building: %s' % status.keys())
+                'Status not 200 while building: %s' % status.keys())
             status = status['200']
 
             self.assertTrue(self.node_status_fields(status),
-                    'Node status while building does not comply: %s' % status['status'])
+                'Illegal status while building: %s' % status['status'])
             time.sleep(3)
 
-        self.assertTrue(status['status'] == 'ready', 'Node is not done?')
+        time.sleep(5)   # chroot failed: ENETDOWN == 100 WTF???
+        msg = '%s: expected status == ready, got %s' % (node, str(status))
+        self.assertTrue(status['status'] == 'ready', msg)
 
         deleted = json.loads(self.tmcmd.delete(node))
         self.assertTrue('204' in deleted,
-                        '204 was not returned after node delete: %s' % deleted.keys())
+            '204 was not returned after node delete: %s' % deleted)
 
         status = json.loads(self.tmcmd.show([node]))
         self.assertTrue('204' in status,
