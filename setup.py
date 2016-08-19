@@ -36,7 +36,7 @@ def link_into_python():
             'Can\'t find suitable path in python environment to link tmms!')
 
 
-def try_dh_helper(argv)
+def try_dh_helper(argv):
     '''If the directive is a dh_helper keyword, process this and EXIT.'''
     legal = ('clean', 'install', 'build')
     if not argv or argv[0] not in legal:
