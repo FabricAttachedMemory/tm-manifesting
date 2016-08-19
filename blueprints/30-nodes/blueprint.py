@@ -258,7 +258,7 @@ def build_node(manifest, node_coord):
         # Now that everything is in a child, this call is FAST.
         # untar and gzip will take a minimum of five seconds. Be
         # completely sure the process really had time to start.
-        time.sleep(3)
+        time.sleep(2)
         assert p.poll() is None     # still running
     except Exception as err:    # TSNH =)
         stdout, stderr = p.communicate()
