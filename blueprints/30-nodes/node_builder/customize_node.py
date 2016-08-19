@@ -28,7 +28,8 @@ from tmms.utils.utils import make_symlink, piper
 _verbose = None     # Poor man's class
 _debug = None
 
-#===============================================================================
+#==============================================================================
+
 
 @contextmanager
 def workdir(path):
@@ -77,12 +78,12 @@ def copy_target_into(target, into):
             print(' - Copying "%s" into "%s"...' % (target, into))
         _fs_sanity_check(target)
         if os.path.isdir(target):
-            shutil.copytree(target, into) # copy directory
+            shutil.copytree(target, into)   # copy directory
         else:
-            shutil.copyfile(target, into) # copy single file
+            shutil.copyfile(target, into)   # copy single file
     except (AssertionError, RuntimeError, EnvironmentError) as err:
-        raise RuntimeError ('Couldn\'t copy "%s" into "%s": %s' %
-            (target, into, str(err)))
+        raise RuntimeError('Couldn\'t copy "%s" into "%s": %s' % (
+            target, into, str(err)))
 
 
 def remove_target(target):
@@ -101,25 +102,25 @@ def remove_target(target):
         elif os.path.exists(target):
             os.remove(target)
     except (AssertionError, EnvironmentError) as e:
-        raise RuntimeError ('Couldn\'t remove "%s": %s' % (target, str(e)))
+        raise RuntimeError('Couldn\'t remove "%s": %s' % (target, str(e)))
 
 
 def write_to_file(target, content):
     """
         Overwrite file in the targeted location with a new content.
 
-    :param 'target': [str] path to a file to create or overwrite with a new content
-    :param 'content': [str] content to use in the new\overwritten file.
+    :param 'target': [str] path to a file to create or overwrite
+    :param 'content': [str] content to use in the new/overwritten file.
     """
     try:
         _fs_sanity_check(target)
         with open(target, 'w+') as file_obj:
             if _verbose:
-                print ('Writing into "%s": \n[\n%s\n]\n' % (target, content))
+                print('Writing into "%s": \n[\n%s\n]\n' % (target, content))
             file_content = '%s\n' % str(content)
             file_obj.write(file_content)
     except Exception as e:
-        raise RuntimeError ('Write "%s" failed: %s' % (target, str(e)))
+        raise RuntimeError('Write "%s" failed: %s' % (target, str(e)))
 
 
 def slice_path(target, slice_ratio=2):
@@ -128,10 +129,10 @@ def slice_path(target, slice_ratio=2):
         there is no need to print an absolute path to a string where the
         first N directories are irrelavent to the user.
 
-        Example: /one/two/three/four/five/ will be sliced into three/four/five/.
+        Ex: /one/two/three/four/five/ will be sliced into three/four/five/.
 
     :param 'target': [str] path to slice.
-    :param 'slice_ratio': [int or float](default=2) ratio by which to slice target.
+    :param 'slice_ratio': [int or float](default=2) slice ratio
                         e.g. len(target) / slice_ratio
     :return: [str] sliced target.
     """
@@ -140,7 +141,7 @@ def slice_path(target, slice_ratio=2):
     sliced = splited[length:]
     return '/'.join(sliced)
 
-#===============================================================================
+#==============================================================================
 
 
 def cleanout_kernel(target_dir, sys_img):
@@ -160,14 +161,14 @@ def cleanout_kernel(target_dir, sys_img):
         for source in vmlinuz + initrd:            # move them all
             # FIXME: we need a move
             copy_into = os.path.basename(source)
-            copy_target_into(source, '%s/%s' % (target_dir, copy_into) )
+            copy_target_into(source, '%s/%s' % (target_dir, copy_into))
             remove_target(source)
         # I want to return the kernel I found and moved.   In an error
         # condition (such as one of the unit tests) it may not be there.
-        vmlinuz =  glob('%s/vmlinuz*' % (target_dir))
+        vmlinuz = glob('%s/vmlinuz*' % (target_dir))
         return vmlinuz[0] if vmlinuz else None
     except Exception as err:
-        raise RuntimeError ('Errror occured cleanout_kernel(): %s' % str(err))
+        raise RuntimeError('Errror occured cleanout_kernel(): %s' % str(err))
 
 
 def fix_init(sys_img):
@@ -186,9 +187,10 @@ def fix_init(sys_img):
     except Exception as err:
         raise RuntimeError('Error occured while fixing /init: %s' % str(err))
 
-#===============================================================================
+#==============================================================================
 # setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME
 # rootfs needs some kind of TLC to show up in df.
+
 
 def fix_rootfs(sys_img):
     try:
@@ -198,7 +200,7 @@ def fix_rootfs(sys_img):
     except Exception as e:
         raise RuntimeError('Error occured while fixing rootfs: %s' % str(e))
 
-#===============================================================================
+#==============================================================================
 
 
 def cleanup_sources_list(sys_img):
@@ -214,10 +216,11 @@ def cleanup_sources_list(sys_img):
 
     if not os.path.exists(sources_base):
         if _verbose:
-            print ('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
+            print('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
         return None
 
-    sources_updated = set_sources_areas(sources_base, ['main', 'contrib', 'non-free'])
+    sources_updated = set_sources_areas(
+        sources_base, ['main', 'contrib', 'non-free'])
 
     try:
         remove_target(sources_base)
@@ -232,8 +235,8 @@ def set_sources_areas(sources_list, areas):
     """
         Set mirror areas in the sources.list, e.g each line that starts with
     'deb' will be modified the end of its line to provided "areas":
-      deb http://l4tm.mirror cattleprod main --> areas = ['non-free', 'contrib']
-      deb http://l4tm.mirror cattleprod non-free contrib
+    deb http://l4tm.mirror cattleprod main --> areas = ['non-free', 'contrib']
+    deb http://l4tm.mirror cattleprod non-free contrib
 
     :param 'sources_list': [str] path to a sources.list file to be modified.
     :param 'areas': [list] of areas to be set ['main', 'contrib', 'non-free']
@@ -254,7 +257,8 @@ def set_sources_areas(sources_list, areas):
 
     return '\n'.join(sources_updated)
 
-#===============================================================================
+#==============================================================================
+
 
 def set_client_id(sys_img, client_id):
     """
@@ -271,7 +275,7 @@ def set_client_id(sys_img, client_id):
     except Exception as err:
         raise RuntimeError('Cannot set DHCP client ID: %s' % str(err))
 
-#===============================================================================
+#==============================================================================
 
 
 def set_hostname(sys_img, hostname):
@@ -337,8 +341,8 @@ def untar(destination, source):
             tar_obj.extractall(path=destination)
         return destination
     except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
-        raise RuntimeError ('Error occured while untaring "%s": %s' %
-            (source, str(err)))
+        raise RuntimeError('Error occured while untaring "%s": %s' % (
+            source, str(err)))
 
 
 def create_cpio(dest_file, src_dir):
@@ -362,7 +366,7 @@ def create_cpio(dest_file, src_dir):
             ignore_dirs=['boot'])
 
         cmd = 'cpio --create --format \'newc\''
-        cpio_stdin = '\n'.join(found_data).encode() # needed for Popen pipe.
+        cpio_stdin = '\n'.join(found_data).encode()  # needed for Popen pipe.
 
         with open(dest_file, 'w') as dest_obj:
             # create CPIO relative to the 'find' path, to avoid '/' in archive
@@ -381,41 +385,41 @@ def create_cpio(dest_file, src_dir):
                 file_obj.write('\n'.join(found_data))   # FIXME proper logging
 
     except Exception as err:
-        raise RuntimeError('Couldn\'t create "%s" from "%s": %s' %
-            (dest_file, src_dir, str(e)))
+        raise RuntimeError('Couldn\'t create "%s" from "%s": %s' % (
+            dest_file, src_dir, str(err)))
 
 
 def find(start_path, ignore_files=[], ignore_dirs=[]):
     """
-        Emulating output of unix "find" command. Thus, have to build a list of all
-    the directories and filenames using os.walk relative to the start of its walking
-    directory.
-    Note: os.walk expands its data into three variables, where 'dirs' and 'files'
-    are not relative path, but  rather "basenames". Combining all together will
-    result in a full path string. e.g:
-            root + "/" dirs[0] + "/" + files[0] = /root/elemenOfDirs/elementOfFIles
+        Emulating output of unix "find" command.  Must build a list of all
+    the directories and filenames using os.walk relative to the start of its
+    walking directory.
+    Note: os.walk expands its data into three variables, where 'dirs' and
+    'files' are not relative path, but  rather "basenames". Combining all
+    together will result in a full path string. e.g:
+      root + "/" dirs[0] + "/" + files[0] = /root/elemenOfDirs/elementOfFIles
 
     :param 'start_path': [str] path to start walk from.
     :param 'ignore_files': [list] filenames to ignore during the walk.
     :param 'ignore_dirs': [list] directories to ignore from walking through.
-    :return: [list] all the walked directories and filenames  relative to the 'start_path'.
-            This will save EACH directory relative path e,g: /path/to/top/ will 
-            be saved as /path/, /path/to/ and /path/to/top/
+    :return: [list] all the walked directories and filenames  relative to the
+            'start_path'.  This will save EACH directory relative path e,g:
+            /path/to/top/ will be saved as /path/, /path/to/ and /path/to/top/
     """
     result = []
-    with workdir(start_path):       # so that can walk relative to untar'ed FS folder.
+    with workdir(start_path):   # walk relative to untar'ed FS folder.
         for root, dirs, files in os.walk('.'):
-            for dirname in dirs:        # each directory relative path to the root
+            for dirname in dirs:    # each directory relative path to the root
                 if dirname in ignore_dirs:
                     continue
                 result.append(os.path.join(root, dirname))
-            for filename in files:      # each filename relative path to the root
+            for filename in files:  # each filename relative path to the root
                 if filename in ignore_files:
                     continue
                 result.append(os.path.join(root, filename))
     return result
 
-#===============================================================================
+#==============================================================================
 
 
 def install_packages(sys_img, pkg_list, task_list):
@@ -469,7 +473,7 @@ apt-get dist-upgrade --assume-yes
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
 
-#===============================================================================
+#==============================================================================
 
 
 def update_status(destination, manifest, message, status='building'):
@@ -483,7 +487,7 @@ def update_status(destination, manifest, message, status='building'):
     response['message'] = message
     write_to_file(destination, json.dumps(response, indent=4))
 
-#===============================================================================
+#==============================================================================
 
 
 def execute(args):
@@ -572,11 +576,12 @@ def execute(args):
             status_file, args.manifest, 'PXE files ready to boot', 'ready')
 
     except RuntimeError as err:     # Caught earlier and re-thrown as this
-         response['status'] = 505
-         response['message'] = 'Filesystem image build failed: %s' % str(err)
+        response['status'] = 505
+        response['message'] = 'Filesystem image build failed: %s' % str(err)
     except Exception as err:        # Suppress Flask traceback
         response['status'] = 505
-        response['message'] = 'Aye! Unexpected Server error: %s' % str(err)
+        response['message'] = 'Unexpected error: %d: %s' % (
+            sys.exc_info()[2].tb_lineno, str(err))
 
     if response['status'] != 200:
         update_status(status_file, args.manifest, response['message'], 'error')
@@ -585,34 +590,35 @@ def execute(args):
 
 
 if __name__ == '__main__':
-    """ Parse commind line arguments and pass it directly into execute() function. """
-    parser = argparse.ArgumentParser(description='Options to customize FS image.')
+    """ Parse commind line arguments and pass them to execute() function. """
+    parser = argparse.ArgumentParser(
+        description='Options to customize FS image.')
 
     # Default default value is "None"
 
     parser.add_argument('--hostname',
-        help='Hostname to use for the FS image')
+                        help='Hostname to use for the FS image')
     parser.add_argument('--client_id',
-        help='DHCP client ID in form "enclosure/X/node/Y"')
+                        help='DHCP client ID in full machine coordinates."')
     parser.add_argument('--manifest',
-        help='Manifest namespace.')
+                        help='Manifest namespace.')
     parser.add_argument('--golden_tar',
-        help='Location of pristine FS image tarball')
+                        help='Location of pristine FS image tarball')
     parser.add_argument('--packages',
-        help='Extra packages to "apt-get install" on new file system')
+                        help='Extra packages to "apt-get install" on new FS.')
     parser.add_argument('--tasks',
-        help='Tasks to "tasksel install" on new file system')
+                        help='Tasks to "tasksel install" on new FS.')
     parser.add_argument('--build_dir',
-        help='Folder where untared FS and compressed images are built.')
+                        help='Scratch folder for building FS images.')
     parser.add_argument('--tftp_dir',
-        help='Absolute path to the server\'s TFTP folder, images placed here.')
+                        help='Absolute path to the dnsmasq TFTP folder.')
 
     parser.add_argument('-v', '--verbose',
-        help='Make it talk. Verbosity levels from 1 to 5',
-        action='store_true')
+                        help='Make it talk. Verbosity levels from 1 to 5',
+                        action='store_true')
     parser.add_argument('--debug',
-        help='Matrix has you. Enter the debugging mode.',
-        action='store_true')
+                        help='Matrix has you. Enter the debugging mode.',
+                        action='store_true')
 
     args, _ = parser.parse_known_args()
     execute(args)
