@@ -36,14 +36,11 @@ def link_into_python():
             'Can\'t find suitable path in python environment to link tmms!')
 
 
-def try_dh_helper(args):
+def try_dh_helper(argv):
     '''If the directive is a dh_helper keyword, process this and EXIT.'''
-    #if len(args.extra) != 1:
-    #    return
     legal = ('clean', 'install', 'build')
-    if args[0] not in legal:
+    if not argv or argv[0] not in legal:
         return
-    action = args.pop()
     raise SystemExit()
 
 
@@ -91,11 +88,10 @@ def parse_cmdline_args(extra_args_msg):
 
 if __name__ == '__main__':
     try:
-        try_dh_helper(sys.argv[1:])     # Does not return if packaging called me
         assert 'linux' in sys.platform, 'I see no Tux here (%s)' % sys.platform
         args = parse_cmdline_args(
             'setup action(s):\n   "all", "environment", "networking", "golden_image"')
-
+        try_dh_helper(args.extra)     # Doesn't return if packaging called me
 
         # Imports are relative because implicit Python path "tmms" may not
         # exist yet.  I think this will break if run from configs?

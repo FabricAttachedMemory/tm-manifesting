@@ -369,26 +369,6 @@ class TMgrub(object):
         with open(prepath + '.iptables', 'w') as f:
             f.write(tmp)
 
-        delrules = tmp.format(action='D').split('\n')
-        for d in delrules:
-            if d.startswith('#'):
-                continue
-            cmd = 'iptables ' + d
-            ret = 0
-            while not ret:
-                ret, stdout, stderr = piper(cmd)
-            pass
-
-        addrules = tmp.format(action='A').split('\n')
-        for a in addrules:
-            if not a or a.startswith('#'):
-                continue
-            cmd = 'iptables ' + a
-            ret, stdout, stderr = piper(cmd)
-            if ret:
-                print('%s failed: %s' % (cmd, stderr))
-
-
     def create_tftp_environment(self):
         """
             Create subdirectories under TFTP and add grub menu files based on
