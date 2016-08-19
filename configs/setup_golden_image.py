@@ -41,7 +41,7 @@ def main(args):
         vmdebootstrap,
         vmdconfig,
         manconfig['L4TM_MIRROR'])
-    ret, stdout, stderr = piper(cmd)
+    ret = piper(cmd, use_call=True)
     assert not ret, 'vmdebootstrap failed: %s' % stderr
 
 
