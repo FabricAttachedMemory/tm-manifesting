@@ -5,8 +5,11 @@
 
 import argparse
 import glob
+import netifaces as NIF
 import os
 import sys
+import time
+
 from importlib import import_module
 from pdb import set_trace
 
@@ -22,12 +25,11 @@ from tm_librarian.tmconfig import TMConfig
 # installation will also do the right thing.
 try:
     from tmms.setup import parse_cmdline_args
-    from tmms.utils import utils
+    from tmms.utils.utils import piper
     from tmms.configs.build_config import ManifestingConfiguration
 except ImportError as e:
     raise SystemExit(
         'Cannot find Python module "tmms"; run "setup.py" and retry.')
-
 
 ###########################################################################
 # Set config variables for future use across the blueprints.
@@ -62,7 +64,7 @@ mainapp.config['DRYRUN'] = cmdline_args.dry_run
 ###########################################################################
 # Must come after mainapp setup because Mobius
 
-paths = sorted([ p for p in glob.glob('blueprints/*') ])
+paths = sorted([p for p in glob.glob('blueprints/*')])
 if not paths:
     raise SystemExit('Cannot find any blueprints')
 ngood = 0
@@ -102,7 +104,7 @@ def check_version(*args, **kwargs):
         return None
     hdr_accept = request.headers['Accept']
     if 'application/json' not in hdr_accept:
-        return _response_bad('I see no JSON here. Did you forget "application/json" in request header?', 406)
+        return _response_bad('I see no application/json in the header.', 406)
     version = -1.0
     for elem in hdr_accept.split(';'):
         if 'version' in elem:
@@ -112,7 +114,7 @@ def check_version(*args, **kwargs):
             except Exception as e:
                 pass
     if version < 0:
-        return _response_bad('I see no version here. Did you forget "version" in request header?')
+        return _response_bad('I see no version here.', 406)
     want = mainapp.config['API_VERSION']
     if version != want:
         return _response_bad('Bad version: %s != %s' % (version, want))
@@ -120,7 +122,8 @@ def check_version(*args, **kwargs):
 
 @mainapp.after_request
 def version(response):
-    response.headers['Content-Type'] = 'application/json;version=%s' % mainapp.config['API_VERSION']
+    response.headers['Content-Type'] = \
+        'application/json;version=%s' % mainapp.config['API_VERSION']
     return response
 
 ###########################################################################
@@ -138,10 +141,62 @@ def root():
         url_root=request.url_root)
 
 ###########################################################################
+# Networking stuff
+
+
+def _read_iptables_config(config):
+    format_path = '%(DNSMASQ_CONFIGS)s/%(PXE_INTERFACE)s.iptables' % config
+    with open(format_path, 'r') as f:
+        action_format = f.read()
+    return action_format
+
+
+def clear_iptables(config):
+    action_format = _read_iptables_config(config)
+    delrules = action_format.format(action='D').split('\n')
+    for d in delrules:  # Delete them until they're gone
+        if not d or d.startswith('#'):
+            continue
+        cmd = 'iptables ' + d
+        ret = 0
+        while not ret:
+            ret, stdout, stderr = piper(cmd)
+    return action_format
+
+
+def set_iptables(config):
+    '''This will actually insert rules regardless of existence of interface.'''
+    action_format = clear_iptables(config)
+    addrules = action_format.format(action='A').split('\n')
+    for a in addrules:
+        if not a or a.startswith('#'):
+            continue
+        cmd = 'iptables ' + a
+        ret, stdout, stderr = piper(cmd)
+        if ret:
+            raise RuntimeError('%s failed: %s' % (cmd, stderr))
+    return action_format
+
+
+def start_dnsmasq(config):
+    pxe_interface = config['PXE_INTERFACE']
+    if pxe_interface not in NIF.interfaces():
+        print('%s does not exist; cannot start dnsmasq.', file=sys.stderr)
+        return None
+    conf_file = '%(DNSMASQ_CONFIGS)s/%(PXE_INTERFACE)s.conf' % config
+    p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
+    time.sleep(1)
+    if p.poll() is not None:    # it quit for some reason
+        print('dnsmasq did not (re)-start.', file=sys.stderr)
+        return None
+    return p
+
+
+###########################################################################
 # Must come after all route declarations, including blueprint registrations
 
 mainapp.config['rules'] = sorted('%s %s' % (rule.rule, rule.methods) for
-    rule in mainapp.url_map.iter_rules())
+                                 rule in mainapp.url_map.iter_rules())
 
 
 if __name__ == '__main__':
@@ -153,6 +208,9 @@ if __name__ == '__main__':
 
     if mainapp.config['DEBUG']:
         mainapp.jinja_env.cache = create_cache(0)
+
+    set_iptables(mainapp.config)
+    dnsmasq_proc = start_dnsmasq(mainapp.config)
     mainapp.run(
         debug=mainapp.config['DEBUG'],
         use_reloader=True,
