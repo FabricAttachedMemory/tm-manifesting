@@ -64,7 +64,15 @@ def install_base_packages():
         cmd = 'apt-get install -y -qq %s' % (pkg)
         ret, stdout, stderr = piper(cmd)
         if ret or stderr:
-            errors.append('[%s] %s' % (pkg, stderr))
+            if pkg == 'tm-librarian':       # might be on plain-old Debian
+                try:
+                    import tm_librarian     # maybe it's already there
+                except ImportError:
+                    print(
+                        '%s not loaded, symlink it into Python from git' % pkg,
+                        file=sys.stderr)
+            else:
+                errors.append('[%s] %s' % (pkg, stderr))
     if errors:
         raise RuntimeError('\n'.join(errors))
 
