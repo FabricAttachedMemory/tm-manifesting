@@ -541,6 +541,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
         ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
         undo_kpartx = True
+        time.sleep(1)
         for e in stdout.decode().split():    # "add map loopXXp1 ...."
             if e.startswith('loop') and e.endswith('p1'):
                 blockdev = '/dev/mapper/' + e
@@ -549,7 +550,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
             raise RuntimeError('Cannot discern loopback device in %s' % stdout)
 
         cmd = 'mkfs.vfat ' + blockdev
-        ret, stdout, stderr = piper(blockdev)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
         # Step 3: Mount and fill out the file system.  Put everything
@@ -565,19 +566,26 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
         with open(ESP_mnt + '/startup.nsh', 'w') as f:
             f.write('\\grub\\grubnetaa64.efi\n')
         grubdir = ESP_mnt + '/grub'
-        os.mkdirs(grubdir)
+        print('SDHC GRUB DIR AT %s' % grubdir)
+        os.makedirs(grubdir)
         shutil.copy(vmlinuz_gzip, grubdir)
         shutil.copy(cpio_gzip, grubdir)
-        grub = args.tftp_dir + '/grubnetaa64.efi'   # symlink
+
+        # tftp_dir has "images/hostname" tacked onto it from caller.
+        # Grub itself is pulled live from L4TM repo at setup networking time.
+        grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
         shutil.copy(grub, grubdir)
+
         with open(grubdir + '/grub.cfg', 'w') as f:
-            f.write('linux /grub/%s\n' % os.basename(vmlinuz_gzip))
-            f.write('initrd /grub/%s\n' % os.basename(cpio_gzip))
+            f.write('linux /grub/%s\n' % os.path.basename(vmlinuz_gzip))
+            f.write('initrd /grub/%s\n' % os.path.basename(cpio_gzip))
             f.write('boot\n')
 
     except AssertionError as e:
         print('%s failed: errno = %d: %s' % (str(e), ret, stderr))
     except RuntimeError as e:
+        print('%s: errno = %d: %s' % (str(e), ret, stderr))
+    except Exception as e:
         print('%s: errno = %d: %s' % (str(e), ret, stderr))
 
     if undo_mount:

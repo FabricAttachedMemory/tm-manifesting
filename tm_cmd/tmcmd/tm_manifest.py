@@ -67,7 +67,7 @@ class TmManifest(tm_base.TmCmd):
             payload = json.loads(manifest_content)
         except ValueError as err:
             return self.to_json({
-                'error': 'Incorrect file type! JSON is expected.'})
+                'error': 'File does not appear to be valid JSON.'})
 
         api_url = '%s/%s/%s' % (self.url, 'manifest/', target[0])
         clean_url = os.path.normpath(api_url.split('http://')[1])

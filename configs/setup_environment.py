@@ -58,7 +58,7 @@ def install_base_packages():
                 'dosfstools', 'grub-efi-arm64-bin',
                 'python3-debian', 'python3-dnspython', 'python3-flask',
                 'python3-netaddr', 'python3-netifaces', 'python3-requests',
-                'tm-librarian', 'vmdebootstrap']
+                'qemu-efi', 'tm-librarian', 'vmdebootstrap']
     errors = []
     for pkg in pkg_list:
         cmd = 'apt-get install -y -qq %s' % (pkg)

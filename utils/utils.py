@@ -141,5 +141,5 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
             ret = 0
         return ret, stdout, stderr
     except Exception as e:
-        raise RuntimeError('Bad piper: %s' % str(e))
+        raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 
