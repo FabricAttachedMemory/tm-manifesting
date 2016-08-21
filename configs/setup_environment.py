@@ -54,7 +54,8 @@ def install_base_packages():
             '"%s" failed: %s' % (cmd, stderr)
 
     print(' ---- Installing base packages ---- ')
-    pkg_list = ['apt-utils', 'cpio', 'dnsmasq', 'grub-efi-arm64-bin',
+    pkg_list = ['apt-utils', 'cpio', 'dnsmasq',
+                'dosfstools', 'grub-efi-arm64-bin',
                 'python3-debian', 'python3-dnspython', 'python3-flask',
                 'python3-netaddr', 'python3-netifaces', 'python3-requests',
                 'tm-librarian', 'vmdebootstrap']
