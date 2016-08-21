@@ -4,6 +4,7 @@ import json
 import os
 from . import tm_base
 
+
 class TmManifest(tm_base.TmCmd):
 
     def __init__(self):
@@ -12,19 +13,16 @@ class TmManifest(tm_base.TmCmd):
         """
         super().__init__()
         self.args = {
-            'list' : self.listall,
-            'get' : self.show,
-            'put' : self.upload,
-            'delete' : self.delete
+            'list':     self.listall,
+            'get':      self.show,
+            'put':      self.upload,
+            'delete':   self.delete
         }
-
 
     def listall(self, arg_list=None, **options):
         """
-    SYNOPSIS
         list
 
-    DESCRIPTION
         List all available manifests uploaded to the server.
         """
         super().listall(arg_list, **options)
@@ -33,18 +31,14 @@ class TmManifest(tm_base.TmCmd):
         data = self.http_request(url)
         return self.to_json(data)
 
-
     def show(self, target, **options):
         """
-    SYNOPSIS
-        get <prefix/manname> (file-to-save-into)
+        get <prefix/manname> [file-to-save-into]
 
-    DESCRIPTION
-            Download a manifest from the server with the specified name to the specified
-        file.
+        Download a the specified manifest from the server to a file.
         (file-to-save-into) is an optional second parameter if you want to save
         manifest into a file. Otherwise, it will only display manifest contents
-        on the screen without saving.
+        on the screen.
         """
         super().show(target, **options)
         api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name)
@@ -55,17 +49,15 @@ class TmManifest(tm_base.TmCmd):
                 file_obj.write(self.to_json(data))
         return self.to_json(data)
 
-
     def upload(self, target, **options):
         """
-    SYNOPSIS
-        put <manifest name> <manifest file>
+        put <name/space/prefix> <manifest file>
 
-    DESCRIPTION
-            Select the manifest for the specified node and construct a kernel
+        Select the manifest for the specified node and construct a kernel
         and root FS that the node will use the next time it boots.
         """
-        assert len(target) >= 2, 'Missing argument: put <manifest name> <manifest file>!'
+        assert len(target) >= 2, \
+            'Missing argument: put <manifest name> <manifest file>!'
         file_real_path = os.path.realpath(target[1])
 
         with open(file_real_path, 'r') as file_obj:
@@ -74,7 +66,8 @@ class TmManifest(tm_base.TmCmd):
         try:
             payload = json.loads(manifest_content)
         except ValueError as err:
-            return self.to_json({ 'error' : 'Incorrect file type! JSON is expected.' })
+            return self.to_json({
+                'error': 'Incorrect file type! JSON is expected.'})
 
         api_url = '%s/%s/%s' % (self.url, 'manifest/', target[0])
         clean_url = os.path.normpath(api_url.split('http://')[1])
@@ -83,19 +76,15 @@ class TmManifest(tm_base.TmCmd):
         data = self.http_upload(api_url, payload=payload)
         return self.to_json(data)
 
-
     def delete(self, target, **options):
         """
-    SYNOPSIS
         delete <manifest name>
-    DESCRIPTION
-            Deletes an existing manifest from the service. Note that this simply deletes the
-        manifest itself and that any nodes configured to use the manifest will continue to
-        boot using the constructed kernel and root file system.
+
+        Deletes an existing manifest from the service. Note that this
+        simply deletes the manifest itself.  Any nodes configured to use the
+        manifest will continue to boot using the kernel and root file system.
         """
         super().show(target, **options)
         api_url = "%s%s%s" % (self.url, 'manifest/', self.show_name.strip('/'))
         data = self.http_delete(api_url)
         return self.to_json(data)
-
-

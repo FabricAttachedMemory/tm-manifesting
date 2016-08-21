@@ -37,8 +37,9 @@ class TmCmd():
             Intended to be overridden by inherited class.
         """
         assert len(target) >= 1, 'Missing argument: thisfunction <name>!'
-        # Let user pass both types to avoid confusion passing args as "list" for a single argument.
-        #Passing list is helpfull for a generic function call, (as in tm_manifest.py)
+        # Let user pass both types to avoid confusion passing args as "list"
+        # for a single argument.  Passing list is helpful for a generic
+        # function call, (as in tm_manifest.py)
         self.show_name = target[0] if isinstance(target, list) else target
         if 'verbose' in options and options['verbose']:
             print(' - Sending request to "%s"...' % self.url)
@@ -118,7 +119,7 @@ class TmCmd():
 
     def to_json(self, content):
         """
-            Convert concent to json string with class parameters.
+            Convert content to JSON string with class parameters.
         """
         try:
             if isinstance(content, HTTP_REQUESTS.models.Response):
