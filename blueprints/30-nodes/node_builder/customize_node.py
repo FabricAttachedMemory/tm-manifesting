@@ -23,107 +23,10 @@ import time
 
 from pdb import set_trace
 
-from tmms.utils.utils import make_symlink, piper
-import tmms.utils
+from tmms.utils import utils, io_utils
 
 _verbose = None     # Poor man's class
 _debug = None
-
-#==============================================================================
-
-def _fs_sanity_check(target):
-    """
-        Some file routines are HORRIBLY dangerous to run as root.
-    Perform a few idiot checks.
-    :param 'target': [str] path about to be copied/moved/overwritten/removed
-    :return: 'None' on success. Raise 'AssertionError' on problems.
-    """
-    if os.geteuid():    # Not root?  Trust the FS
-        return
-    target = target.strip()
-    assert target[0] == '/', 'Not an absolute path'
-    elems = target.split('/')[1:]   # zeroth is empty string
-    assert len(elems) > 2, 'Target is a primary directory'
-    assert elems[:2] == ['var', 'lib'], 'Target is not under /var/lib'
-
-
-def copy_target_into(target, into):
-    """
-        Wrapper around shutil.copy* functions. Main intention is to catch a
-    specific exception and raise RuntimeError with a meaningful message. Also
-    provides debugging and verbose options.
-
-    :param 'target': [str] path to an object that needs to be copied.
-    :param 'into': [str] path to the destination object (dir path or filename)
-    :return: 'None' on success. Raise 'RuntimeError' on problems.
-    """
-    try:
-        if _verbose:
-            print(' - Copying "%s" into "%s"...' % (target, into))
-        _fs_sanity_check(target)
-        if os.path.isdir(target):
-            shutil.copytree(target, into)   # copy directory
-        else:
-            shutil.copyfile(target, into)   # copy single file
-    except (AssertionError, RuntimeError, EnvironmentError) as err:
-        raise RuntimeError('Couldn\'t copy "%s" into "%s": %s' % (
-            target, into, str(err)))
-
-
-def remove_target(target):
-    """
-        Remove "target" file.
-
-    :param 'target': [str] path to the file to remove.
-    :return: 'None' on success. Raise 'RuntimeError' on problems.
-    """
-    try:
-        if _verbose:
-            print(' - Removing "%s"...' % (target))
-        _fs_sanity_check(target)
-        if os.path.isdir(target):
-            shutil.rmtree(target)
-        elif os.path.exists(target):
-            os.remove(target)
-    except (AssertionError, EnvironmentError) as e:
-        raise RuntimeError('Couldn\'t remove "%s": %s' % (target, str(e)))
-
-
-def write_to_file(target, content):
-    """
-        Overwrite file in the targeted location with a new content.
-
-    :param 'target': [str] path to a file to create or overwrite
-    :param 'content': [str] content to use in the new/overwritten file.
-    """
-    try:
-        _fs_sanity_check(target)
-        with open(target, 'w+') as file_obj:
-            if _verbose:
-                print('Writing into "%s": \n[\n%s\n]\n' % (target, content))
-            file_content = '%s\n' % str(content)
-            file_obj.write(file_content)
-    except Exception as e:
-        raise RuntimeError('Write "%s" failed: %s' % (target, str(e)))
-
-
-def slice_path(target, slice_ratio=2):
-    """
-        Slice long path string on half (or by slice_ratio amount). Sometimes
-        there is no need to print an absolute path to a string where the
-        first N directories are irrelavent to the user.
-
-        Ex: /one/two/three/four/five/ will be sliced into three/four/five/.
-
-    :param 'target': [str] path to slice.
-    :param 'slice_ratio': [int or float](default=2) slice ratio
-                        e.g. len(target) / slice_ratio
-    :return: [str] sliced target.
-    """
-    splited = target.split('/')
-    length = int(len(splited) / slice_ratio)
-    sliced = splited[length:]
-    return '/'.join(sliced)
 
 #==============================================================================
 
@@ -145,8 +48,8 @@ def cleanout_kernel(target_dir, sys_img):
         for source in vmlinuz + initrd:            # move them all
             # FIXME: we need a move
             copy_into = os.path.basename(source)
-            copy_target_into(source, '%s/%s' % (target_dir, copy_into))
-            remove_target(source)
+            io_utils.copy_target_into(source, '%s/%s' % (target_dir, copy_into))
+            io_utils.remove_target(source)
         # I want to return the kernel I found and moved.   In an error
         # condition (such as one of the unit tests) it may not be there.
         vmlinuz = glob('%s/vmlinuz*' % (target_dir))
@@ -167,7 +70,7 @@ def fix_init(sys_img):
         with utils.workdir(sys_img):      # At the root
             if os.path.exists('init'):
                 os.unlink('init')
-            utils.make_symlink('sbin/init', 'init')
+            io_utils.make_symlink('sbin/init', 'init')
     except Exception as err:
         raise RuntimeError('Error occured while fixing /init: %s' % str(err))
 
@@ -207,9 +110,9 @@ def cleanup_sources_list(sys_img):
         sources_base, ['main', 'contrib', 'non-free'])
 
     try:
-        remove_target(sources_base)
-        remove_target(sources_list)
-        write_to_file(sources_list, sources_updated)
+        io_utils.remove_target(sources_base)
+        io_utils.remove_target(sources_list)
+        io_utils.write_to_file(sources_list, sources_updated)
     except RuntimeError as err:
         raise RuntimeError('Error occured while cleaning sources.list!\n\
                             %s' % (err))
@@ -273,8 +176,8 @@ def set_hostname(sys_img, hostname):
     hostname_file = '%s/etc/hostname' % (sys_img)
     try:
         if os.path.exists(hostname_file):
-            remove_target(hostname_file)
-        write_to_file(hostname_file, hostname)
+            io_utils.remove_target(hostname_file)
+        io_utils.write_to_file(hostname_file, hostname)
     except RuntimeError as err:
         raise RuntimeError('Cannot set /etc/hostname: %s' % str(err))
 
@@ -290,43 +193,16 @@ def set_hosts(sys_img, hostname):
     hosts_file = '%s/etc/hosts' % (sys_img)
     try:
         if os.path.exists(hosts_file):
-            remove_target(hosts_file)
+            io_utils.remove_target(hosts_file)
 
         content = []
         content.append('127.0.0.1   localhost')     # visual alignment
         content.append('127.1.0.1   %s' % hostname)
         content = '\n'.join(content)
 
-        write_to_file(hosts_file, content)
+        io_utils.write_to_file(hosts_file, content)
     except RuntimeError as err:
         raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
-
-
-def untar(destination, source):
-    """
-        Untar source file into destination folder. tar.tarfile.extractall
-    will create all necessary (sub)directories.
-    Note: When untaring into the existing folder to overwrite files,
-    tarfile.extractall function will throw a FileExistsError
-    if it can not overwrite broken symlinks of the tar'ed file.
-    Nuke it from orbit, it's the only way to be sure.
-
-    :param 'destination': [str] path to where to extract target into.
-    :param 'source': [str] path to a .tar file to untar.
-    :return: [str] path to untared content.  Raise RuntimeError on problems.
-    """
-
-    try:
-        destination = destination + '/untar'
-        remove_target(destination)  # succeeds even if missing
-        if _verbose:
-            print(' - Extracting "%s" into "%s"...' % (source, destination))
-        with tarfile.open(source) as tar_obj:
-            tar_obj.extractall(path=destination)
-        return destination
-    except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
-        raise RuntimeError('Error occured while untaring "%s": %s' % (
-            source, str(err)))
 
 
 def create_cpio(dest_file, src_dir):
@@ -344,7 +220,7 @@ def create_cpio(dest_file, src_dir):
         # FIXME: do a test to insure dest_dir is not a subdir of src_dir
 
         # Skip things even though they may have been moved
-        found_data = find(
+        found_data = utils.find(
             src_dir,
             ignore_files=['vmlinuz', 'initrd.img'],
             ignore_dirs=['boot'])
@@ -372,36 +248,6 @@ def create_cpio(dest_file, src_dir):
         raise RuntimeError('Couldn\'t create "%s" from "%s": %s' % (
             dest_file, src_dir, str(err)))
 
-
-def find(start_path, ignore_files=[], ignore_dirs=[]):
-    """
-        Emulating output of unix "find" command.  Must build a list of all
-    the directories and filenames using os.walk relative to the start of its
-    walking directory.
-    Note: os.walk expands its data into three variables, where 'dirs' and
-    'files' are not relative path, but  rather "basenames". Combining all
-    together will result in a full path string. e.g:
-      root + "/" dirs[0] + "/" + files[0] = /root/elemenOfDirs/elementOfFIles
-
-    :param 'start_path': [str] path to start walk from.
-    :param 'ignore_files': [list] filenames to ignore during the walk.
-    :param 'ignore_dirs': [list] directories to ignore from walking through.
-    :return: [list] all the walked directories and filenames  relative to the
-            'start_path'.  This will save EACH directory relative path e,g:
-            /path/to/top/ will be saved as /path/, /path/to/ and /path/to/top/
-    """
-    result = []
-    with utils.workdir(start_path):   # walk relative to untar'ed FS folder.
-        for root, dirs, files in os.walk('.'):
-            for dirname in dirs:    # each directory relative path to the root
-                if dirname in ignore_dirs:
-                    continue
-                result.append(os.path.join(root, dirname))
-            for filename in files:  # each filename relative path to the root
-                if filename in ignore_files:
-                    continue
-                result.append(os.path.join(root, filename))
-    return result
 
 #==============================================================================
 
@@ -459,7 +305,6 @@ apt-get dist-upgrade --assume-yes
 
 #==============================================================================
 
-
 def update_status(args, message, status='building'):
     """
         status must be one of 'building', 'ready', or 'error'
@@ -469,7 +314,7 @@ def update_status(args, message, status='building'):
     response['manifest'] = args.manifest
     response['status'] = status
     response['message'] = message
-    write_to_file(args.status_file, json.dumps(response, indent=4))
+    io_utils.write_to_file(args.status_file, json.dumps(response, indent=4))
 
 #==============================================================================
 # This is just as fast as gzip standalone program and gives better error
@@ -584,7 +429,6 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
 
 #==============================================================================
 
-
 def execute(args):
     """
         Customize Filesystem image: set hostname, cleanup sources.list,
@@ -612,7 +456,7 @@ def execute(args):
     # is done inside those functions that throw RuntimeError.
     try:
         update_status(args, 'Untar golden image')
-        new_fs_dir = untar(args.build_dir, args.golden_tar)
+        new_fs_dir = utils.untar(args.build_dir, args.golden_tar)
 
         update_status(args, 'Configuration file updates')
 

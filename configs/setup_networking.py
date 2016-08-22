@@ -34,7 +34,8 @@ from tm_librarian.tmconfig import TMConfig
 # Python path "tmms" may not exist yet.
 
 from configs.build_config import ManifestingConfiguration
-from utils.utils import make_dir, make_symlink, basepath, piper
+from utils.utils import basepath, piper
+from utils.io_utils import make_symlink, make_dir
 
 _maxnodes = 40  # Revised FRD for 2016
 

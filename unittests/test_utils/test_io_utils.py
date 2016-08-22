@@ -9,11 +9,8 @@ import shlex
 import sys
 import unittest
 from shutil import rmtree, copytree
-customize_node = os.path.realpath(__file__)
-customize_node = os.path.dirname(customize_node)
-customize_node = '%s/../../blueprints/30-nodes/node_builder/' % (customize_node)
-sys.path.append(customize_node)
-import customize_node as CN
+
+from tmms.utils import io_utils
 
 
 
@@ -43,7 +40,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file_new = '%s.new' % (test_file)
         self.touch_file(test_file)
 
-        CN.copy_target_into(test_file, test_file_new)
+        io_utils.copy_target_into(test_file, test_file_new)
 
         self.assertTrue(os.path.exists(test_file_new),
             'File "%s" was not copied into "%s"!' % (test_file, test_file_new))
@@ -58,7 +55,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_dir_new = '%s.new' % (test_dir)
         self.touch_folder(test_dir)
 
-        CN.copy_target_into(test_dir, test_dir_new)
+        io_utils.copy_target_into(test_dir, test_dir_new)
 
         self.assertTrue(os.path.isdir(test_dir_new),
             'File "%s" was not copied into "%s"!' % (test_dir, test_dir_new))
@@ -72,7 +69,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file = '%s/test_remove_file.orig' % self.tmp_folder
         self.touch_file(test_file)
 
-        CN.remove_target(test_file)
+        io_utils.remove_target(test_file)
         self.assertFalse(os.path.exists(test_file), 'Target "%s" was not removed!' % test_file)
 
 
@@ -84,7 +81,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_dir = '%s/test_remove_dir.orig/' % self.tmp_folder
         self.touch_folder(test_dir)
 
-        CN.remove_target(test_dir)
+        io_utils.remove_target(test_dir)
         self.assertFalse(os.path.exists(test_dir), 'Target "%s" was not removed!' % test_dir)
 
 
@@ -100,7 +97,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file_new = '%s.linked' % test_file
         self.touch_file(test_file)
 
-        CN.symlink_target(test_file, test_file_new)
+        io_utils.symlink_target(test_file, test_file_new)
         self.assertTrue(os.path.exists(test_file_new),
                 'Target "%s" was not linked into "%s"!' % (test_file, test_file_new))
 
@@ -117,7 +114,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
             self.assertFalse(True,
                 'Couldn\'t create a test file "%s"!' % test_file)
 
-        CN.write_to_file(test_file, new_content)
+        io_utils.write_to_file(test_file, new_content)
 
         file_content = ''
         with open(test_file, 'r') as file_obj:

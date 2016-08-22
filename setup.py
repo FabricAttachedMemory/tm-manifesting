@@ -96,7 +96,7 @@ if __name__ == '__main__':
         # Imports are relative because implicit Python path "tmms" may not
         # exist yet.  I think this will break if run from configs?
 
-        from utils.utils import make_symlink
+        from utils.io_utils import make_symlink
 
         link_into_python()
 
