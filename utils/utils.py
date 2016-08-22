@@ -143,3 +143,18 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
     except Exception as e:
         raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 
+
+@contextmanager
+def workdir(path):
+    """
+        Change script's work directory to perform a set of operation.
+    Set original directory back when done.
+    """
+    try:
+        orig_dir = os.getcwd()
+        os.chdir(path)
+        yield
+    except OSError as e:
+        raise RuntimeError('os.chdir(%s) failed: %s' % (path, str(e)))
+    finally:
+        os.chdir(orig_dir)

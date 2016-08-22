@@ -24,28 +24,12 @@ import time
 from pdb import set_trace
 
 from tmms.utils.utils import make_symlink, piper
+import tmms.utils
 
 _verbose = None     # Poor man's class
 _debug = None
 
 #==============================================================================
-
-
-@contextmanager
-def workdir(path):
-    """
-        Change script's work directory to perform a set of operation.
-    Set original directory back when done.
-    """
-    try:
-        orig_dir = os.getcwd()
-        os.chdir(path)
-        yield
-    except OSError as e:
-        raise RuntimeError('os.chdir(%s) failed: %s' % (path, str(e)))
-    finally:
-        os.chdir(orig_dir)
-
 
 def _fs_sanity_check(target):
     """
@@ -180,10 +164,10 @@ def fix_init(sys_img):
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     try:
-        with workdir(sys_img):      # At the root
+        with utils.workdir(sys_img):      # At the root
             if os.path.exists('init'):
                 os.unlink('init')
-            make_symlink('sbin/init', 'init')
+            utils.make_symlink('sbin/init', 'init')
     except Exception as err:
         raise RuntimeError('Error occured while fixing /init: %s' % str(err))
 
@@ -194,7 +178,7 @@ def fix_init(sys_img):
 
 def fix_rootfs(sys_img):
     try:
-        with workdir(sys_img):      # At the root
+        with utils.workdir(sys_img):      # At the root
             with open('etc/fstab', 'w') as f:    # no leading slash!!!
                 f.write('proc /proc proc defaults 0 0\n')
     except Exception as e:
@@ -374,8 +358,8 @@ def create_cpio(dest_file, src_dir):
             # "full path" string (e.g. whatever/untar/boot...., instead
             # ./boot...). This causes Kernel Panic when trying to boot with
             # such a cpio file.
-            with workdir(src_dir):
-                ret, cpio_out, cpio_err = piper(
+            with utils.workdir(src_dir):
+                ret, cpio_out, cpio_err = utils.piper(
                     cmd, stdin=cpio_stdin, stdout=dest_obj)
                 assert not ret, 'cpio failed: %s' % cpio_err
 
@@ -407,7 +391,7 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
             /path/to/top/ will be saved as /path/, /path/to/ and /path/to/top/
     """
     result = []
-    with workdir(start_path):   # walk relative to untar'ed FS folder.
+    with utils.workdir(start_path):   # walk relative to untar'ed FS folder.
         for root, dirs, files in os.walk('.'):
             for dirname in dirs:    # each directory relative path to the root
                 if dirname in ignore_dirs:
@@ -468,7 +452,7 @@ apt-get dist-upgrade --assume-yes
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
-        ret, _, _ = piper(cmd, use_call=True)
+        ret, _, _ = utils.piper(cmd, use_call=True)
         assert not ret, 'chroot failed: errno %d' % (ret)
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
@@ -532,13 +516,13 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
     try:    # piper catches many things, asserts get me out early
         cmd = 'parted -s ' + ESP_img    # Yes, -s goes right here
         cmd += ' mklabel gpt mkpart ESP fat32 1MiB 100% set 1 boot on'
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = utils.piper(cmd)
         assert not ret, cmd
 
         # Step 2: Make the file system.
 
         cmd = 'kpartx -av %s' % ESP_img
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = utils.piper(cmd)
         assert not ret, cmd
         undo_kpartx = True
         time.sleep(1)
@@ -550,7 +534,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
             raise RuntimeError('Cannot discern loopback device in %s' % stdout)
 
         cmd = 'mkfs.vfat ' + blockdev
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = utils.piper(cmd)
         assert not ret, cmd
 
         # Step 3: Mount and fill out the file system.  Put everything
@@ -559,7 +543,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
         # Ass-u-me enough loopback devics to go around.
 
         cmd = 'mount %s %s' % (blockdev, ESP_mnt)
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = utils.piper(cmd)
         assert not ret, cmd
         undo_mount = True
 
@@ -590,7 +574,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
 
     if undo_mount:
         cmd = 'umount ' + ESP_mnt
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = utils.piper(cmd)
         assert not ret, cmd
     if undo_kpartx:
         cmd = 'kpartx -d %s' % ESP_img
