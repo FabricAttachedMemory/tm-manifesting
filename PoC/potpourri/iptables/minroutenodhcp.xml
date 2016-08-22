@@ -1,0 +1,8 @@
+<network>
+  <name>minroutenodhcp</name>
+  <forward mode='route'/>
+  <bridge name='testbrd' stp='off' delay='0'/>
+  <domain name='big.bro'/>
+  <ip address='10.11.10.254' netmask='255.255.255.0'/>
+</network>
+

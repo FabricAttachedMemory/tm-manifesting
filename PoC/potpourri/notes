@@ -1,0 +1,15 @@
+sudo virsh qemu-monitor-command --hmp node01 info
+synopsis
+
+sudo virsh qemu-monitor-command --hmp node01 info qtree
+big list
+
+sudo virsh qemu-monitor-command --hmp node01 info memdev
+what I really wanted
+
+----------------------------------------------------------------------------
+
+lxc-clone -o l4tm -n manitest
+
+in lxc/manitest/config:  should be DHCP, virbr0
+

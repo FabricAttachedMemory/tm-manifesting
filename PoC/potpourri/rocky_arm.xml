@@ -1,0 +1,35 @@
+<network>
+  <!--
+  1. Assign addresses in IPV4DLL (169.254.0.0/16) range.
+  2. Use Avahi service announcements on ToRMS, Avahi browse on nodes.
+     Do NOT use Avahi autoipd as it could conflict with DHCP.
+  3. MAC addresses are 52:54:HPE:<node>
+  -->
+  <name>rocky_arm</name>
+  <bridge name='rocky_arm' stp='off' delay='0'/>
+  <mac address='52:54:48:50:45:fd'/>
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <ip address='169.254.255.254' netmask='255.255.0.0'>
+    <tftp root='/home/rocky/torms/tftp/'/>
+    <dhcp>
+      <range start='169.254.255.101' end='169.254.255.200'/>
+      <bootp file='bootaa64.efi'/>
+    </dhcp>
+  </ip>
+  <domain name="eatme.tm"/>
+  <dns public="no">
+    <srv
+        service='librarian'
+        protocol='tcp'
+        domain='eatme.tm'
+        target='.'
+        port='9093'
+        priority='10'
+        weight='10'
+    />
+  </dns>
+</network>
