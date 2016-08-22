@@ -15,9 +15,22 @@
 
 <p>
 <hr><!-------------------------------------------------------------------->
+<h3>Manifest template</h3>
+Copy and paste this to a file, fill out packages and tasks,  and upload it.
+<PRE>
+{
+"_comment": "Comments are allowed at any point",
+"name": "NoSpacesOrPunctuation",
+"description": "Do nothing",
+"release": "the operating system release (unstable/testing/stable)",
+"tasks" : [],
+"packages": []
+}
+</PRE>
+<hr><!-------------------------------------------------------------------->
 <p>
+<H3>Upload new manifest</H3>
 <form action='' method="POST" enctype="multipart/form-data">
-<b>Upload new manifest</b>
 <input type='file' name='file[]'><!-- multiple='' -->
 <input type='submit' value='Send'>
 </form>

@@ -8,7 +8,8 @@ import time
 from shutil import copyfile
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, make_response
+from flask import Blueprint, render_template, request, jsonify
+from flask import make_response, send_file
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
@@ -38,16 +39,33 @@ def node():
 @BP.route('/%s/<path:name>' % _ERS_element)
 @BP.route('/%s//<path:name>' % _ERS_element)    # Postel's law
 def node_name(name=None):
+    '''name will never have a leading / but now always needs one.'''
+    name = '/' + name
     try:
-        node = BP.nodes['/' + name][0]
+        node = BP.nodes[name][0]
+        status = _data.get(name, None)
+        if status is None:
+            status = ''
+            ESPURL = ''
+        else:
+            prefix = request.url.split(_ERS_element)[0]
+            ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
             node=node,
-            manifest=_data.get(name, '(no binding)')
+            status=status,
+            ESPURL=ESPURL
         )
     except Exception as e:
         return make_response('Kaboom: %s' % str(e), 404)
+
+
+@BP.route('/%s/ESP/<path:hostname>' % _ERS_element)
+def node_ESP(hostname):
+    fname = hostname + '.ESP'
+    ESP = '%s/%s/%s' % (BP.config['TFTP_IMAGES'], hostname, fname)
+    return send_file(ESP, attachment_filename=fname)
 
 ###########################################################################
 # API
