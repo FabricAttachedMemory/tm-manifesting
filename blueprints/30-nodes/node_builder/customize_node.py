@@ -476,16 +476,127 @@ apt-get dist-upgrade --assume-yes
 #==============================================================================
 
 
-def update_status(destination, manifest, message, status='building'):
+def update_status(args, message, status='building'):
     """
         status must be one of 'building', 'ready', or 'error'
         TODO: docstr
     """
     response = {}
-    response['manifest'] = manifest
+    response['manifest'] = args.manifest
     response['status'] = status
     response['message'] = message
-    write_to_file(destination, json.dumps(response, indent=4))
+    write_to_file(args.status_file, json.dumps(response, indent=4))
+
+#==============================================================================
+# This is just as fast as gzip standalone program and gives better error
+# handling.  500M cpio file takes about 20 seconds for reduction to 180M (both
+# methods, gzip command defaults to level 6).
+# TMAS PXE is about 100 MB / hour xfer then 500 seconds to uncompress 180M
+#          or about two hours to boot
+# FAME PXE is about   6 MB / sec  xfer then  15 seconds to uncompress 180M
+#          or about one minute to boot
+# REAL HW  is about xxx MB per hour; xxx seconds to uncompress 180M
+
+
+def compress_bootfiles(args, vmlinuz_file, cpio_file):
+    cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
+    vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
+
+    update_status(args, 'Compressing kernel')
+    with open(vmlinuz_file, 'rb') as f_in:
+        with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    update_status(args, 'Compressing File System')
+    with open(cpio_file, 'rb') as f_in:
+        with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    # Since all the files are here, build the single node bringup flash image.
+    # ESP == EFI System Partition, where EFI wants to scan for FS0:.
+    update_status(args, 'Building SNBU SDHC image')
+    ESP_img = '%s/%s.ESP' % (args.build_dir, args.hostname)
+    ESP_mnt = '%s/ESP' % (args.build_dir)   # VFAT FS
+    os.makedirs(ESP_mnt, exist_ok=True)     # That was easy
+
+    # This will be pulled over HTTP, dd'd, etc.  Keep it small but useful.
+    # Most cpio.gz are under 200M, vmlinuz.gz under 7M, so this leaves
+    # at least 50M of space for copying log files, etc.  SNBU shouldn't
+    # make all that much data, as networking isn't expected.
+    # Step 1: create the image file, burn GPT and ESP on it.
+
+    with open(ESP_img, 'wb') as f:
+        os.posix_fallocate(f.fileno(), 0, 256 << 20)
+    undo_kpartx = undo_mount = False
+
+    try:    # piper catches many things, asserts get me out early
+        cmd = 'parted -s ' + ESP_img    # Yes, -s goes right here
+        cmd += ' mklabel gpt mkpart ESP fat32 1MiB 100% set 1 boot on'
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+
+        # Step 2: Make the file system.
+
+        cmd = 'kpartx -av %s' % ESP_img
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+        undo_kpartx = True
+        time.sleep(1)
+        for e in stdout.decode().split():    # "add map loopXXp1 ...."
+            if e.startswith('loop') and e.endswith('p1'):
+                blockdev = '/dev/mapper/' + e
+                break
+        else:
+            raise RuntimeError('Cannot discern loopback device in %s' % stdout)
+
+        cmd = 'mkfs.vfat ' + blockdev
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+
+        # Step 3: Mount and fill out the file system.  Put everything
+        # under /grub.  grubnetaa64.efi turns around and grabs /grub/grub.cfg.
+        # EFI directory separator is backslash, while grub is forward.
+        # Ass-u-me enough loopback devics to go around.
+
+        cmd = 'mount %s %s' % (blockdev, ESP_mnt)
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+        undo_mount = True
+
+        with open(ESP_mnt + '/startup.nsh', 'w') as f:
+            f.write('\\grub\\grubnetaa64.efi\n')
+        grubdir = ESP_mnt + '/grub'
+        print('SDHC GRUB DIR AT %s' % grubdir)
+        os.makedirs(grubdir)
+        shutil.copy(vmlinuz_gzip, grubdir)
+        shutil.copy(cpio_gzip, grubdir)
+
+        # tftp_dir has "images/hostname" tacked onto it from caller.
+        # Grub itself is pulled live from L4TM repo at setup networking time.
+        grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
+        shutil.copy(grub, grubdir)
+
+        with open(grubdir + '/grub.cfg', 'w') as f:
+            f.write('linux /grub/%s\n' % os.path.basename(vmlinuz_gzip))
+            f.write('initrd /grub/%s\n' % os.path.basename(cpio_gzip))
+            f.write('boot\n')
+
+    except AssertionError as e:
+        print('%s failed: errno = %d: %s' % (str(e), ret, stderr))
+    except RuntimeError as e:
+        print('%s: errno = %d: %s' % (str(e), ret, stderr))
+    except Exception as e:
+        print('%s: errno = %d: %s' % (str(e), ret, stderr))
+
+    if undo_mount:
+        cmd = 'umount ' + ESP_mnt
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+    if undo_kpartx:
+        cmd = 'kpartx -d %s' % ESP_img
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+    shutil.copy(ESP_img, args.tftp_dir)
 
 #==============================================================================
 
@@ -511,15 +622,15 @@ def execute(args):
         'status': 200,
         'message': 'System image was created.'
     }
-    status_file = args.tftp_dir + '/status.json'
+    args.status_file = args.tftp_dir + '/status.json'
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
     try:
-        update_status(status_file, args.manifest, 'Untar golden image')
+        update_status(args, 'Untar golden image')
         new_fs_dir = untar(args.build_dir, args.golden_tar)
 
-        update_status(status_file, args.manifest, 'Configuration file updates')
+        update_status(args, 'Configuration file updates')
 
         # Use hostname and client_id
         set_hosts(new_fs_dir, args.hostname)
@@ -537,43 +648,22 @@ def execute(args):
         # Add packages and tasks from manifest.
         # Even if empty, it does an apt-get update/upgrade/dist-upgrade
         # in case golden image has gone stale.
-        update_status(
-            status_file, args.manifest, 'Installing ' + str(args.packages))
+        update_status(args, 'Installing ' + str(args.packages))
         cleanup_sources_list(new_fs_dir)
         install_packages(new_fs_dir, args.packages, args.tasks)
 
         # Create .cpio file from untar.  Filename done here in case
         # we ever want to pass it in as an option.
-        update_status(status_file, args.manifest, 'Generating FS image')
+        update_status(args, 'Generating FS image')
         cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
         create_cpio(cpio_file, new_fs_dir)
 
-        # This is just as fast as gzip standalone program and gives better
-        # error handling.  500M cpio file takes about 20 seconds for
-        # reduction to 180M (both methods, gzip command defaults to level 6).
-        # Net results:
-        # TMAS PXE is about 100M per hour; 500 seconds to uncompress 180M
-        # FAME PXE is about xxxM per hour; xxx seconds to uncompress 180M
-        # REAL HW  is about xxxM per hour; xxx seconds to uncompress 180M
-
-        cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
-        vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
-
-        update_status(status_file, args.manifest, 'Compressing kernel')
-        with open(vmlinuz_file, 'rb') as f_in:
-            with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
-                shutil.copyfileobj(f_in, f_out)
-
-        update_status(status_file, args.manifest, 'Compressing File System')
-        with open(cpio_file, 'rb') as f_in:
-            with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
-                shutil.copyfileobj(f_in, f_out)
+        compress_bootfiles(args, vmlinuz_file, cpio_file)
 
         # Free up space someday, but not during active development
         # remove_target(build_dir)
 
-        update_status(
-            status_file, args.manifest, 'PXE files ready to boot', 'ready')
+        update_status(args, 'PXE files ready to boot', 'ready')
 
     except RuntimeError as err:     # Caught earlier and re-thrown as this
         response['status'] = 505
@@ -584,7 +674,7 @@ def execute(args):
             sys.exc_info()[2].tb_lineno, str(err))
 
     if response['status'] != 200:
-        update_status(status_file, args.manifest, response['message'], 'error')
+        update_status(args, response['message'], 'error')
 
     return response
 
@@ -612,14 +702,12 @@ if __name__ == '__main__':
                         help='Scratch folder for building FS images.')
     parser.add_argument('--tftp_dir',
                         help='Absolute path to the dnsmasq TFTP folder.')
-
     parser.add_argument('-v', '--verbose',
                         help='Make it talk. Verbosity levels from 1 to 5',
                         action='store_true')
     parser.add_argument('--debug',
                         help='Matrix has you. Enter the debugging mode.',
                         action='store_true')
-
     args, _ = parser.parse_known_args()
     execute(args)
 

@@ -6,6 +6,7 @@ modified for the needs of manifesting. Modified vmdebootstrap is in
 on the system to satisfy package dependencies.
 """
 import argparse
+import errno
 import os
 
 from pdb import set_trace
@@ -41,8 +42,9 @@ def main(args):
         vmdebootstrap,
         vmdconfig,
         manconfig['L4TM_MIRROR'])
-    ret = piper(cmd, use_call=True)
-    assert not ret, 'vmdebootstrap failed: %s' % stderr
+    ret, stdout, stderr = piper(cmd)
+    assert not ret, 'vmdebootstrap failed: %s: %s' % (
+        errno.errorcode[ret], stderr)
 
 
 if __name__ == '__main__':

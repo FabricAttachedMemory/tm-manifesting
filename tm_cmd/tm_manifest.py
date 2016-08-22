@@ -32,6 +32,8 @@ def main(args):
         if args['debug']:
             set_trace()
             pass
+    except Exception as e:  # Show me the stack trace NOT!
+        raise SystemExit(str(e))
 
 
 if __name__ == '__main__':

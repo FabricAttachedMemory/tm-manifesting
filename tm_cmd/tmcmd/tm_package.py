@@ -16,12 +16,9 @@ class TmPackage(tm_base.TmCmd):
 
     def listall(self, arg_list=None, **options):
         """
-    SYNOPSIS
         listpkgs
 
-    DESCRIPTION
-        List all the packages available in the repo with its metadata in json
-    string format.
+        List all the packages available in the repo with its metadata in JSON.
         """
         super().listall(arg_list, **options)
         url = "%s%s" % (self.url, 'packages/')
@@ -31,11 +28,9 @@ class TmPackage(tm_base.TmCmd):
 
     def show(self, target, **options):
         """
-    SYNOPSIS
         showpkg <name>
 
-    DESCRIPTION
-        List metadata of the package in json string format.
+        List metadata of the package in JSON format.
         """
         super().show(target, **options)
         url = "%s%s%s" % (self.url, 'package/', self.show_name)

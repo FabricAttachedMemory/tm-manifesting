@@ -118,11 +118,15 @@ if __name__ == '__main__':
                 from configs import setup_golden_image
                 setup_golden_image.main(args)
         raise SystemExit(0)
-    except (ImportError, NameError) as err:
+    except ImportError as err:
         errmsg = 'First run "setup.py all" or "setup.py environment"'
     except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
+    except NameError as err:
+        errmsg = 'Name (coding) error: line %d: %s' % (
+            sys.exc_info()[2].tb_lineno, str(err))
     except Exception as err:
-        errmsg = 'UNEXPECTED ERROR: %s' % str(err)
+        errmsg = 'UNEXPECTED ERROR: line %d: %s' % (
+            sys.exc_info()[2].tb_lineno, str(err))
 
     raise SystemExit('%s\nsetup failed' % errmsg)

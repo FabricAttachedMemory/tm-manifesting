@@ -100,11 +100,11 @@ def _response_bad(errmsg, status_code=418):
 
 @mainapp.before_request
 def check_version(*args, **kwargs):
-    if 'api' not in request.path:   # Ignore versioning for HTML
+    if 'api' not in request.path:   # Ignore versioning/JSON for HTML
         return None
     hdr_accept = request.headers['Accept']
     if 'application/json' not in hdr_accept:
-        return _response_bad('I see no application/json in the header.', 406)
+        return _response_bad('I see no JSON in header/accept.', 406)
     version = -1.0
     for elem in hdr_accept.split(';'):
         if 'version' in elem:
@@ -122,8 +122,9 @@ def check_version(*args, **kwargs):
 
 @mainapp.after_request
 def version(response):
-    response.headers['Content-Type'] = \
-        'application/json;version=%s' % mainapp.config['API_VERSION']
+    if 'api' in request.path:   # Ignore versioning/JSON for HTML
+        response.headers['Content-Type'] = \
+            'application/json;version=%s' % mainapp.config['API_VERSION']
     return response
 
 ###########################################################################

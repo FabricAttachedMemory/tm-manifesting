@@ -11,6 +11,7 @@ from subprocess import call, Popen, PIPE
 
 def make_dir(path):
     """
+        FIXME: all we need is ', exists_ok=True' and we can get rid of this.
         A simple wrapper around os.makedirs that skip existing folders.
     :param 'path': [str] Leave this routine with a (new) directory at path
     :return: None or raised error
@@ -140,5 +141,5 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
             ret = 0
         return ret, stdout, stderr
     except Exception as e:
-        raise RuntimeError('Bad piper: %s' % str(e))
+        raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 

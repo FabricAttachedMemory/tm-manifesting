@@ -54,16 +54,25 @@ def install_base_packages():
             '"%s" failed: %s' % (cmd, stderr)
 
     print(' ---- Installing base packages ---- ')
-    pkg_list = ['apt-utils', 'cpio', 'dnsmasq', 'grub-efi-arm64-bin',
+    pkg_list = ['apt-utils', 'cpio', 'dnsmasq',
+                'dosfstools', 'grub-efi-arm64-bin',
                 'python3-debian', 'python3-dnspython', 'python3-flask',
                 'python3-netaddr', 'python3-netifaces', 'python3-requests',
-                'tm-librarian', 'vmdebootstrap']
+                'qemu-efi', 'tm-librarian', 'vmdebootstrap']
     errors = []
     for pkg in pkg_list:
         cmd = 'apt-get install -y -qq %s' % (pkg)
         ret, stdout, stderr = piper(cmd)
         if ret or stderr:
-            errors.append('[%s] %s' % (pkg, stderr))
+            if pkg == 'tm-librarian':       # might be on plain-old Debian
+                try:
+                    import tm_librarian     # maybe it's already there
+                except ImportError:
+                    print(
+                        '%s not loaded, symlink it into Python from git' % pkg,
+                        file=sys.stderr)
+            else:
+                errors.append('[%s] %s' % (pkg, stderr))
     if errors:
         raise RuntimeError('\n'.join(errors))
 

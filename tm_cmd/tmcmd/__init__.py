@@ -38,10 +38,8 @@ def set_help(func_dict):
 
 def show_help(args=[], **options):
     """
-    SYNOPSIS
         help
 
-    DESCRIPTION
         Prints the synopsis and a list of the most commonly used commands.
     """
     help_dict = set_help(cmdlookup)

@@ -18,13 +18,12 @@ BP = Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 
-
 _UPFROM = 'uploaded_from'
-
 
 ###########################################################################
 # HTML
 # See blueprint registration in manifest_api.py, these are relative paths
+
 
 def render_all(okmsg='', errmsg=''):
     return render_template(
@@ -71,8 +70,8 @@ def webpage_upload():
         return render_all(okmsg=msg + ': ' + file.filename)
 
     except Exception as e:
-        return render_all(errmsg='Upload("%s") failed: %s' %
-            (file.filename, str(e)))
+        return render_all(errmsg='Upload("%s") failed: %s' % (
+            file.filename, str(e)))
 
     _load_data()
     return render_all(okmsg='Upload %s complete' % file.filename)
@@ -85,11 +84,11 @@ def webpage_upload():
 @BP.route('/api/%s/' % _ERS_element)
 def listall():
     """
-        GET request that returns a json string response of all the manifests uploaded
-    to the server.
+        GET request that returns a JSON response of all the manifests
+    uploaded to the server.
     """
     all_manifests = sorted(list(_data.keys()))
-    msg = json.dumps({ 'manifests' : all_manifests }, indent=4)
+    msg = json.dumps({'manifests': all_manifests}, indent=4)
     status_code = 200
     if not all_manifests:
         status_code = 204
@@ -100,7 +99,7 @@ def listall():
 @BP.route('/api/%s/<path:manname>' % _ERS_element)
 def show_manifest_json(manname='/'):
     """
-        Find a specifiec manifest with respect to <prefix> and a <manifest name>
+        Find a specific manifest with respect to <prefix> and a <manifest name>
     and return a manifest contents in the response body.
 
     :param <prefix>: [str] full path to a user's manifesting folder.
@@ -120,36 +119,40 @@ def show_manifest_json(manname='/'):
 
 def list_manifests_by_prefix(prefix=None):
     """
-        This function loops throw _data.items() and for each element in it, finds
-    match with the provided <prefix>. Note: the comparison is happening between
-    _data's known manifests and provided <prefix> with a .startswith() function.
+        This function loops throw _data.items() and for each element in it,
+    finds match with the provided <prefix>. Note: the comparison is happening
+    between _data's known manifests and provided <prefix> with a .startswith()
+    function.
 
-    :param <prefix>: [str] full path to user's manifesting folder e.g. "funutarama/" or "my/futurama/manifests/"
+    :param <prefix>: [str] full path to user's manifesting folder e.g.
+        "funutarama/" or "my/futurama/manifests/"
 
     :return: json string of { 'manifests' : ['prefix/manifest_name']
-                Example: if there is a "futurama/" folder on the server that has
-                'bender' and 'fry' manifests, then request to ../manifest/futurama/
-                will reesult a respons of "{ 'manifests' : ['futurama/bender', 'futurama/fry'] }".
+        Example: if there is a "futurama/" folder on the server that has
+        'bender' and 'fry' manifests, then request to ../manifest/futurama/
+        will result a response of
+        "{ 'manifests' : ['futurama/bender', 'futurama/fry'] }".
     """
-    result = { 'manifests' : [] }
+    result = {'manifests': []}
 
     for man_path, man_obj in _data.items():
         if man_path.startswith(prefix) or not prefix:
             result['manifests'].append(man_path)
 
     if not result['manifests']:
-        response = make_response('No Manifests are available under the provided path.', 204)
+        response = make_response('No Manifests are available.', 204)
     else:
         response = make_response(jsonify(result), 200)
 
     return response
 
-
-# Must have a string greater or equal to 1. Thats the RULE for Flask's rules (<path:str>).
-# Reference: http://werkzeug.pocoo.org/docs/0.11/routing/
+# Must have a string greater or equal to 1. Thats the RULE for Flask's rules
+# (<path:str>).  Reference: http://werkzeug.pocoo.org/docs/0.11/routing/
 # Thus, to upload to root folder, we have to have a separate rule.
-@BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))                  # Upload to the Root
-@BP.route('/api/%s/<path:prefix>' % _ERS_element, methods=(('POST', )))    # Upload with prefix/
+
+
+@BP.route('/api/%s/' % _ERS_element, methods=(('POST', )))  # Upload to Root
+@BP.route('/api/%s/<path:prefix>' % _ERS_element, methods=(('POST', )))
 def api_upload(prefix=''):
     """
         Upload a manifest to the server using json string body content provided
@@ -240,7 +243,6 @@ class ManifestDestiny(object):
 
         return m
 
-
     def __init__(self, dirpath, basename, contentstr=None):
         '''If contentstr is given, it is an upload, else read a file.'''
         assert '/' not in basename, 'basename is not a leaf element'
@@ -257,7 +259,7 @@ class ManifestDestiny(object):
 
             for e in elems:
                 assert e == secure_filename(e), \
-                'Illegal namespace component "%s"' % e
+                    'Illegal namespace component "%s"' % e
 
             fname = secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
@@ -302,6 +304,7 @@ class ManifestDestiny(object):
 
 ###########################################################################
 
+
 def _lookup(manifest_name):    # Can be sub/path/name
     manifest_name = manifest_name.strip('/')
     return _data.get(manifest_name, None)
@@ -317,21 +320,24 @@ _data = None
 
 def _load_data():
     global _data
-    _data = { }
+    _data = {}
     try:    # don't die in a daemon
         manfiles = [    # List comprehension
-            (dirpath, b)
-                for dirpath, dirnames, basenames in os.walk(BP.UPLOADS)
-                    for b in basenames
+            (dirpath, f) for dirpath, dirnames, fnames in os.walk(BP.UPLOADS)
+            for f in fnames
         ]
         for dirpath, basename in manfiles:
             this = ManifestDestiny(dirpath, basename)
 
-            manname = os.path.join(dirpath, basename)                   # Build a manifest full path
-            manname = manname.split(BP.config['MANIFEST_UPLOADS'])[-1]  # relative to Manifest Uploads
-            manname = os.path.normpath(manname).strip('/')              # folder. e.g. user_folder/my_manifest
+            # Start with a full path, then a relative part, then the namespace
+            manname = os.path.join(dirpath, basename)   # Build a full path
+            manname = manname.split(BP.config['MANIFEST_UPLOADS'])[-1]
+            # folder. e.g. user_folder/my_manifest
+            manname = os.path.normpath(manname).strip('/')
 
-            _data[manname] = this # search is expected by manifest name, (e.g. manifest.json, not path/manifest.json)
+            # search is expected by manifest name, (e.g. manifest.json, not
+            # path/manifest.json)
+            _data[manname] = this
     except Exception as e:
         pass
 
