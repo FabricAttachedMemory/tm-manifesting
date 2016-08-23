@@ -23,7 +23,9 @@ import time
 
 from pdb import set_trace
 
-from tmms.utils import utils, io_utils
+from tmms.utils.utils import workdir, find, piper, untar
+from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
+from tmms.utils.file_utils import write_to_file
 
 _verbose = None     # Poor man's class
 _debug = None
@@ -48,8 +50,8 @@ def cleanout_kernel(target_dir, sys_img):
         for source in vmlinuz + initrd:            # move them all
             # FIXME: we need a move
             copy_into = os.path.basename(source)
-            io_utils.copy_target_into(source, '%s/%s' % (target_dir, copy_into))
-            io_utils.remove_target(source)
+            copy_target_into(source, '%s/%s' % (target_dir, copy_into))
+            remove_target(source)
         # I want to return the kernel I found and moved.   In an error
         # condition (such as one of the unit tests) it may not be there.
         vmlinuz = glob('%s/vmlinuz*' % (target_dir))
@@ -67,10 +69,10 @@ def fix_init(sys_img):
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     try:
-        with utils.workdir(sys_img):      # At the root
+        with workdir(sys_img):      # At the root
             if os.path.exists('init'):
                 os.unlink('init')
-            io_utils.make_symlink('sbin/init', 'init')
+            make_symlink('sbin/init', 'init')
     except Exception as err:
         raise RuntimeError('Error occured while fixing /init: %s' % str(err))
 
@@ -81,7 +83,7 @@ def fix_init(sys_img):
 
 def fix_rootfs(sys_img):
     try:
-        with utils.workdir(sys_img):      # At the root
+        with workdir(sys_img):      # At the root
             with open('etc/fstab', 'w') as f:    # no leading slash!!!
                 f.write('proc /proc proc defaults 0 0\n')
     except Exception as e:
@@ -110,9 +112,9 @@ def cleanup_sources_list(sys_img):
         sources_base, ['main', 'contrib', 'non-free'])
 
     try:
-        io_utils.remove_target(sources_base)
-        io_utils.remove_target(sources_list)
-        io_utils.write_to_file(sources_list, sources_updated)
+        remove_target(sources_base)
+        remove_target(sources_list)
+        write_to_file(sources_list, sources_updated)
     except RuntimeError as err:
         raise RuntimeError('Error occured while cleaning sources.list!\n\
                             %s' % (err))
@@ -176,8 +178,8 @@ def set_hostname(sys_img, hostname):
     hostname_file = '%s/etc/hostname' % (sys_img)
     try:
         if os.path.exists(hostname_file):
-            io_utils.remove_target(hostname_file)
-        io_utils.write_to_file(hostname_file, hostname)
+            remove_target(hostname_file)
+        write_to_file(hostname_file, hostname)
     except RuntimeError as err:
         raise RuntimeError('Cannot set /etc/hostname: %s' % str(err))
 
@@ -193,14 +195,14 @@ def set_hosts(sys_img, hostname):
     hosts_file = '%s/etc/hosts' % (sys_img)
     try:
         if os.path.exists(hosts_file):
-            io_utils.remove_target(hosts_file)
+            remove_target(hosts_file)
 
         content = []
         content.append('127.0.0.1   localhost')     # visual alignment
         content.append('127.1.0.1   %s' % hostname)
         content = '\n'.join(content)
 
-        io_utils.write_to_file(hosts_file, content)
+        write_to_file(hosts_file, content)
     except RuntimeError as err:
         raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
 
@@ -220,7 +222,7 @@ def create_cpio(dest_file, src_dir):
         # FIXME: do a test to insure dest_dir is not a subdir of src_dir
 
         # Skip things even though they may have been moved
-        found_data = utils.find(
+        found_data = find(
             src_dir,
             ignore_files=['vmlinuz', 'initrd.img'],
             ignore_dirs=['boot'])
@@ -234,8 +236,8 @@ def create_cpio(dest_file, src_dir):
             # "full path" string (e.g. whatever/untar/boot...., instead
             # ./boot...). This causes Kernel Panic when trying to boot with
             # such a cpio file.
-            with utils.workdir(src_dir):
-                ret, cpio_out, cpio_err = utils.piper(
+            with workdir(src_dir):
+                ret, cpio_out, cpio_err = piper(
                     cmd, stdin=cpio_stdin, stdout=dest_obj)
                 assert not ret, 'cpio failed: %s' % cpio_err
 
@@ -298,7 +300,7 @@ apt-get dist-upgrade --assume-yes
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
-        ret, _, _ = utils.piper(cmd, use_call=True)
+        ret, _, _ = piper(cmd, use_call=True)
         assert not ret, 'chroot failed: errno %d' % (ret)
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
@@ -314,7 +316,7 @@ def update_status(args, message, status='building'):
     response['manifest'] = args.manifest
     response['status'] = status
     response['message'] = message
-    io_utils.write_to_file(args.status_file, json.dumps(response, indent=4))
+    write_to_file(args.status_file, json.dumps(response, indent=4))
 
 #==============================================================================
 # This is just as fast as gzip standalone program and gives better error
@@ -361,13 +363,13 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
     try:    # piper catches many things, asserts get me out early
         cmd = 'parted -s ' + ESP_img    # Yes, -s goes right here
         cmd += ' mklabel gpt mkpart ESP fat32 1MiB 100% set 1 boot on'
-        ret, stdout, stderr = utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
         # Step 2: Make the file system.
 
         cmd = 'kpartx -av %s' % ESP_img
-        ret, stdout, stderr = utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
         undo_kpartx = True
         time.sleep(1)
@@ -379,7 +381,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
             raise RuntimeError('Cannot discern loopback device in %s' % stdout)
 
         cmd = 'mkfs.vfat ' + blockdev
-        ret, stdout, stderr = utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
         # Step 3: Mount and fill out the file system.  Put everything
@@ -388,7 +390,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
         # Ass-u-me enough loopback devics to go around.
 
         cmd = 'mount %s %s' % (blockdev, ESP_mnt)
-        ret, stdout, stderr = utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
         undo_mount = True
 
@@ -419,7 +421,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
 
     if undo_mount:
         cmd = 'umount ' + ESP_mnt
-        ret, stdout, stderr = utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
     if undo_kpartx:
         cmd = 'kpartx -d %s' % ESP_img
@@ -456,7 +458,7 @@ def execute(args):
     # is done inside those functions that throw RuntimeError.
     try:
         update_status(args, 'Untar golden image')
-        new_fs_dir = utils.untar(args.build_dir, args.golden_tar)
+        new_fs_dir = untar(args.build_dir, args.golden_tar)
 
         update_status(args, 'Configuration file updates')
 
@@ -508,7 +510,7 @@ def execute(args):
 
 
 if __name__ == '__main__':
-    """ Parse commind line arguments and pass them to execute() function. """
+    """ Parse command line arguments and pass them to execute() function. """
     parser = argparse.ArgumentParser(
         description='Options to customize FS image.')
 

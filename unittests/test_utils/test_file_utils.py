@@ -7,19 +7,21 @@ from pdb import set_trace
 import os
 import shlex
 import sys
+import tempfile
 import unittest
 from shutil import rmtree, copytree
 
-from tmms.utils import io_utils
+from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink, write_to_file
 
 
 
 class CustomizeNodeHelpersTest(unittest.TestCase):
 
-    tmp_folder = "/tmp/UNITTEST_CUSTOMNODE/"
+    tmp_folder = None
 
     @classmethod
     def setUp(cls):
+        cls.tmp_folder = tempfile.mkdtemp()
         if os.path.isdir(cls.tmp_folder):
             rmtree(cls.tmp_folder)
         os.makedirs(cls.tmp_folder)
@@ -40,7 +42,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file_new = '%s.new' % (test_file)
         self.touch_file(test_file)
 
-        io_utils.copy_target_into(test_file, test_file_new)
+        copy_target_into(test_file, test_file_new)
 
         self.assertTrue(os.path.exists(test_file_new),
             'File "%s" was not copied into "%s"!' % (test_file, test_file_new))
@@ -55,7 +57,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_dir_new = '%s.new' % (test_dir)
         self.touch_folder(test_dir)
 
-        io_utils.copy_target_into(test_dir, test_dir_new)
+        copy_target_into(test_dir, test_dir_new)
 
         self.assertTrue(os.path.isdir(test_dir_new),
             'File "%s" was not copied into "%s"!' % (test_dir, test_dir_new))
@@ -69,7 +71,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file = '%s/test_remove_file.orig' % self.tmp_folder
         self.touch_file(test_file)
 
-        io_utils.remove_target(test_file)
+        remove_target(test_file)
         self.assertFalse(os.path.exists(test_file), 'Target "%s" was not removed!' % test_file)
 
 
@@ -81,7 +83,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_dir = '%s/test_remove_dir.orig/' % self.tmp_folder
         self.touch_folder(test_dir)
 
-        io_utils.remove_target(test_dir)
+        remove_target(test_dir)
         self.assertFalse(os.path.exists(test_dir), 'Target "%s" was not removed!' % test_dir)
 
 
@@ -89,17 +91,29 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         """
             Touch a test file inside the test directorty(self.tmp_folder)
         and try to create a new symlink inside it folder using
-        customize_node.symlink_target.  DEPRECATED
+        tmms.file_utils.make_symlink
         """
-        self.assertTrue(True, 'DEPRECATED')
-        return
         test_file = '%s/test_symlink_file.orig' % self.tmp_folder
         test_file_new = '%s.linked' % test_file
         self.touch_file(test_file)
 
-        io_utils.symlink_target(test_file, test_file_new)
+        make_symlink(test_file, test_file_new)
         self.assertTrue(os.path.exists(test_file_new),
                 'Target "%s" was not linked into "%s"!' % (test_file, test_file_new))
+
+        try:
+            make_symlink(test_file, test_file_new)
+            self.assertTrue(True)
+        except RuntimeError:
+            self.assertFalse(True, msg='Exception for symlinking same files.')
+
+        try:
+            make_symlink('/tmp/whatever', test_file)
+            self.assertFalse(True, msg='No exception for symlinking nonexisting file.')
+        except RuntimeError:
+            self.assertTrue(True)
+
+
 
 
     def test_write_to_file(self):
@@ -114,7 +128,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
             self.assertFalse(True,
                 'Couldn\'t create a test file "%s"!' % test_file)
 
-        io_utils.write_to_file(test_file, new_content)
+        write_to_file(test_file, new_content)
 
         file_content = ''
         with open(test_file, 'r') as file_obj:

@@ -35,7 +35,7 @@ from tm_librarian.tmconfig import TMConfig
 
 from configs.build_config import ManifestingConfiguration
 from utils.utils import basepath, piper
-from utils.io_utils import make_symlink, make_dir
+from utils.file_utils import make_symlink, make_dir
 
 _maxnodes = 40  # Revised FRD for 2016
 

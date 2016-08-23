@@ -26,7 +26,7 @@ from tm_librarian.tmconfig import TMConfig
 try:
     from tmms.setup import parse_cmdline_args
     from tmms.utils.utils import piper
-    from tmms.utils.io_utils import make_dir
+    from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
 except ImportError as e:
     raise SystemExit(

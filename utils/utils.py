@@ -6,8 +6,10 @@ import os
 import shlex
 import shutil
 import sys
+import tarfile
 
 from subprocess import call, Popen, PIPE
+from tmms.utils.file_utils import remove_target
 
 
 def basepath(fullpath, leading):
@@ -18,24 +20,6 @@ def basepath(fullpath, leading):
         '"%s" does not start with %s' % (fullpath, leading)
     tmp = fullpath[len(leading):]
     return tmp
-
-
-def ensure_pythonpath(cfg_hook, python_dest):
-    """
-        Validate the existance of the hook located in the python dist-packages
-    that references the expected .pth hook config file. If not - create one.
-
-    :param 'cfg_hook': full path to a .pth hook config file to use for an
-                       environment path string.
-    :param 'python_dest': path to python/dist-packages/ to place hook into.
-    """
-    hook_name = os.path.basename(cfg_hook)
-    hooked_path = os.path.join(python_dest, cfg_hook)   # full path dest
-    if os.path.exists(hooked_path):
-        if os.readlink(hooked_path) == cfg_hook:        # is symlink correct?
-            return
-
-    os.symlink(cfg_hook, target)
 
 
 def find(start_path, ignore_files=[], ignore_dirs=[]):
@@ -126,19 +110,6 @@ def ratify(path):
     return missing_path_list
 
 
-def symlink_target(source, target):
-    """
-        Wrapper to os.symlink to trap errors.
-
-        FIXME: THIS IS NOT IMPORTED ANYWHERE.  CAN IT BE DELETED?
-
-    """
-    try:
-        os.symlink(source, target)
-    except EnvironmentError as err:
-        raise RuntimeError('Couldn\'t create a symlink: %s ' % err)
-
-
 def untar(destination, source):
     """
         Untar source file into destination folder. tar.tarfile.extractall
@@ -155,7 +126,7 @@ def untar(destination, source):
 
     try:
         destination = destination + '/untar'
-        io_utils.remove_target(destination)  # succeeds even if missing
+        remove_target(destination)  # succeeds even if missing
         with tarfile.open(source) as tar_obj:
             tar_obj.extractall(path=destination)
         return destination

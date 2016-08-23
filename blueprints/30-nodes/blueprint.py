@@ -274,14 +274,15 @@ def build_node(manifest, node_coord):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
     try:
-        p = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
+        proc = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
         # Now that everything is in a child, this call is FAST.
         # untar and gzip will take a minimum of five seconds. Be
         # completely sure the process really had time to start.
         time.sleep(2)
-        assert p.poll() is None     # still running
+        proc_status = proc.poll()
+        assert proc_status is None or proc_status == 0     # still running
     except Exception as err:    # TSNH =)
-        stdout, stderr = p.communicate()
+        stdout, stderr = proc.communicate()
         return make_response('Node binding failed: %s' % stderr.decode(), 418)
 
     # FIXME: move this to customize_node
