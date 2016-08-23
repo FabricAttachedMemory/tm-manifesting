@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import errno
 import os
 import shutil
+import stat
 import sys
 from pdb import set_trace
 
@@ -142,3 +143,28 @@ def write_to_file(target, content):
             file_obj.write(file_content)
     except Exception as e:
         raise RuntimeError('Write "%s" failed: %s' % (target, str(e)))
+
+
+def re_mknod(fname, devtype, major, minor, perms=0o660):
+    '''Wrap mknod so it won't choke on existing file.
+       FIXME: have it check attributes for a match.'''
+
+    try:
+        mode = stat.S_IFBLK if devtype.lower()[0] == 'b' else stat.S_IFCHR
+        os.mknod(
+            fname,
+            mode=mode + perms,
+            device=os.makedev(major, minor)
+        )
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise RuntimeError('mknod(%s) failed: %s' % (fname, str(e)))
+
+
+def chgrp(fname, grpname):
+    try:
+        shutil.chown(fname, group=grpname)
+    except OSError as e:
+        raise RuntimeError('chown(%s) failed: %s' % (fname, str(e)))
+
+

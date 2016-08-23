@@ -43,7 +43,7 @@ def link_into_usrlocalbin(git_repo_path):
         git_repo_path + '/tm_cmd/tm_manifest.py',
         '/usr/local/bin/tm-manifest')
     make_symlink(
-        git_repo_path + '/tm_manifest.py',
+        git_repo_path + '/manifest_api.py',
         '/usr/local/bin/tm-manifest-server')
 
 

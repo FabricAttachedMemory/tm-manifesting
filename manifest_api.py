@@ -25,7 +25,7 @@ from tm_librarian.tmconfig import TMConfig
 # installation will also do the right thing.
 try:
     from tmms.setup import parse_cmdline_args
-    from tmms.utils.utils import piper
+    from tmms.utils.utils import piper, create_loopback_files
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
 except ImportError as e:
