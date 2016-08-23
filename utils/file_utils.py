@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from contextlib import contextmanager
 import errno
 import os
 import shutil
@@ -109,6 +110,22 @@ def remove_target(target):
             os.remove(target)
     except (AssertionError, EnvironmentError) as e:
         raise RuntimeError('Couldn\'t remove "%s": %s' % (target, str(e)))
+
+
+@contextmanager
+def workdir(path):
+    """
+        Change script's work directory to perform a set of operation.
+    Set original directory back when done.
+    """
+    try:
+        orig_dir = os.getcwd()
+        os.chdir(path)
+        yield
+    except OSError as e:
+        raise RuntimeError('os.chdir(%s) failed: %s' % (path, str(e)))
+    finally:
+        os.chdir(orig_dir)
 
 
 def write_to_file(target, content):

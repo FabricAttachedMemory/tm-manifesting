@@ -11,7 +11,6 @@
 """
 
 import argparse
-from contextlib import contextmanager
 from glob import glob
 import gzip
 import json
@@ -23,9 +22,9 @@ import time
 
 from pdb import set_trace
 
-from tmms.utils.utils import workdir, find, piper, untar
+from tmms.utils.utils import find, piper, untar
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
-from tmms.utils.file_utils import write_to_file
+from tmms.utils.file_utils import write_to_file, workdir
 
 _verbose = None     # Poor man's class
 _debug = None
@@ -73,8 +72,10 @@ def fix_init(sys_img):
             if os.path.exists('init'):
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
+    except RuntimeError as err:      # Expecting this error from make_symlink,
+        raise RuntimeError(str(err)) # therefore, let it print the err message
     except Exception as err:
-        raise RuntimeError('Fix init error: %s' % str(err))
+        raise RuntimeError('Unexpected error in fix_init function: %s' % str(err))
 
 #==============================================================================
 # setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME

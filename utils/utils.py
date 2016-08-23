@@ -9,7 +9,7 @@ import sys
 import tarfile
 
 from subprocess import call, Popen, PIPE
-from tmms.utils.file_utils import remove_target
+from tmms.utils.file_utils import remove_target, workdir
 
 
 def basepath(fullpath, leading):
@@ -88,28 +88,6 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
         raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 
 
-def ratify(path):
-    """
-        Validate path (or list of path) exist on the system. Save each
-    non-existing path and return it in a list in the end.
-
-    :param 'path': [list or str] list of pathes to validate or a signle path.
-    :return: [list] of non-existing pathes.
-    """
-    if not path:
-        return []
-
-    if not isinstance(path, list):
-        path = [path]
-
-    missing_path_list = []
-    for to_validate in path:
-        if not os.path.exists(to_validate):
-            missing_path_list.append(to_validate)
-
-    return missing_path_list
-
-
 def untar(destination, source):
     """
         Untar source file into destination folder. tar.tarfile.extractall
@@ -132,19 +110,3 @@ def untar(destination, source):
         return destination
     except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
         raise RuntimeError('Error occured while untaring "%s": %s' % (source, str(err)))
-
-
-@contextmanager
-def workdir(path):
-    """
-        Change script's work directory to perform a set of operation.
-    Set original directory back when done.
-    """
-    try:
-        orig_dir = os.getcwd()
-        os.chdir(path)
-        yield
-    except OSError as e:
-        raise RuntimeError('os.chdir(%s) failed: %s' % (path, str(e)))
-    finally:
-        os.chdir(orig_dir)
