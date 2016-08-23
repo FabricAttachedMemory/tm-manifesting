@@ -9,7 +9,7 @@ from shutil import copyfile
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify
-from flask import make_response, send_file
+from flask import make_response, send_from_directory
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
@@ -43,11 +43,9 @@ def node_name(name=None):
     name = '/' + name
     try:
         node = BP.nodes[name][0]
-        status = _data.get(name, None)
-        if status is None:
-            status = ''
-            ESPURL = ''
-        else:
+        ESPURL = ''    # Jinja2 does what I want with zer0-length strings
+        status = get_node_status(name)
+        if status is not None and status['status'] == 'ready':
             prefix = request.url.split(_ERS_element)[0]
             ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
         return render_template(
@@ -63,9 +61,13 @@ def node_name(name=None):
 
 @BP.route('/%s/ESP/<path:hostname>' % _ERS_element)
 def node_ESP(hostname):
-    fname = hostname + '.ESP'
-    ESP = '%s/%s/%s' % (BP.config['TFTP_IMAGES'], hostname, fname)
-    return send_file(ESP, attachment_filename=fname)
+    filename = hostname + '.ESP'
+    ESPdir = '%s/%s' % (BP.config['TFTP_IMAGES'], hostname)
+
+    return send_from_directory(ESPdir, filename,
+        as_attachment=True,                         # os.path.basename
+        mimetype='application/x-raw-disk-image',    # dialogs say "ESP file"
+        cache_timeout=0)                            # Not in mainapp.config
 
 ###########################################################################
 # API
@@ -312,7 +314,7 @@ def get_node_status(node_coord):
         node_image_dir = node_coord2image_dir(node_coord)   # can raise
         with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
-    except FileNotFoundError as err:
+    except FileNotFoundError as err:    # Unbound
         return None
     except Exception as err:       # TCNH =)
         status = {

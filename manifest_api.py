@@ -60,6 +60,7 @@ mainapp.config['VERBOSE'] = \
     cmdline_args.verbose if sys.stdin.isatty() else 0
 mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
 mainapp.config['DRYRUN'] = cmdline_args.dry_run
+mainapp.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0     # For node ESP files
 
 ###########################################################################
 # Must come after mainapp setup because Mobius
