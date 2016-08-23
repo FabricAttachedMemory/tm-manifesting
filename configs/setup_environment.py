@@ -5,7 +5,6 @@ import json
 import os
 import os.path
 import shutil
-import stat
 import sys
 
 from pdb import set_trace
