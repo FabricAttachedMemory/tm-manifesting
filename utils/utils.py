@@ -173,7 +173,7 @@ def create_loopback_files():
     By default, eight of them are preconfigured.  Unless you're on LXC.
     Don't run out.
     """
-    fname = '/dev/loop-control')
+    fname = '/dev/loop-control'
     re_mknod(fname, 'char', 10, 237)
     chgrp(fname, 'disk')
     for i in range(100, 150):
