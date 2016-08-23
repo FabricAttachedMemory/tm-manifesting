@@ -220,7 +220,7 @@ if __name__ == '__main__':
     dnsmasq_proc = start_dnsmasq(mainapp.config)
     mainapp.run(
         debug=mainapp.config['DEBUG'],
-        use_reloader=mainap.config['DEBUG'],
+        use_reloader=mainapp.config['DEBUG'],
         host=mainapp.config['HOST'],
         port=mainapp.config['PORT'],
         threaded=False)
