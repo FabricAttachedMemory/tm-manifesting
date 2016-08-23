@@ -9,7 +9,7 @@ import sys
 import tarfile
 
 from subprocess import call, Popen, PIPE
-from tmms.utils.file_utils import remove_target, workdir
+from tmms.utils.file_utils import remove_target, workdir, re_mknod, chgrp
 
 
 def basepath(fullpath, leading):
@@ -110,3 +110,18 @@ def untar(destination, source):
         return destination
     except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
         raise RuntimeError('Error occured while untaring "%s": %s' % (source, str(err)))
+
+
+def create_loopback_files():
+    """
+    One loopback file is required for each node being bound to a manifest.
+    By default, eight of them are preconfigured.  Unless you're on LXC.
+    Don't run out.
+    """
+    fname = '/dev/loop-control'
+    re_mknod(fname, 'char', 10, 237)
+    chgrp(fname, 'disk')
+    for i in range(100, 150):
+        fname = '/dev/loop%d' % i
+        re_mknod(fname, 'block', 7, i)
+        chgrp(fname, 'disk')
