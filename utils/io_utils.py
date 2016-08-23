@@ -1,8 +1,9 @@
 #!/usr/bin/python3
+import errno
 import os
 import shutil
 import sys
-
+from pdb import set_trace
 
 _allowed_dirs = [
             ['var', 'lib'],
@@ -77,8 +78,6 @@ def make_symlink(source, target):
     :param 'target': [str] path to the file to create a symbolic link to.
     :return: 'None' on success or raise 'RuntimeError'
     '''
-
-    # print(' - symlink [%s] -> [%s]' % (source, target))
     try:
         os.symlink(source, target)
     except OSError as e:
