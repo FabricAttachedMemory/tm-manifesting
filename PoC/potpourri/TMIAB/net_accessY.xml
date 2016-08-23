@@ -1,0 +1,23 @@
+<network>
+  <name>net_accessY</name>
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <bridge name='net_accessY' stp='off' delay='0'/>
+  <mac address='52:54:48:50:44:ef'/>
+  <domain name='big.bro'/>
+  <dns>
+    <host ip='10.11.254.254'>
+      <hostname>torms</hostname>
+    </host>
+  </dns>
+  <ip address='10.11.254.254' netmask='255.255.255.0'>
+    <dhcp>
+    	<range start='10.11.254.1' end='10.11.254.40' />
+    </dhcp>
+  </ip>
+  <route address="10.11.254.0" prefix="24" gateway="10.11.254.254" />
+</network>
+

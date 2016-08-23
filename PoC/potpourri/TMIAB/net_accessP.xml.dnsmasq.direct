@@ -1,0 +1,23 @@
+<network>
+  <name>net_accessP</name>
+  <bridge name='net_accessP' stp='off' delay='0'/>
+  <mac address='52:54:48:50:45:ef'/>
+  <domain name='have.it.your.way'/>
+  <dns>
+    <srv service='librarian' protocol='tcp' target='torms' port='9093'/>
+    <host ip='10.11.10.254'>
+      <hostname>torms</hostname>
+    </host>
+  </dns>
+  <ip address='10.11.10.254' netmask='255.255.255.0'>
+    <tftp root='/var/lib/tmms/tftp/'/>
+    <dhcp>
+      <host id='enclosure/1/node/1' name='node01' ip='10.11.10.1'/>
+      <host id='enclosure/1/node/2' name='node02' ip='10.11.10.2'/>
+      <host id='enclosure/1/node/3' name='node03' ip='10.11.10.3'/>
+      <host id='enclosure/1/node/4' name='node04' ip='10.11.10.4'/>
+      <bootp file='/grub/grubnetaa64.efi'/>
+    </dhcp>
+  </ip>
+</network>
+

@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# Start a FAME ARM64 "node" that will PXE boot against the given interface.
+# Reduced from manifesting/PoC/diskless.sh
+
+###########################################################################
+# Command line processing
+
+[ $# -ne 1 -o "$1" = "-h" -o "$1" = "-?" ] && \
+	echo "usage: $0 nodenum" >&2 && exit 1
+set -u
+NODE=$1
+[ $NODE -lt 1 -o $NODE -gt 40 ] && echo "nodenum must be 1-40" >&2 && exit 1
+
+# Candidates for arguments
+NETNAME=net_accessP
+BOOTTYPE='QEMU_EFI'
+FAM=/var/tmp/GlobalNVM
+
+###########################################################################
+# Network prep
+
+ip link show $NETNAME >/dev/null || exit 1	# No such interface on stderr
+DECIMAL=`printf "%02d" $NODE`
+
+# netdev helper defaults to /usr/lib/qemu/qemu-bridge-helper.                   
+# It needs file /etc/qemu/bridge.conf, root:root, mode 640, with the line       
+# allow <NETNAME>                                                               
+NETACCESS=/etc/qemu/bridge.conf                                                 
+grep -Eq "^allow\s+$NETNAME" $NETACCESS                                         
+[ $? -ne 0 ] && echo "Missing 'allow' in $NETACCESS" >&2 && exit 1
+
+MAC="52:54:48:50:45:$DECIMAL"
+ps -ef | grep qemu-system-aarch64 | grep -q $MAC
+[ $? -eq 0 ] && echo "Node $NODE (MAC $MAC) already running" >&2 && exit 1
+
+NETDEV="-netdev bridge,br=$NETNAME,id=thisbridge"
+NIC="-device virtio-net-device,mac=$MAC,netdev=thisbridge"                      
+
+###########################################################################
+# EFI ROM/NV prep
+# BOOTROM=/usr/share/qemu/OVMF.fd	# Don't know what's up
+
+MACHTYPE="-M virt"
+case "$BOOTTYPE" in
+    SFW)
+    	BOOTROM=$HOME/rom.bin.1.13		# Needs Vulcan model for reset
+	# MACHTYPE="-M virt,gic_version=3"	# Only native with kvm not tcg
+	;;
+
+    QEMU_EFI)
+	BOOTROM=/usr/share/qemu-efi/QEMU_EFI.fd	# Package qemu-efi, PoC too old
+	;;
+
+    *)
+	echo 'Bad bootrom' >&2 && exit 1
+	;;
+esac
+
+echo "$BOOTTYPE: Boot ROM is $BOOTROM"
+sleep 2
+
+# Always make a boot ROM, don't overwrite an existing data ROM
+EFIROM=pflash.$DECIMAL.efirom
+EFIVARS=pflash.$DECIMAL.efivars
+rm -f $EFIROM
+cat $BOOTROM /dev/zero | dd iflag=fullblock bs=1M count=64 of=$EFIROM 2>/dev/null
+chmod -w $EFIROM
+[ ! -f $EFIVARS ] && dd iflag=fullblock if=/dev/zero bs=1M count=64 of=$EFIVARS 2>/dev/null
+
+PFLASH="-drive if=pflash,format=raw,file=$EFIROM,readonly \
+	-drive if=pflash,format=raw,file=$EFIVARS"
+
+###########################################################################
+# Construct remaining arguments.  File system will take up to half of RAM
+# by default.  Once inside, "mount -oremount,size=10000M rootfs /" would
+# bump it.  If I want to reach 40 nodes I should keep this sane.
+
+CONSOLE="-serial stdio"
+
+QEMU="qemu-system-aarch64 -m 16384 $MACHTYPE -cpu cortex-a57 -machine accel=tcg"
+
+# -d in_asm
+
+FAME="-object \
+       memory-backend-file,size=256M,mem-path=$FAM,id=FAM,share=on \
+      -device ivshmem,x-memdev=FAM"
+# FAME=
+
+ZBRIDGE="-device ivshmem,shm=z${DECIMAL}csr,size=1 \
+	 -device ivshmem,shm=z${DECIMAL}desbk,size=1 \
+	 -device ivshmem,shm=z${DECIMAL}desbl,size=1 \
+	 -device ivshmem,shm=z${DECIMAL}frwl,size=32 \
+	 -device ivshmem,shm=z${DECIMAL}inlv,size=1 \
+	 -device ivshmem,shm=z${DECIMAL}commit,size=8"
+# ZBRIDGE=
+
+stty intr ''	# So this running shell will ingore ctrl-C, passing it to qemu
+sudo $QEMU $PFLASH $NETDEV $NIC $CONSOLE $FAME $ZBRIDGE
+RET=$?
+stty sane
+reset
+echo qemu exited $RET
+exit 0

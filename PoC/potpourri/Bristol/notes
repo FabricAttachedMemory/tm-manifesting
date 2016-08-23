@@ -1,0 +1,17 @@
+1. Program will not start, it's missing package "requests". 
+   The recommendation is to "pip install requests".  Installing
+   "pip" requires almost sixty more packages to be installed.
+
+   As it turns out, "python-request" for 2.7 already exists in L4TM
+   so pip is not needed at all.
+
+   SUGGESTED FIX: use L4TM packages whenever possible
+
+2. Have to edit source code to change API URL.
+
+   SUGGESTED FIX: command line arguments
+
+3. INTEGRATION TEST #0 , but it's really network misconfiguration.  The API
+   service was never contacted.
+
+   FIX
