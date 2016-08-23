@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -u
+
+MANIFEST=$1
+
+NODES="/MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/1 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/10 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/2 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/3 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/4 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/5 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/6 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/7 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/8 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/1/Node/9 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/1 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/10 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/2 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/3 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/4 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/5 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/6 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/7 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/8 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/2/Node/9 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/1 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/10 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/2 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/3 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/4 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/5 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/6 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/7 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/8 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/3/Node/9 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/1 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/10 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/2 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/3 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/4 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/5 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/6 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/7 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/8 \
+      /MachineVersion/1/Datacenter/rohin/Rack/FAME/Enclosure/UV/EncNum/4/Node/9"
+
+START=`date +%s`
+for N in $NODES; do
+	echo $N
+	tm-manifest unsetnode $N
+	tm-manifest setnode $N $MANIFEST
+done
+let ELAPSED=`date +%s`-$START
+
+function sec2ascii() {
+	let H=$1/3600
+	let M=$1/60
+	let S=$1%60
+	printf "%2d:%02d:%02d" $H $M $S
+}
+
+echo "`sec2ascii $ELAPSED` all bindings started"
+
+FINISHED=0
+while [ $FINISHED -lt 40 ]; do
+	sleep 5
+	FINISHED=`find /var/lib/tmms/tftp/images -name status.json | xargs cat | grep ready | grep status | wc -l`
+	let ELAPSED=`date +%s`-$START
+	echo "`sec2ascii $ELAPSED` $FINISHED bindings finished"
+done
+exit 0
