@@ -81,8 +81,7 @@ class BindNodeTest(unittest.TestCase):
         node = self.coords[-1]
         args = [node, self.manifest]
 
-        # Hey, Herry Volchak: insure it's unbound before binding and whining.
-        output = json.loads(self.tmcmd.delete([node, ]))
+        output = json.loads(self.tmcmd.delete([node, ]))    # Cleaning up node before test
         self.assertTrue('204' in output,
             'Expected 204 after unsetnode: %s instead' % output)
 

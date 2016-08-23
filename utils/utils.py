@@ -1,49 +1,15 @@
 #!/usr/bin/python3 -tt
 '''Every real project needs a utils module.'''
-
+from contextlib import contextmanager
 import errno
 import os
 import shlex
 import shutil
 import sys
+import tarfile
 
 from subprocess import call, Popen, PIPE
-
-def make_dir(path):
-    """
-        FIXME: all we need is ', exists_ok=True' and we can get rid of this.
-        A simple wrapper around os.makedirs that skip existing folders.
-    :param 'path': [str] Leave this routine with a (new) directory at path
-    :return: None or raised error
-    """
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
-
-
-def make_symlink(source, target):
-    '''
-    Wrap os.symlink; succeed if target exists properly.  Used in setup.
-    :param 'source': [str] path to a file to create a symbolic link from.
-    :param 'target': [str] path to the file to create a symbolic link to.
-    :return: 'None' on success or raise 'RuntimeError'
-    '''
-
-    # print(' - symlink [%s] -> [%s]' % (source, target))
-    try:
-        os.symlink(source, target)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise RuntimeError('symlink(%s -> %s) failed: %s' % (
-                source, target, str(e)))
-        if not os.path.islink(target):
-            raise RuntimeError('Existing "%s" is not a symlink' % target)
-        if os.path.realpath(target) != source:
-            raise RuntimeError(
-                'Existing symlink "%s" does not point to %s' % (
-                    target, source))
+from tmms.utils.file_utils import remove_target, workdir
 
 
 def basepath(fullpath, leading):
@@ -56,57 +22,35 @@ def basepath(fullpath, leading):
     return tmp
 
 
-def ratify(path):
+def find(start_path, ignore_files=[], ignore_dirs=[]):
     """
-        Validate path (or list of path) exist on the system. Save each
-    non-existing path and return it in a list in the end.
+        Emulating output of unix "find" command.  Must build a list of all
+    the directories and filenames using os.walk relative to the start of its
+    walking directory.
+    Note: os.walk expands its data into three variables, where 'dirs' and
+    'files' are not relative path, but  rather "basenames". Combining all
+    together will result in a full path string. e.g:
+      root + "/" dirs[0] + "/" + files[0] = /root/elemenOfDirs/elementOfFIles
 
-    :param 'path': [list or str] list of pathes to validate or a signle path.
-    :return: [list] of non-existing pathes.
+    :param 'start_path': [str] path to start walk from.
+    :param 'ignore_files': [list] filenames to ignore during the walk.
+    :param 'ignore_dirs': [list] directories to ignore from walking through.
+    :return: [list] all the walked directories and filenames  relative to the
+            'start_path'.  This will save EACH directory relative path e,g:
+            /path/to/top/ will be saved as /path/, /path/to/ and /path/to/top/
     """
-    if not path:
-        return []
-
-    if not isinstance(path, list):
-        path = [path]
-
-    missing_path_list = []
-    for to_validate in path:
-        if not os.path.exists(to_validate):
-            missing_path_list.append(to_validate)
-
-    return missing_path_list
-
-
-def ensure_pythonpath(cfg_hook, python_dest):
-    """
-        Validate the existance of the hook located in the python dist-packages
-    that references the expected .pth hook config file. If not - create one.
-
-    :param 'cfg_hook': full path to a .pth hook config file to use for an
-                       environment path string.
-    :param 'python_dest': path to python/dist-packages/ to place hook into.
-    """
-    hook_name = os.path.basename(cfg_hook)
-    hooked_path = os.path.join(python_dest, cfg_hook)   # full path dest
-    if os.path.exists(hooked_path):
-        if os.readlink(hooked_path) == cfg_hook:        # is symlink correct?
-            return
-
-    os.symlink(cfg_hook, target)
-
-
-def symlink_target(source, target):
-    """
-        Wrapper to os.symlink to trap errors.
-
-        FIXME: THIS IS NOT IMPORTED ANYWHERE.  CAN IT BE DELETED?
-
-    """
-    try:
-        os.symlink(source, target)
-    except EnvironmentError as err:
-        raise RuntimeError('Couldn\'t create a symlink: %s ' % err)
+    result = []
+    with workdir(start_path):   # walk relative to untar'ed FS folder.
+        for root, dirs, files in os.walk('.'):
+            for dirname in dirs:    # each directory relative path to the root
+                if dirname in ignore_dirs:
+                    continue
+                result.append(os.path.join(root, dirname))
+            for filename in files:  # each filename relative path to the root
+                if filename in ignore_files:
+                    continue
+                result.append(os.path.join(root, filename))
+    return result
 
 ###########################################################################
 # Sub-process caller that returns different things based on return_process_obj:
@@ -143,3 +87,26 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
     except Exception as e:
         raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 
+
+def untar(destination, source):
+    """
+        Untar source file into destination folder. tar.tarfile.extractall
+    will create all necessary (sub)directories.
+    Note: When untaring into the existing folder to overwrite files,
+    tarfile.extractall function will throw a FileExistsError
+    if it can not overwrite broken symlinks of the tar'ed file.
+    Nuke it from orbit, it's the only way to be sure.
+
+    :param 'destination': [str] path to where to extract target into.
+    :param 'source': [str] path to a .tar file to untar.
+    :return: [str] path to untared content.  Raise RuntimeError on problems.
+    """
+
+    try:
+        destination = destination + '/untar'
+        remove_target(destination)  # succeeds even if missing
+        with tarfile.open(source) as tar_obj:
+            tar_obj.extractall(path=destination)
+        return destination
+    except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
+        raise RuntimeError('Error occured while untaring "%s": %s' % (source, str(err)))

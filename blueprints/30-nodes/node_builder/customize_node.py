@@ -11,7 +11,6 @@
 """
 
 import argparse
-from contextlib import contextmanager
 from glob import glob
 import gzip
 import json
@@ -23,123 +22,12 @@ import time
 
 from pdb import set_trace
 
-from tmms.utils.utils import make_symlink, piper
+from tmms.utils.utils import find, piper, untar
+from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
+from tmms.utils.file_utils import write_to_file, workdir
 
 _verbose = None     # Poor man's class
 _debug = None
-
-#==============================================================================
-
-
-@contextmanager
-def workdir(path):
-    """
-        Change script's work directory to perform a set of operation.
-    Set original directory back when done.
-    """
-    try:
-        orig_dir = os.getcwd()
-        os.chdir(path)
-        yield
-    except OSError as e:
-        raise RuntimeError('os.chdir(%s) failed: %s' % (path, str(e)))
-    finally:
-        os.chdir(orig_dir)
-
-
-def _fs_sanity_check(target):
-    """
-        Some file routines are HORRIBLY dangerous to run as root.
-    Perform a few idiot checks.
-    :param 'target': [str] path about to be copied/moved/overwritten/removed
-    :return: 'None' on success. Raise 'AssertionError' on problems.
-    """
-    if os.geteuid():    # Not root?  Trust the FS
-        return
-    target = target.strip()
-    assert target[0] == '/', 'Not an absolute path'
-    elems = target.split('/')[1:]   # zeroth is empty string
-    assert len(elems) > 2, 'Target is a primary directory'
-    assert elems[:2] == ['var', 'lib'], 'Target is not under /var/lib'
-
-
-def copy_target_into(target, into):
-    """
-        Wrapper around shutil.copy* functions. Main intention is to catch a
-    specific exception and raise RuntimeError with a meaningful message. Also
-    provides debugging and verbose options.
-
-    :param 'target': [str] path to an object that needs to be copied.
-    :param 'into': [str] path to the destination object (dir path or filename)
-    :return: 'None' on success. Raise 'RuntimeError' on problems.
-    """
-    try:
-        if _verbose:
-            print(' - Copying "%s" into "%s"...' % (target, into))
-        _fs_sanity_check(target)
-        if os.path.isdir(target):
-            shutil.copytree(target, into)   # copy directory
-        else:
-            shutil.copyfile(target, into)   # copy single file
-    except (AssertionError, RuntimeError, EnvironmentError) as err:
-        raise RuntimeError('Couldn\'t copy "%s" into "%s": %s' % (
-            target, into, str(err)))
-
-
-def remove_target(target):
-    """
-        Remove "target" file.
-
-    :param 'target': [str] path to the file to remove.
-    :return: 'None' on success. Raise 'RuntimeError' on problems.
-    """
-    try:
-        if _verbose:
-            print(' - Removing "%s"...' % (target))
-        _fs_sanity_check(target)
-        if os.path.isdir(target):
-            shutil.rmtree(target)
-        elif os.path.exists(target):
-            os.remove(target)
-    except (AssertionError, EnvironmentError) as e:
-        raise RuntimeError('Couldn\'t remove "%s": %s' % (target, str(e)))
-
-
-def write_to_file(target, content):
-    """
-        Overwrite file in the targeted location with a new content.
-
-    :param 'target': [str] path to a file to create or overwrite
-    :param 'content': [str] content to use in the new/overwritten file.
-    """
-    try:
-        _fs_sanity_check(target)
-        with open(target, 'w+') as file_obj:
-            if _verbose:
-                print('Writing into "%s": \n[\n%s\n]\n' % (target, content))
-            file_content = '%s\n' % str(content)
-            file_obj.write(file_content)
-    except Exception as e:
-        raise RuntimeError('Write "%s" failed: %s' % (target, str(e)))
-
-
-def slice_path(target, slice_ratio=2):
-    """
-        Slice long path string on half (or by slice_ratio amount). Sometimes
-        there is no need to print an absolute path to a string where the
-        first N directories are irrelavent to the user.
-
-        Ex: /one/two/three/four/five/ will be sliced into three/four/five/.
-
-    :param 'target': [str] path to slice.
-    :param 'slice_ratio': [int or float](default=2) slice ratio
-                        e.g. len(target) / slice_ratio
-    :return: [str] sliced target.
-    """
-    splited = target.split('/')
-    length = int(len(splited) / slice_ratio)
-    sliced = splited[length:]
-    return '/'.join(sliced)
 
 #==============================================================================
 
@@ -184,8 +72,10 @@ def fix_init(sys_img):
             if os.path.exists('init'):
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
+    except RuntimeError as err:      # Expecting this error from make_symlink,
+        raise RuntimeError(str(err)) # therefore, let it print the err message
     except Exception as err:
-        raise RuntimeError('Error occured while fixing /init: %s' % str(err))
+        raise RuntimeError('Unexpected error in fix_init function: %s' % str(err))
 
 #==============================================================================
 # setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME
@@ -318,33 +208,6 @@ def set_hosts(sys_img, hostname):
         raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
 
 
-def untar(destination, source):
-    """
-        Untar source file into destination folder. tar.tarfile.extractall
-    will create all necessary (sub)directories.
-    Note: When untaring into the existing folder to overwrite files,
-    tarfile.extractall function will throw a FileExistsError
-    if it can not overwrite broken symlinks of the tar'ed file.
-    Nuke it from orbit, it's the only way to be sure.
-
-    :param 'destination': [str] path to where to extract target into.
-    :param 'source': [str] path to a .tar file to untar.
-    :return: [str] path to untared content.  Raise RuntimeError on problems.
-    """
-
-    try:
-        destination = destination + '/untar'
-        remove_target(destination)  # succeeds even if missing
-        if _verbose:
-            print(' - Extracting "%s" into "%s"...' % (source, destination))
-        with tarfile.open(source) as tar_obj:
-            tar_obj.extractall(path=destination)
-        return destination
-    except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
-        raise RuntimeError('Error occured while untaring "%s": %s' % (
-            source, str(err)))
-
-
 def create_cpio(dest_file, src_dir):
     """
         Get the non-boot pieces, ignoring initrd, kernel, and /boot.
@@ -388,36 +251,6 @@ def create_cpio(dest_file, src_dir):
         raise RuntimeError('Couldn\'t create "%s" from "%s": %s' % (
             dest_file, src_dir, str(err)))
 
-
-def find(start_path, ignore_files=[], ignore_dirs=[]):
-    """
-        Emulating output of unix "find" command.  Must build a list of all
-    the directories and filenames using os.walk relative to the start of its
-    walking directory.
-    Note: os.walk expands its data into three variables, where 'dirs' and
-    'files' are not relative path, but  rather "basenames". Combining all
-    together will result in a full path string. e.g:
-      root + "/" dirs[0] + "/" + files[0] = /root/elemenOfDirs/elementOfFIles
-
-    :param 'start_path': [str] path to start walk from.
-    :param 'ignore_files': [list] filenames to ignore during the walk.
-    :param 'ignore_dirs': [list] directories to ignore from walking through.
-    :return: [list] all the walked directories and filenames  relative to the
-            'start_path'.  This will save EACH directory relative path e,g:
-            /path/to/top/ will be saved as /path/, /path/to/ and /path/to/top/
-    """
-    result = []
-    with workdir(start_path):   # walk relative to untar'ed FS folder.
-        for root, dirs, files in os.walk('.'):
-            for dirname in dirs:    # each directory relative path to the root
-                if dirname in ignore_dirs:
-                    continue
-                result.append(os.path.join(root, dirname))
-            for filename in files:  # each filename relative path to the root
-                if filename in ignore_files:
-                    continue
-                result.append(os.path.join(root, filename))
-    return result
 
 #==============================================================================
 
@@ -474,7 +307,6 @@ apt-get dist-upgrade --assume-yes
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
 
 #==============================================================================
-
 
 def update_status(args, message, status='building'):
     """
@@ -600,7 +432,6 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
 
 #==============================================================================
 
-
 def execute(args):
     """
         Customize Filesystem image: set hostname, cleanup sources.list,
@@ -680,7 +511,7 @@ def execute(args):
 
 
 if __name__ == '__main__':
-    """ Parse commind line arguments and pass them to execute() function. """
+    """ Parse command line arguments and pass them to execute() function. """
     parser = argparse.ArgumentParser(
         description='Options to customize FS image.')
 

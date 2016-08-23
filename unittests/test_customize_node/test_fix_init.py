@@ -59,12 +59,16 @@ class FixInitTest(unittest.TestCase):
         """
         orig_init = '%s/sbin/init' % self.fs_img
         os.remove(orig_init)
-        self.assertRaises(RuntimeError, CN.fix_init(self.fs_img),
-                'Unexpected error was raised!')
+        try:
+            CN.fix_init(self.fs_img)
+            self.assertTrue(False, ms='No RuntimeError for fix_init with incorrect env.')
+        except RuntimeError:
+            self.assertTrue(True)
+
         wrong_fsimg = '/tmp/'
         try:
             CN.fix_init(wrong_fsimg)
-            self.assertTrue(False, 'Expected failure due to a wrong fsimg path')
+            self.assertTrue(False, 'RuntimeError was not raised for wrong init env.')
         except RuntimeError:
             self.assertTrue(True)
 

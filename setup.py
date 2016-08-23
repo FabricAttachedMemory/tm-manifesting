@@ -106,7 +106,7 @@ if __name__ == '__main__':
         # this script needs to do a few things that Debian postinstall
         # scripts will do.
 
-        from utils.utils import make_symlink
+        from tmms.utils.file_utils import make_symlink
 
         setup_file = os.path.realpath(__file__)
         git_repo_path = os.path.dirname(setup_file)
