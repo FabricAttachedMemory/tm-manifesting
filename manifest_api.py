@@ -215,6 +215,7 @@ if __name__ == '__main__':
     if mainapp.config['DEBUG']:
         mainapp.jinja_env.cache = create_cache(0)
 
+    create_loopback_files()     # disappear after reboot
     set_iptables(mainapp.config)
     dnsmasq_proc = start_dnsmasq(mainapp.config)
     mainapp.run(

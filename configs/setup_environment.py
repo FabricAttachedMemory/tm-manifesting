@@ -79,28 +79,6 @@ def install_base_packages():
         raise RuntimeError('\n'.join(errors))
 
 
-def create_loopback_files():
-    """
-    One loopback file is required for each node being bound to a manifest.
-    By default, eight of them are preconfigured.  Don't run out.
-    """
-    for i in range(100, 150):
-        fname = '/dev/loop%d' % i
-        try:
-            os.mknod(
-                fname,
-                mode=stat.S_IFBLK + 0o660,
-                device=os.makedev(7, i)
-            )
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise RuntimeError('mknod(%s) failed: %s' % (fname, str(e)))
-        try:
-            shutil.chown(fname, group='disk')
-        except OSError as e:
-            raise RuntimeError('chown(%s) failed: %s' % (fname, str(e)))
-
-
 def main(args):
     """
         Run all the functions needed to setup tm-manifesting environment:

@@ -42,6 +42,9 @@ def link_into_usrlocalbin(git_repo_path):
     make_symlink(
         git_repo_path + '/tm_cmd/tm_manifest.py',
         '/usr/local/bin/tm-manifest')
+    make_symlink(
+        git_repo_path + '/tm_manifest.py',
+        '/usr/local/bin/tm-manifest-server')
 
 
 def try_dh_helper(argv):
