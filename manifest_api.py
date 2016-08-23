@@ -183,9 +183,10 @@ def set_iptables(config):
 def start_dnsmasq(config):
     pxe_interface = config['PXE_INTERFACE']
     if pxe_interface not in NIF.interfaces():
-        print('%s does not exist; cannot start dnsmasq.', file=sys.stderr)
+        print('%s does not exist; cannot start dnsmasq.' % pxe_interface,
+            file=sys.stderr)
         return None
-    make_dir('/var/log/tmms')
+    make_dir('/var/log/tmms')   # FIXME: local to MANIFEST_ROOT/flotsam
     make_dir('/var/run/tmms')
     conf_file = '%(DNSMASQ_CONFIGS)s/%(PXE_INTERFACE)s.conf' % config
     p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
