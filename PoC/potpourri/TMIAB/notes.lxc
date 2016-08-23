@@ -1,0 +1,61 @@
+From https://wiki.debian.org/LXC
+
+sudo LANG=C SUITE=catapult \
+	MIRROR=http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm \
+	lxc-create -n l4tm -t debian
+
+First had to:
+
+- set up /etc/subuid and /etc/subgid by hand as usermod won't work with LDAP
+
+- create /usr/share/debootstrap/scripts/l4tm with 'hpelinux-keyring'
+  execpt something still said "hlinux-archive'
+
+- modify /usr/share/lxc/templates/lxc-debian to add 'cattleprod' to suites
+
+sudo lxc-console -n l4tm, 'ctl-A then q' to exit
+
+Worked with debian template, but there was no networking because at the
+time of lxc-create /etc/lxc/default.conf had nothing.
+
+---------------------------------------------------------------------------
+
+Tried a noop transparent containter:
+
+sudo lxc-create -n transparent -t /bin/true
+
+Doesn't do what I want
+
+---------------------------------------------------------------------------
+
+After install, /etc/lxc/default.conf just had
+
+lxc.network.type = empty
+
+man lxc.conf talks about many files, man lxc.container.conf talks about
+this one
+
+Now it says
+# original one-liner:
+# lxc.network.type = empty
+
+# From https://feeding.cloud.geek.nz/posts/lxc-setup-on-debian-jessie/
+
+lxc.network.type = veth
+lxc.network.flags = up
+lxc.network.link = virbr0
+lxc.network.hwaddr = 00:FF:AA:xx:xx:xx
+lxc.network.ipv4 = 0.0.0.0/24
+
+But keyring was missing, I'm tired of typing MIRROR=, so copy 
+/usr/share/lxc/templates/lxc-debian.conf to l4tm.conf and fix it.
+
+Console doesn't work but lxc-attach does.  And the container is hooked up
+to virbr0, get IP address, cool.
+
+Now, "insmod overlay" and sudo lxc-clone -o l4tm -n netaccess -B overlayfs -s
+
+Breaks because overlayfs changed it's name in /proc/filesystems, but 
+lxc-create version on L4TM is too old (1.0.6, needs to be 1.1.1).  So
+nothing fancy yet.
+

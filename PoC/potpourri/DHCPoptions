@@ -1,0 +1,50 @@
+Note: dnsmasq --help dhcp
+
+From wireshark: 
+Bootp flags 0x8000 (Broadcast bit)
+Client IP: 0.0.0.0
+YOUR Client IP: 10.11.10.1
+Next Server: 10.11.10.254
+Relay agent: 0.0.0.0
+Client MAC: Simpact_0b:51:66 (00:00:3e:ob:51:66)
+Client HWADDR Padding: 00000000000000000000000
+Server Host Name (sname): zeros ("not given")
+Boot file name: boot/tmgrub.efi
+Magic cookie: DHCP (0x63825363)
+
+SFW: DHCP Discover Requests		dnsmasq: DHCP Offer
+  1: Subnet Mask			255.255.255.0
+  2: Time Offset			-
+  3: Router				10.11.10.254
+  4: Time Server			-
+  5: Name Server			-
+  6: Domain Name Server			10.11.10.254
+ 12: Host Name				node01
+ 13: Boot File Size			-
+ 15: Domain Name			have.it.your.way
+ 17: Root Path				-
+ 18: Extensions Path			-
+ 22: Max datagram reassembly		-
+ 23: Default IP TTL			-
+ 28: Broadcast address			10.11.10.255
+ 40: Network Info Service Domain	-
+     (NetBIOS scope)
+ 41: Network Info Service Servers	-
+     (NetBIOS server)
+ 42: NTP Servers			-
+ 43: Vendor-specific info		-
+ 50: Request IP Address			-
+ 51: IP Address Lease Time		3600 seconds
+ 					53: DHCP Type == Offer
+ 54: DHCP Server Identifer		10.11.10.254
+ 58: Renewal Time Value			1800 seconds
+ 59: Rebinding Time Value		3150 seconds
+ 60: Vendor class identifier		-
+ 66: TFTP Server Name			-
+ 67: Bootfile name			-
+ 97: UUID/GUID-based Client Identifier	-
+128: DOCSIS full security server IP	-
+129-135 PXE Undefined vendor-specific:	-
+
+
+

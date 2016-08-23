@@ -1,0 +1,3 @@
+mklabel gpt
+mkpart ESP fat32 1MiB 100%
+set 1 boot on

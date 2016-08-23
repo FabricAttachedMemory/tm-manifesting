@@ -1,0 +1,71 @@
+grub> lsmod
+Name    Ref Count       Dependencies
+all_video       1       efi_gop
+bitmap  	8            
+bitmap_scale    3       bitmap
+boot    	14      
+btrfs   	1       lzopio,gzio
+bufio   	13      
+cat     	1       extcmd
+chain   	1       efinet,net,boot
+configfile      1       normal
+crypto  	20              
+datetime        6               
+disk    	2               
+echo    	1       extcmd
+efifwsetup      1       reboot
+efi_gop 	2       video_fb,video
+efinet  	2       net
+ext2    	1       fshelp
+extcmd  	15              
+fat     	1               
+font    	5       bufio,video
+fshelp  	4               
+gcry_rijndael   2       crypto
+gcry_sha1       2       crypto
+gcry_sha512     2       crypto
+gettext 	7               
+gfxmenu 	1       font,normal,bitmap,video_colors,bitmap_scale,trig,gfxterm,video
+gfxterm 	3       font,video
+gfxterm_background 1    bitmap,video_colors,bitmap_scale,extcmd,video,gfxterm
+gzio    	5               
+halt    	1               
+hfsplus 	1       fshelp
+iso9660 	1       fshelp
+jpeg    	1       bitmap,bufio
+keystatus       1       extcmd
+linux   	1       boot
+loadenv 	1       disk,extcmd
+lsefi   	1               
+lsefimmap       1               
+lsefisystab     1               
+lssal   	1               
+lzopio  	2       crypto
+memdisk 	1               
+minicmd 	1               
+net     	5       bufio,datetime,boot,priority_queue
+normal  	6       gettext,terminal,crypto,extcmd,boot
+part_apple      1               
+part_gpt        1               
+part_msdos      1               
+password_pbkdf2 1       normal,crypto,pbkdf2,gcry_sha512
+pbkdf2  	3       crypto
+png     	1       bitmap,bufio
+priority_queue  7               
+reboot  	2               
+search  	1       search_label,search_fs_file,extcmd,search_fs_uuid
+search_fs_file  2               
+search_fs_uuid  2               
+search_label    2               
+sleep   	1       normal,extcmd
+terminal        7               
+test    	1               
+tftp    	1       net,priority_queue
+trig    	2               
+true    	1               
+video   	13              
+video_colors    3               
+video_fb        3
+zfs     	3       gzio
+zfscrypt        1       gcry_sha1,zfs,crypto,pbkdf2,extcmd,gcry_rijndael
+zfsinfo 1               zfs
