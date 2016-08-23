@@ -280,7 +280,7 @@ def build_node(manifest, node_coord):
         # completely sure the process really had time to start.
         time.sleep(2)
         proc_status = proc.poll()
-        assert proc_status is None or proc_status == 0     # still running
+        assert proc_status is None     # still running
     except Exception as err:    # TSNH =)
         stdout, stderr = proc.communicate()
         return make_response('Node binding failed: %s' % stderr.decode(), 418)

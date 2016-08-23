@@ -73,8 +73,10 @@ def fix_init(sys_img):
             if os.path.exists('init'):
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
+    except RuntimeError as err:      # Expecting this error from make_symlink,
+        raise RuntimeError(str(err)) # therefore, let it print the err message
     except Exception as err:
-        raise RuntimeError('Fix init error: %s' % str(err))
+        raise RuntimeError('Unexpected error in fix_init function: %s' % str(err))
 
 #==============================================================================
 # setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME
