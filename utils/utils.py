@@ -88,6 +88,7 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
     except Exception as e:
         raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 
+<<<<<<< HEAD
 
 def untar(destination, source):
     """

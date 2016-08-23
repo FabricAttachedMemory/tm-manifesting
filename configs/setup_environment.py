@@ -16,6 +16,7 @@ from configs.build_config import ManifestingConfiguration
 from utils.utils import piper
 from utils.file_utils import make_dir
 
+
 def _create_env(manconfig, fields, ignore=None):
     """
         Create folder tree from passed parameters that must comply with
