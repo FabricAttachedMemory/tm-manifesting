@@ -78,6 +78,8 @@ def make_symlink(source, target):
     :param 'target': [str] path to the file to create a symbolic link to.
     :return: 'None' on success or raise 'RuntimeError'
     '''
+    if not os.path.exists(os.path.realpath(source)):
+        raise RuntimeError('Symlink failed! %s not found!' % source)
     try:
         os.symlink(source, target)
     except OSError as e:
