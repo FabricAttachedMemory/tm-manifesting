@@ -143,3 +143,40 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
     except Exception as e:
         raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 
+###########################################################################
+# I want to start a new utils file but this works for now
+
+
+def re_mknod(fname, devtype, major, minor, perms=0o660):
+    try:
+        mode = stat.S_IFBLK if devtype.lower()[0] == 'b' else stat.S_IFCHR
+        os.mknod(
+            fname,
+            mode=mode + perms,
+            device=os.makedev(major, minor)
+        )
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise RuntimeError('mknod(%s) failed: %s' % (fname, str(e)))
+
+
+def chgrp(fname, grpname):
+    try:
+        shutil.chown(fname, group=grpname)
+    except OSError as e:
+        raise RuntimeError('chown(%s) failed: %s' % (fname, str(e)))
+
+
+def create_loopback_files():
+    """
+    One loopback file is required for each node being bound to a manifest.
+    By default, eight of them are preconfigured.  Unless you're on LXC.
+    Don't run out.
+    """
+    fname = '/dev/loop-control')
+    re_mknod(fname, 'char', 10, 237)
+    chgrp(fname, 'disk')
+    for i in range(100, 150):
+        fname = '/dev/loop%d' % i
+        re_mknod(fname, 'block', 7, i)
+        chgrp(fname, 'disk')

@@ -14,7 +14,7 @@ from pdb import set_trace
 # Python path "tmms" may not exist yet.
 
 from configs.build_config import ManifestingConfiguration
-from utils.utils import make_dir, piper
+from utils.utils import make_dir, piper, create_loopback_files
 
 
 def _create_env(manconfig, fields, ignore=None):
@@ -77,28 +77,6 @@ def install_base_packages():
                 errors.append('[%s] %s' % (pkg, stderr))
     if errors:
         raise RuntimeError('\n'.join(errors))
-
-
-def create_loopback_files():
-    """
-    One loopback file is required for each node being bound to a manifest.
-    By default, eight of them are preconfigured.  Don't run out.
-    """
-    for i in range(100, 150):
-        fname = '/dev/loop%d' % i
-        try:
-            os.mknod(
-                fname,
-                mode=stat.S_IFBLK + 0o660,
-                device=os.makedev(7, i)
-            )
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise RuntimeError('mknod(%s) failed: %s' % (fname, str(e)))
-        try:
-            shutil.chown(fname, group='disk')
-        except OSError as e:
-            raise RuntimeError('chown(%s) failed: %s' % (fname, str(e)))
 
 
 def main(args):
