@@ -9,7 +9,7 @@ import sys
 import tarfile
 
 from subprocess import call, Popen, PIPE
-from tmms.utils.file_utils import remove_target
+from tmms.utils.file_utils import remove_target, workdir
 
 
 def basepath(fullpath, leading):
@@ -110,19 +110,3 @@ def untar(destination, source):
         return destination
     except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
         raise RuntimeError('Error occured while untaring "%s": %s' % (source, str(err)))
-
-
-@contextmanager
-def workdir(path):
-    """
-        Change script's work directory to perform a set of operation.
-    Set original directory back when done.
-    """
-    try:
-        orig_dir = os.getcwd()
-        os.chdir(path)
-        yield
-    except OSError as e:
-        raise RuntimeError('os.chdir(%s) failed: %s' % (path, str(e)))
-    finally:
-        os.chdir(orig_dir)
