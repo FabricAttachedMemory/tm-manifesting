@@ -13,9 +13,10 @@ from flask import make_response, send_from_directory
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
+from tmms.utils import customize_node
 
 # programmatic import in main requires this form
-from .node_builder import customize_node
+#from .node_builder import customize_node
 
 _ERS_element = 'node'
 
@@ -273,6 +274,14 @@ def build_node(manifest, node_coord):
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
+    forked = os.fork()
+    if forked == 0:
+        try:
+            customize_node.execute(build_args)
+        except Exception:
+            pass
+        os.kill(forked, signal.SIGKILL)
+    '''
     try:
         proc = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
         # Now that everything is in a child, this call is FAST.
@@ -284,6 +293,7 @@ def build_node(manifest, node_coord):
     except Exception as err:    # TSNH =)
         stdout, stderr = proc.communicate()
         return make_response('Node binding failed: %s' % stderr.decode(), 418)
+    '''
 
     # FIXME: move this to customize_node
     manifest_tftp_file = manifest.namespace.replace('/', '.')
