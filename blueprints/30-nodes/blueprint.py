@@ -8,7 +8,8 @@ import time
 from shutil import copyfile
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, make_response
+from flask import Blueprint, render_template, request, jsonify
+from flask import make_response, send_from_directory
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
@@ -38,16 +39,35 @@ def node():
 @BP.route('/%s/<path:name>' % _ERS_element)
 @BP.route('/%s//<path:name>' % _ERS_element)    # Postel's law
 def node_name(name=None):
+    '''name will never have a leading / but now always needs one.'''
+    name = '/' + name
     try:
-        node = BP.nodes['/' + name][0]
+        node = BP.nodes[name][0]
+        ESPURL = ''    # Jinja2 does what I want with zer0-length strings
+        status = get_node_status(name)
+        if status is not None and status['status'] == 'ready':
+            prefix = request.url.split(_ERS_element)[0]
+            ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
             node=node,
-            manifest=_data.get(name, '(no binding)')
+            status=status,
+            ESPURL=ESPURL
         )
     except Exception as e:
         return make_response('Kaboom: %s' % str(e), 404)
+
+
+@BP.route('/%s/ESP/<path:hostname>' % _ERS_element)
+def node_ESP(hostname):
+    filename = hostname + '.ESP'
+    ESPdir = '%s/%s' % (BP.config['TFTP_IMAGES'], hostname)
+
+    return send_from_directory(ESPdir, filename,
+        as_attachment=True,                         # os.path.basename
+        mimetype='application/x-raw-disk-image',    # dialogs say "ESP file"
+        cache_timeout=0)                            # Not in mainapp.config
 
 ###########################################################################
 # API
@@ -248,8 +268,8 @@ def build_node(manifest, node_coord):
         return response
     # ---------------------------------
 
-    try:
-        os.makedirs(build_dir, exist_ok=True)
+    try:    # FIXME: instead of JIT, move this to setup_networking?
+        os.makedirs(build_dir + '/ESP', exist_ok=True)
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
@@ -294,7 +314,7 @@ def get_node_status(node_coord):
         node_image_dir = node_coord2image_dir(node_coord)   # can raise
         with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
-    except FileNotFoundError as err:
+    except FileNotFoundError as err:    # Unbound
         return None
     except Exception as err:       # TCNH =)
         status = {

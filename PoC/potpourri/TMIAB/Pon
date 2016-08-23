@@ -1,0 +1,28 @@
+#! /bin/bash
+
+if [ -z "$1" ]
+then
+  echo "Usage: Pon <node_MP_IP_address>"
+  echo "Power on the FAM, fabric, and SoC in TMAS tm-node simulation."
+  exit 1
+fi
+set -u
+
+RACK_PREFIX="/MachineVersion/1/Datacenter/BUK1/Frame/A1.above-floor/Rack/1/"
+
+echo -e "\nSetting rack coordinate string..."
+manage_mp.pl $1 8081 SetRackCoordinate $RACK_PREFIX
+
+echo -e "\nPowering on the FAM..."
+manage_fam.pl $1 8081 PowerOn
+
+echo -e "\nPowering on the fabric..."
+manage_fabric.pl $1 8081 PowerOn
+
+echo -e "\nPress any key to power on the SoC."
+read -n1 -s
+
+echo -e "\nPowering on the SoC..."
+manage_soc.pl $1 8081 PowerOn
+
+exit 0

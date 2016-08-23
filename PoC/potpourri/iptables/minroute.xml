@@ -1,0 +1,12 @@
+<network>
+  <name>minroute</name>
+  <forward mode='route'/>
+  <bridge name='testbrr' stp='off' delay='0'/>
+  <domain name='big.bro'/>
+  <ip address='10.11.10.254' netmask='255.255.255.0'>
+    <dhcp>
+    	<range start='10.11.10.1' end='10.11.10.40' />
+    </dhcp>
+  </ip>
+</network>
+

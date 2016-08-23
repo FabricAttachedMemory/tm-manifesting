@@ -1,0 +1,68 @@
+
+THere are two many devices doing UDP checksums, turn off the host side
+
+ethtool -k eth0 | grep check
+ethtool -K eth0 tx off rx off gso off 
+
+Doesn't matter.  It's on the host side (net_accessX)
+
+---------------------------------------------------------------------------
+
+libvirt bridge net_accessP is a SIMPLE NAT for the node tmasa processes.
+It fires up a dnsmasq because there's DNS to route (in libvirt's mind).
+I copied the bridge setup and have an iptables-save template.  That's
+all I wanted libvirt for.
+
+libvirt bridge net_accessY is a standard, DHCP-serving NAT for the MP
+processes.  It's also doing DNS (shown by tcpdump during boot).
+It needs a separate subnet.
+
+$ cd tmas/5.2/run
+$ vi net_access.servers
+10.11.10.100
+
+single line with IP address of net_accessP.   The TMMS-configured dnsmasq
+should be running against that interface.  This is the same as for
+TMAS 5.0 without MP stuff and the Gorenc pet rock.
+
+The address in the following line is the net_accessY container
+(ie, this line is the net_access.servers file for the NMP).
+Its running a stock libvirt dnsmasq serving DHCP in .1 - .40
+
+scar -type tm-node -nodes 1:2 -torms -netacc 10.11.254.100
+
+Sharepoint http://ent254.sharepoint.hpe.com/teams/CFETheMachine/TheMachineSFWAndOS/SitePages/Running%20TM-NODE%20simulation%20%28NMP%20and%20SoC%29.htm
+
+and get Perl scripts:
+
+$ wget http://colossus.ftc.rdlabs.hpecorp.net/publish/mfw/Latest/manage_fam.pl 
+
+$ wget http://colossus.ftc.rdlabs.hpecorp.net/publish/mfw/Latest/manage_fabric.pl 
+
+$ wget http://colossus.ftc.rdlabs.hpecorp.net/publish/mfw/Latest/manage_mp.pl 
+
+$ wget http://colossus.ftc.rdlabs.hpecorp.net/publish/mfw/Latest/manage_soc.pl 
+
+Note: To determine the value for <version_directory>, you can visit
+http://colossus.ftc.rdlabs.hpecorp.net/publish/mfw in your browser,
+and look for the above files.
+
+Then insure IP address is right (log into node MP root/hpinvent to check).
+
+1. Set ClientID: 
+$ ./manage_mp.pl <node_MP_IP> 8081 SetRackCoordinate "machine_sim/1/datacenter/pa3/frame/a3.above-floor/rack/3/"
+
+It's a rack-only prefix and must end in /.
+
+2. Power on FAME (takes seconds):
+$ ./manage_fam.pl <node_MP_IP> 8081 PowerOn
+
+3. Power on fabric (takes minutes):
+$ ./manage_fabric.pl <node_MP_IP> 8081 PowerOn
+
+4. Power on node:
+$ ./manage_soc.pl <node_MP_IP> 8081 PowerOn
+
+Or get their "Pon" / "Poff" scripts from the wiki.
+
+

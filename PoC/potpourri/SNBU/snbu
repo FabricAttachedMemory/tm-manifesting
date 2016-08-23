@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# One minute from invocation to Linux prompt including DHCP client completion.
+# Let qemu choose the MAC. If a FAME MAC is hard-coded and the PXE server
+# is running, PXE boot has priority, at least for QEMU_EFI.fd.  The Linux
+# image has the ClientID encoded for dhcpc, so it will get good networking
+# at boot time.
+
+# stty intr ''
+
+sudo qemu-system-aarch64 -m 8192 -M virt -cpu cortex-a57 -machine accel=tcg \
+	-drive if=pflash,format=raw,file=pflash.01.efirom,readonly \
+	-drive if=pflash,format=raw,file=pflash.01.efivars \
+	-netdev bridge,br=net_accessP,id=thisbridge \
+	-device virtio-net-device,netdev=thisbridge \
+	-serial stdio -drive file="$1",format=raw
+
+stty sane
+tset
+exit 0

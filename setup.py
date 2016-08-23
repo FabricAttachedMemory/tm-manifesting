@@ -13,7 +13,7 @@ import sys
 from pdb import set_trace
 
 
-def link_into_python():
+def link_into_python(git_repo_path):
     """
         Create a symlink to THIS manifesting source tree under the known
     Python hierarchy so that user could import manifesting libraries like
@@ -24,16 +24,24 @@ def link_into_python():
     paths_to_lib = ('%s/local/lib/%s/dist-packages' % tmptuple,
                     '%s/lib/%s/dist-packages' % tmptuple)
 
-    setup_file = os.path.realpath(__file__)
-    repo_path = os.path.dirname(setup_file)
     for path in paths_to_lib:
         if path not in sys.path:
             break
         path = path + '/tmms'
-        make_symlink(repo_path, path)
+        make_symlink(git_repo_path, path)
     else:
         raise RuntimeError(
             'Can\'t find suitable path in python environment to link tmms!')
+
+
+def link_into_usrlocalbin(git_repo_path):
+    """
+        Create a symlink to THIS manifesting source tree tm_cmd for
+    /usr/local/bin/tm-manifest as specified by ERS.
+    """
+    make_symlink(
+        git_repo_path + '/tm_cmd/tm_manifest.py',
+        '/usr/local/bin/tm-manifest')
 
 
 def try_dh_helper(argv):
@@ -94,11 +102,16 @@ if __name__ == '__main__':
         try_dh_helper(args.extra)     # Doesn't return if packaging called me
 
         # Imports are relative because implicit Python path "tmms" may not
-        # exist yet.  I think this will break if run from configs?
+        # exist yet.  I think this will break if run from configs?  Anyhow,
+        # this script needs to do a few things that Debian postinstall
+        # scripts will do.
 
         from tmms.utils.io_utils import make_symlink
 
-        link_into_python()
+        setup_file = os.path.realpath(__file__)
+        git_repo_path = os.path.dirname(setup_file)
+        link_into_python(git_repo_path)
+        link_into_usrlocalbin(git_repo_path)
 
         legal = ('environment', 'networking', 'golden_image')  # order matters
         if not args.extra or 'all' in args.extra:

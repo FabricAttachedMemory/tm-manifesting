@@ -1,0 +1,28 @@
+<network>
+  <name>rocky_amd</name>
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <bridge name='rocky_amd' stp='off' delay='0'/>
+  <mac address='52:54:48:50:45:fe'/>
+  <domain name='fame1.l4tm.fc.us.rdlabs.hpecorp.net'/>
+  <dns>
+    <srv service='librarian' protocol='tcp' target='torms' port='9093'/>
+    <srv service='lmp' protocol='tcp' target='torms' port='31179'/>
+    <srv service='manifest_api' protocol='tcp' target='torms' port='31178'/>
+    <host ip='10.10.10.254'>
+      <hostname>torms</hostname>
+    </host>
+  </dns>
+  <ip address='10.10.10.254' netmask='255.255.255.0'>
+    <dhcp>
+      <host mac='52:54:00:01:01:01' name='node01' ip='10.10.10.1'/>
+      <host mac='52:54:00:02:02:02' name='node02' ip='10.10.10.2'/>
+      <host mac='52:54:00:03:03:03' name='node03' ip='10.10.10.3'/>
+      <host mac='52:54:00:04:04:04' name='node04' ip='10.10.10.4'/>
+    </dhcp>
+  </ip>
+</network>
+

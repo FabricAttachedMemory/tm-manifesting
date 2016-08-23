@@ -1,0 +1,15 @@
+#! /bin/bash
+
+if [ -z "$1" ]; then
+  echo "Usage: Poff <node_MP_IP_address>"
+  echo "Power off the SoC in TMAS tm-node simulation."
+  exit 1
+fi
+set -u
+
+echo -e "\nPress any key to power off the SoC."
+read -n1 -s
+echo -e "\nPowering off the SoC..."
+manage_soc.pl $1 8081 PowerOff
+
+exit 0

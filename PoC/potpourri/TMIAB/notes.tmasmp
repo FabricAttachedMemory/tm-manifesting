@@ -1,0 +1,5 @@
+./scar -type tmnode -nodes 1:1
+
+Wait for tmasmp window to provide login prompt (5 minutes)
+
+root/hpinvent
