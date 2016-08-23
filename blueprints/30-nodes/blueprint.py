@@ -268,8 +268,8 @@ def build_node(manifest, node_coord):
         return response
     # ---------------------------------
 
-    try:
-        os.makedirs(build_dir, exist_ok=True)
+    try:    # FIXME: instead of JIT, move this to setup_networking?
+        os.makedirs(build_dir + '/ESP', exist_ok=True)
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
