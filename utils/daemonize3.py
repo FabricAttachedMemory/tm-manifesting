@@ -9,6 +9,7 @@ import sys
 
 class Daemon(object):
     """ Daemonization controller """
+    """ Script based of this: https://gist.github.com/marazmiki/3618191 """
 
     def __init__(self, pid_file=None, nochdir=False, noclose=False):
         self.nochdir = nochdir
