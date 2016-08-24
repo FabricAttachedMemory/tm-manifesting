@@ -11,7 +11,6 @@
 """
 
 import argparse
-from contextlib import contextmanager
 from glob import glob
 import gzip
 import json
@@ -23,9 +22,9 @@ import time
 
 from pdb import set_trace
 
-from tmms.utils.utils import workdir, find, piper, untar
+from tmms.utils.utils import find, piper, untar
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
-from tmms.utils.file_utils import write_to_file
+from tmms.utils.file_utils import write_to_file, workdir
 
 _verbose = None     # Poor man's class
 _debug = None
@@ -73,8 +72,10 @@ def fix_init(sys_img):
             if os.path.exists('init'):
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
+    except RuntimeError as err:      # Expecting this error from make_symlink,
+        raise RuntimeError(str(err)) # therefore, let it print the err message
     except Exception as err:
-        raise RuntimeError('Fix init error: %s' % str(err))
+        raise RuntimeError('Unexpected error in fix_init function: %s' % str(err))
 
 #==============================================================================
 # setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME
@@ -300,7 +301,7 @@ apt-get dist-upgrade --assume-yes
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
-        ret, _, _ = piper(cmd, use_call=True)
+        ret, stdin, stderr = piper(cmd, use_call=True)
         assert not ret, 'chroot failed: errno %d' % (ret)
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
@@ -314,8 +315,8 @@ def update_status(args, message, status='building'):
     """
     response = {}
     response['manifest'] = args['manifest']
-    response['status'] = ['status']
-    response['message'] = ['message']
+    response['status'] = status
+    response['message'] = message
     write_to_file(args['status_file'], json.dumps(response, indent=4))
 
 #==============================================================================
@@ -330,8 +331,8 @@ def update_status(args, message, status='building'):
 
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
-    cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
-    vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
+    cpio_gzip = args['tftp_dir'] + '/' + os.path.basename(cpio_file) + '.gz'
+    vmlinuz_gzip = args['tftp_dir'] + '/' + args['hostname'] + '.vmlinuz.gz'
 
     update_status(args, 'Compressing kernel')
     with open(vmlinuz_file, 'rb') as f_in:
@@ -346,8 +347,8 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
     # Since all the files are here, build the single node bringup flash image.
     # ESP == EFI System Partition, where EFI wants to scan for FS0:.
     update_status(args, 'Building SNBU SDHC image')
-    ESP_img = '%s/%s.ESP' % (args.build_dir, args.hostname)
-    ESP_mnt = '%s/ESP' % (args.build_dir)   # VFAT FS
+    ESP_img = '%s/%s.ESP' % (args['build_dir'], args['hostname'])
+    ESP_mnt = '%s/ESP' % (args['build_dir'])   # VFAT FS
     os.makedirs(ESP_mnt, exist_ok=True)     # That was easy
 
     # This will be pulled over HTTP, dd'd, etc.  Keep it small but useful.
@@ -404,7 +405,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
 
         # tftp_dir has "images/hostname" tacked onto it from caller.
         # Grub itself is pulled live from L4TM repo at setup networking time.
-        grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
+        grub = '/'.join(args['tftp_dir'].split('/')[:-2]) + '/grub/grubnetaa64.efi'
         shutil.copy(grub, grubdir)
 
         with open(grubdir + '/grub.cfg', 'w') as f:
@@ -427,7 +428,7 @@ def compress_bootfiles(args, vmlinuz_file, cpio_file):
         cmd = 'kpartx -d %s' % ESP_img
         ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
-    shutil.copy(ESP_img, args.tftp_dir)
+    shutil.copy(ESP_img, args['tftp_dir'])
 
 #==============================================================================
 
@@ -443,37 +444,40 @@ def execute(args):
         Not 200 - failure. 'message' - is a message string that briefly
             explains the error\success status.
     """
+    os.chdir('/tmp/')
+    os.setsid()
     forked = os.fork()
-    if forked != 0:     # close parent and let child to do the work.
-        raise SystemExit()
+    print (' --- Customize ID parent PID: %s' % (forked))
+    if forked != 0:
+        os._exit(0)
 
     global _verbose, _debug
 
     _verbose = args['verbose']
-    _debug = args.['debug']
+    _debug = args['debug']
 
     response = {  # No errors occured yet! Let's keep it this way.
         'status': 200,
         'message': 'System image was created.'
     }
-    args.status_file = args['tftp_dir'] + '/status.json'
+    args['status_file'] = args['tftp_dir'] + '/status.json'
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
     try:
         update_status(args, 'Untar golden image')
-        new_fs_dir = untar(args.build_dir, args.golden_tar)
+        new_fs_dir = untar(args['build_dir'], args['golden_tar'])
 
         update_status(args, 'Configuration file updates')
 
         # Use hostname and client_id
-        set_hosts(new_fs_dir, args.hostname)
-        set_hostname(new_fs_dir, args.hostname)
-        set_client_id(new_fs_dir, args.client_id)
+        set_hosts(new_fs_dir, args['hostname'])
+        set_hostname(new_fs_dir, args['hostname'])
+        set_client_id(new_fs_dir, args['client_id'])
 
         # Remove kernel/boot files.  This is superfluous as the find/cpio
         # ignores them.  The kernel gets copied to tftp_dir.
-        vmlinuz_file = cleanout_kernel(args.build_dir, new_fs_dir)
+        vmlinuz_file = cleanout_kernel(args['build_dir'], new_fs_dir)
 
         # This is the magic that preserves initrd as rootfs.
         fix_init(new_fs_dir)
@@ -482,14 +486,14 @@ def execute(args):
         # Add packages and tasks from manifest.
         # Even if empty, it does an apt-get update/upgrade/dist-upgrade
         # in case golden image has gone stale.
-        update_status(args, 'Installing ' + str(args.packages))
+        update_status(args, 'Installing ' + str(args['packages']))
         cleanup_sources_list(new_fs_dir)
-        install_packages(new_fs_dir, args.packages, args.tasks)
+        install_packages(new_fs_dir, args['packages'], args['tasks'])
 
         # Create .cpio file from untar.  Filename done here in case
         # we ever want to pass it in as an option.
         update_status(args, 'Generating FS image')
-        cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
+        cpio_file = '%s/%s.cpio' % (args['build_dir'], args['hostname'])
         create_cpio(cpio_file, new_fs_dir)
 
         compress_bootfiles(args, vmlinuz_file, cpio_file)
@@ -509,7 +513,7 @@ def execute(args):
 
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
-
+    os.wait()
     return response
 
 
@@ -543,6 +547,6 @@ if __name__ == '__main__':
                         help='Matrix has you. Enter the debugging mode.',
                         action='store_true')
     args, _ = parser.parse_known_args()
-    execute(args)
+    execute(vars(args))
 
     raise SystemExit(0)

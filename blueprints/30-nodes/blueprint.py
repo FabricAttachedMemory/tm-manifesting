@@ -275,12 +275,19 @@ def build_node(manifest, node_coord):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
     forked = os.fork()
+    build_error = None
+    print(' --- 30-node parent PID: %s' % (forked))
     if forked == 0:
         try:
             customize_node.execute(build_args)
-        except Exception:
-            pass
-        os.kill(forked, signal.SIGKILL)
+        except Exception as err:
+            build_error = err
+
+    os.wait()
+    if build_error is not None:
+        return make_response('Node binding failed: %s' % str(build_error), 418)
+
+    #customize_node.execute(build_args)
     '''
     try:
         proc = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
