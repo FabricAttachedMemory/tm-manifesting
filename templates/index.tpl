@@ -4,10 +4,15 @@
 </HEAD>
 
 <BODY>
-<H1>
+<TABLE BORDER=0><TR>
+<TD>
 <IMG SRC='/static/manifest.jpg' align='middle'>
-Manifesting for The Machine (version {{ api_version }})
-</H1>
+</TD><TD>
+<H1>Manifesting for The Machine (version {{ api_version }})</H1>
+<H3>Location: {{ coordinate }}</H3>
+</TD>
+</TR></TABLE>
+<p>
 The <a href='/static/software-arch.pdf'>L4TM Software ERS</a> chapter 8
 describes the Manifesting service.  The functions in chapter 7,
 Provisioning, are also covered by this service.
