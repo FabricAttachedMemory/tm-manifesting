@@ -216,12 +216,9 @@ def create_cpio(dest_file, src_dir):
     :param 'src_dir': [str] folder to create .cpio from.
     :return: returncode of Popen() process.
     """
+    # FIXME: do a test to insure dest_dir is not a subdir of src_dir
+    update_status(args, 'Create %s from %s' % (dest_file, src_dir))
     try:
-        if _verbose:
-            print(' - Creating %s from %s... ' % (dest_file, src_dir))
-
-        # FIXME: do a test to insure dest_dir is not a subdir of src_dir
-
         # Skip things even though they may have been moved
         found_data = find(
             src_dir,
@@ -267,8 +264,6 @@ def install_packages(sys_img, pkg_list, task_list):
     :param 'sys_img': [str] path to filesystem image to install packages to.
     :param 'pkg_list': [list] of packages to be installed.
     """
-    if _verbose:
-        print(' - Installing %s... ' % pkg_list)
 
     script_header = """#!/bin/bash
 # Created %s
@@ -314,6 +309,8 @@ def update_status(args, message, status='building'):
         status must be one of 'building', 'ready', or 'error'
         TODO: docstr
     """
+    if _verbose:    # sometimes it's for stdout, sometimes it's for the file
+        print(' - %s: %s' % (args.hostname, message))
     response = {}
     response['manifest'] = args.manifest
     response['status'] = status
@@ -325,11 +322,13 @@ def update_status(args, message, status='building'):
 
 
 def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
+    update_status(args, 'Creating and filling ESP')
+
     # tftp_dir has "images/nodeZZ" tacked onto it from caller.
     # Grub itself is pulled live from L4TM repo at setup networking time.
     grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
 
-    ESP_mnt = '%s/ESP' % (args.build_dir)   # VFAT FS
+    ESP_mnt = '%s/mnt' % (args.build_dir)   # VFAT FS
     os.makedirs(ESP_mnt, exist_ok=True)     # That was easy
 
     undo_mount = False
@@ -354,7 +353,7 @@ def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
         with open(ESP_mnt + '/startup.nsh', 'w') as f:
             f.write('\\grub\\grubnetaa64.efi\n')
         grubdir = ESP_mnt + '/grub'
-        print('SDHC GRUB DIR AT %s' % grubdir)
+        update_status(args, 'SDHC GRUB DIR AT %s' % grubdir)
         os.makedirs(grubdir)
         shutil.copy(vmlinuz_gzip, grubdir)
         shutil.copy(cpio_gzip, grubdir)
@@ -399,25 +398,27 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
     undo_kpartx = do_copy = False     # until I make it that far.
 
     try:    # piper catches many things, asserts get me out early
-        cmd = 'parted -s ' + ESP_img    # Yes, -s goes right here
-        cmd += ' mklabel gpt mkpart ESP fat32 1MiB 100% set 1 boot on'
+        cmd = 'parted -s %s ' % ESP_img    # Yes, -s goes right here
+        cmd += 'mklabel gpt '
+        cmd += 'unit MiB mkpart primary fat32 1 100% '
+        cmd += 'set 1 boot on set 1 esp on '
+        cmd += 'name 1 %s ' % args.hostname
         ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
         # Step 2: located the partition and create a block device.
         # Ass-u-me enough loopback devics to go around.
 
-        cmd = 'kpartx -av %s' % ESP_img
+        cmd = 'kpartx -asv %s' % ESP_img
         ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
         undo_kpartx = True
-        time.sleep(1)
-        for e in stdout.decode().split():    # "add map loopXXp1 ...."
-            if e.startswith('loop') and e.endswith('p1'):
-                blockdev = '/dev/mapper/' + e
-                break
-        else:
-            raise RuntimeError('Cannot discern loopback device in %s' % stdout)
+        stdout = stdout.decode()
+        assert stdout.startswith('add map loop'), \
+            'Unexpected kpartx output: %s' % stdout
+        blockdev = '/dev/mapper/' + stdout.split()[2]
+        assert blockdev.endswith('p1'), \
+            'Unexpected kpartx partition: %s' % blockdev
 
         # Step 3: fill it out
 
@@ -450,15 +451,14 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
 
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
-    cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
-    vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
+    update_status(args, 'Compressing kernel and file system')
 
-    update_status(args, 'Compressing kernel')
+    vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
     with open(vmlinuz_file, 'rb') as f_in:
         with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-    update_status(args, 'Compressing File System')
+    cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
     with open(cpio_file, 'rb') as f_in:
         with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
             shutil.copyfileobj(f_in, f_out)
