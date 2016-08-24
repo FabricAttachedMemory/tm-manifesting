@@ -25,7 +25,7 @@ from tm_librarian.tmconfig import TMConfig
 # installation will also do the right thing.
 try:
     from tmms.setup import parse_cmdline_args
-    from tmms.utils.utils import piper
+    from tmms.utils.utils import piper, create_loopback_files
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
 except ImportError as e:
@@ -215,11 +215,12 @@ if __name__ == '__main__':
     if mainapp.config['DEBUG']:
         mainapp.jinja_env.cache = create_cache(0)
 
+    create_loopback_files()     # disappear after reboot
     set_iptables(mainapp.config)
     dnsmasq_proc = start_dnsmasq(mainapp.config)
     mainapp.run(
         debug=mainapp.config['DEBUG'],
-        use_reloader=True,
+        use_reloader=mainapp.config['DEBUG'],
         host=mainapp.config['HOST'],
         port=mainapp.config['PORT'],
         threaded=False)

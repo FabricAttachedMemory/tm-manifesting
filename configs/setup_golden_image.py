@@ -15,7 +15,7 @@ from pdb import set_trace
 # Python path "tmms" may not exist yet.
 
 from configs.build_config import ManifestingConfiguration
-from utils.utils import piper
+from utils.utils import piper, create_loopback_files
 
 
 def main(args):
@@ -24,6 +24,8 @@ def main(args):
         vmdebootstrap.  Return None or raise error.
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
+    create_loopback_files()     # LXC containers don't have them on restart.
+
     whereami = os.path.dirname(os.path.realpath(__file__))
     vmdebootstrap = whereami + '/vmdebootstrap'
     vmdconfig = whereami + '/filesystem/golden.arm.vmd'
@@ -42,9 +44,9 @@ def main(args):
         vmdebootstrap,
         vmdconfig,
         manconfig['L4TM_MIRROR'])
-    ret, stdout, stderr = piper(cmd)
-    assert not ret, 'vmdebootstrap failed: %s: %s' % (
-        errno.errorcode[ret], stderr)
+
+    ret, _, _ = piper(cmd, use_call=True)     # Watch it all go by
+    assert not ret, 'vmdebootstrap failed: %s:' % (errno.errorcode[ret])
 
 
 if __name__ == '__main__':

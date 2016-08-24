@@ -9,7 +9,7 @@ import sys
 import tarfile
 
 from subprocess import call, Popen, PIPE
-from tmms.utils.file_utils import remove_target, workdir
+from tmms.utils.file_utils import remove_target, workdir, mknod, chgrp
 
 
 def basepath(fullpath, leading):
@@ -110,3 +110,19 @@ def untar(destination, source):
         return destination
     except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
         raise RuntimeError('Error occured while untaring "%s": %s' % (source, str(err)))
+
+
+def create_loopback_files():
+    """
+    One loopback file is required for each node being bound to a manifest.
+    One is also used during setup golden_image.  LXC doesn't prebuild them
+    and I'm not sure why.  "loop" is statically compiled and that seems to
+    lock the count at eight.
+    """
+    fname = '/dev/loop-control'
+    mknod(fname, 'char', 10, 237)
+    chgrp(fname, 'disk')
+    for i in range(0, 8):
+        fname = '/dev/loop%d' % i
+        mknod(fname, 'block', 7, i)
+        chgrp(fname, 'disk')
