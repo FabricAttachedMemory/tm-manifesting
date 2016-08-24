@@ -208,7 +208,7 @@ def set_hosts(sys_img, hostname):
         raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
 
 
-def create_cpio(dest_file, src_dir):
+def create_cpio(args, dest_file, src_dir):
     """
         Get the non-boot pieces, ignoring initrd, kernel, and /boot.
 
@@ -523,7 +523,7 @@ def execute(args):
         # we ever want to pass it in as an option.
         update_status(args, 'Generating FS image')
         cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
-        create_cpio(cpio_file, new_fs_dir)
+        create_cpio(args, cpio_file, new_fs_dir)
 
         vmlinuz_gzip, cpio_gzip = compress_bootfiles(
             args, vmlinuz_file, cpio_file)
