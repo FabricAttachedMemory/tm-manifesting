@@ -9,7 +9,7 @@ import sys
 import tarfile
 
 from subprocess import call, Popen, PIPE
-from tmms.utils.file_utils import remove_target, workdir, re_mknod, chgrp
+from tmms.utils.file_utils import remove_target, workdir, mknod, chgrp
 
 
 def basepath(fullpath, leading):
@@ -115,13 +115,14 @@ def untar(destination, source):
 def create_loopback_files():
     """
     One loopback file is required for each node being bound to a manifest.
-    By default, eight of them are preconfigured.  Unless you're on LXC.
-    Don't run out.
+    One is also used during setup golden_image.  LXC doesn't prebuild them
+    and I'm not sure why.  "loop" is statically compiled and that seems to
+    lock the count at eight.
     """
     fname = '/dev/loop-control'
-    re_mknod(fname, 'char', 10, 237)
+    mknod(fname, 'char', 10, 237)
     chgrp(fname, 'disk')
-    for i in range(100, 150):
+    for i in range(0, 8):
         fname = '/dev/loop%d' % i
-        re_mknod(fname, 'block', 7, i)
+        mknod(fname, 'block', 7, i)
         chgrp(fname, 'disk')

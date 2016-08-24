@@ -145,20 +145,19 @@ def write_to_file(target, content):
         raise RuntimeError('Write "%s" failed: %s' % (target, str(e)))
 
 
-def re_mknod(fname, devtype, major, minor, perms=0o660):
-    '''Wrap mknod so it won't choke on existing file.
-       FIXME: have it check attributes for a match.'''
+def mknod(fname, devtype, major, minor, perms=0o660):
+    '''Wrap mknod so it won't choke on existing file.'''
 
-    try:
-        mode = stat.S_IFBLK if devtype.lower()[0] == 'b' else stat.S_IFCHR
-        os.mknod(
-            fname,
-            mode=mode + perms,
-            device=os.makedev(major, minor)
-        )
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise RuntimeError('mknod(%s) failed: %s' % (fname, str(e)))
+    mode = stat.S_IFBLK if devtype.lower()[0] == 'b' else stat.S_IFCHR
+    device = os.makedev(major, minor)
+    if os.path.exists(fname):   # see if it matches
+        s = os.stat(fname)
+        assert os.major(device) == os.major(s.st_rdev), 'Wrong devfile major'
+        assert os.minor(device) == os.minor(s.st_rdev), 'Wrong devfile minor'
+        mask = ~0o777           # Since I'm root, perms aren't critical
+        assert mode == s.st_mode & mask, 'Wrong devfile type'
+        return                  # My work here is done
+    os.mknod(fname, mode=mode + perms, device=device)
 
 
 def chgrp(fname, grpname):

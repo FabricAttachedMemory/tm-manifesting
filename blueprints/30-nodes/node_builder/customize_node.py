@@ -72,10 +72,10 @@ def fix_init(sys_img):
             if os.path.exists('init'):
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
-    except RuntimeError as err:      # Expecting this error from make_symlink,
-        raise RuntimeError(str(err)) # therefore, let it print the err message
+    except RuntimeError as err:         # Expecting this from make_symlink...
+        raise RuntimeError(str(err))    # ...so let it print the err message
     except Exception as err:
-        raise RuntimeError('Unexpected error in fix_init function: %s' % str(err))
+        raise RuntimeError('Unexpected error in fix_init(): %s' % str(err))
 
 #==============================================================================
 # setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME
@@ -216,12 +216,9 @@ def create_cpio(dest_file, src_dir):
     :param 'src_dir': [str] folder to create .cpio from.
     :return: returncode of Popen() process.
     """
+    # FIXME: do a test to insure dest_dir is not a subdir of src_dir
+    update_status(args, 'Create %s from %s' % (dest_file, src_dir))
     try:
-        if _verbose:
-            print(' - Creating %s from %s... ' % (dest_file, src_dir))
-
-        # FIXME: do a test to insure dest_dir is not a subdir of src_dir
-
         # Skip things even though they may have been moved
         found_data = find(
             src_dir,
@@ -267,8 +264,6 @@ def install_packages(sys_img, pkg_list, task_list):
     :param 'sys_img': [str] path to filesystem image to install packages to.
     :param 'pkg_list': [list] of packages to be installed.
     """
-    if _verbose:
-        print(' - Installing %s... ' % pkg_list)
 
     script_header = """#!/bin/bash
 # Created %s
@@ -308,18 +303,143 @@ apt-get dist-upgrade --assume-yes
 
 #==============================================================================
 
+
 def update_status(args, message, status='building'):
     """
         status must be one of 'building', 'ready', or 'error'
         TODO: docstr
     """
+    if _verbose:    # sometimes it's for stdout, sometimes it's for the file
+        print(' - %s: %s' % (args.hostname, message))
     response = {}
     response['manifest'] = args.manifest
     response['status'] = status
     response['message'] = message
     write_to_file(args.status_file, json.dumps(response, indent=4))
 
-#==============================================================================
+#=============================================================================
+# ESP == EFI System Partition, where EFI wants to scan for FS0:.
+
+
+def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
+    update_status(args, 'Creating and filling ESP')
+
+    # tftp_dir has "images/nodeZZ" tacked onto it from caller.
+    # Grub itself is pulled live from L4TM repo at setup networking time.
+    grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
+
+    ESP_mnt = '%s/mnt' % (args.build_dir)   # VFAT FS
+    os.makedirs(ESP_mnt, exist_ok=True)     # That was easy
+
+    undo_mount = False
+    try:
+        # This happens on containers, not sure why...
+        assert os.path.exists(blockdev), \
+            'Cannot find mapper file %s' % blockdev
+
+        cmd = 'mkfs.vfat ' + blockdev
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+
+        # Step 3: Make, mount and fill out the file system.  Put everything
+        # under /grub.  grubnetaa64.efi turns around and grabs /grub/grub.cfg.
+        # EFI directory separator is backslash, while grub is forward.
+
+        cmd = 'mount %s %s' % (blockdev, ESP_mnt)
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+        undo_mount = True
+
+        with open(ESP_mnt + '/startup.nsh', 'w') as f:
+            f.write('\\grub\\grubnetaa64.efi\n')
+        grubdir = ESP_mnt + '/grub'
+        update_status(args, 'SDHC GRUB DIR AT %s' % grubdir)
+        os.makedirs(grubdir)
+        shutil.copy(vmlinuz_gzip, grubdir)
+        shutil.copy(cpio_gzip, grubdir)
+
+        shutil.copy(grub, grubdir)
+
+        with open(grubdir + '/grub.cfg', 'w') as f:
+            f.write('linux /grub/%s\n' % os.path.basename(vmlinuz_gzip))
+            f.write('initrd /grub/%s\n' % os.path.basename(cpio_gzip))
+            f.write('boot\n')
+
+    except Exception as e:
+        pass    # Just keep it here
+
+    if undo_mount:
+        cmd = 'umount ' + ESP_mnt
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+
+    return undo_mount   # suppress final copy if this didn't work
+
+#=============================================================================
+# SNBU == Single Node Bringup, the first turnon of node boards.
+# It will get burned onto SDHC/USB for single node bringup (SNBU).
+# This will be pulled over HTTP, dd'd, etc.  Keep it small but useful.
+# Most cpio.gz are under 200M, vmlinuz.gz under 7M, so this leaves
+# at least 50M of space for copying log files, etc.  SNBU shouldn't
+# make all that much data, he says with a smile.
+
+
+def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
+    update_status(args, 'Building SNBU SDHC image')
+    ESP_img = '%s/%s.ESP' % (args.build_dir, args.hostname)
+    ESP_target = '%s/%s' % (args.tftp_dir, ESP_img)     # node-specific by now
+    if os.path.exists(ESP_target):                      # shutil.copy below
+        os.unlink(ESP_target)
+
+    # Step 1: create the image file, burn GPT and ESP on it.
+
+    with open(ESP_img, 'wb') as f:
+        os.posix_fallocate(f.fileno(), 0, 256 << 20)
+    undo_kpartx = do_copy = False     # until I make it that far.
+
+    try:    # piper catches many things, asserts get me out early
+        cmd = 'parted -s %s ' % ESP_img    # Yes, -s goes right here
+        cmd += 'mklabel gpt '
+        cmd += 'unit MiB mkpart primary fat32 1 100% '
+        cmd += 'set 1 boot on set 1 esp on '
+        cmd += 'name 1 %s ' % args.hostname
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+
+        # Step 2: located the partition and create a block device.
+        # Ass-u-me enough loopback devics to go around.
+
+        cmd = 'kpartx -asv %s' % ESP_img
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+        undo_kpartx = True
+        stdout = stdout.decode()
+        assert stdout.startswith('add map loop'), \
+            'Unexpected kpartx output: %s' % stdout
+        blockdev = '/dev/mapper/' + stdout.split()[2]
+        assert blockdev.endswith('p1'), \
+            'Unexpected kpartx partition: %s' % blockdev
+
+        # Step 3: fill it out
+
+        do_copy = create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip)
+
+    except AssertionError as e:
+        print('%s failed: errno = %d: %s' % (str(e), ret, stderr))
+    except RuntimeError as e:
+        print('%s: errno = %d: %s' % (str(e), ret, stderr))
+    except Exception as e:
+        print('%s: errno = %d: %s' % (str(e), ret, stderr))
+
+    if undo_kpartx:
+        cmd = 'kpartx -d %s' % ESP_img
+        ret, stdout, stderr = piper(cmd)
+        assert not ret, cmd
+
+    if do_copy:
+        shutil.copy(ESP_img, args.tftp_dir)
+
+#=============================================================================
 # This is just as fast as gzip standalone program and gives better error
 # handling.  500M cpio file takes about 20 seconds for reduction to 180M (both
 # methods, gzip command defaults to level 6).
@@ -331,106 +451,22 @@ def update_status(args, message, status='building'):
 
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
-    cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
-    vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
+    update_status(args, 'Compressing kernel and file system')
 
-    update_status(args, 'Compressing kernel')
+    vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
     with open(vmlinuz_file, 'rb') as f_in:
         with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-    update_status(args, 'Compressing File System')
+    cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
     with open(cpio_file, 'rb') as f_in:
         with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-    # Since all the files are here, build the single node bringup flash image.
-    # ESP == EFI System Partition, where EFI wants to scan for FS0:.
-    update_status(args, 'Building SNBU SDHC image')
-    ESP_img = '%s/%s.ESP' % (args.build_dir, args.hostname)
-    ESP_mnt = '%s/ESP' % (args.build_dir)   # VFAT FS
-    os.makedirs(ESP_mnt, exist_ok=True)     # That was easy
-
-    # This will be pulled over HTTP, dd'd, etc.  Keep it small but useful.
-    # Most cpio.gz are under 200M, vmlinuz.gz under 7M, so this leaves
-    # at least 50M of space for copying log files, etc.  SNBU shouldn't
-    # make all that much data, as networking isn't expected.
-    # Step 1: create the image file, burn GPT and ESP on it.
-
-    with open(ESP_img, 'wb') as f:
-        os.posix_fallocate(f.fileno(), 0, 256 << 20)
-    undo_kpartx = undo_mount = False
-
-    try:    # piper catches many things, asserts get me out early
-        cmd = 'parted -s ' + ESP_img    # Yes, -s goes right here
-        cmd += ' mklabel gpt mkpart ESP fat32 1MiB 100% set 1 boot on'
-        ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
-
-        # Step 2: Make the file system.
-
-        cmd = 'kpartx -av %s' % ESP_img
-        ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
-        undo_kpartx = True
-        time.sleep(1)
-        for e in stdout.decode().split():    # "add map loopXXp1 ...."
-            if e.startswith('loop') and e.endswith('p1'):
-                blockdev = '/dev/mapper/' + e
-                break
-        else:
-            raise RuntimeError('Cannot discern loopback device in %s' % stdout)
-
-        cmd = 'mkfs.vfat ' + blockdev
-        ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
-
-        # Step 3: Mount and fill out the file system.  Put everything
-        # under /grub.  grubnetaa64.efi turns around and grabs /grub/grub.cfg.
-        # EFI directory separator is backslash, while grub is forward.
-        # Ass-u-me enough loopback devics to go around.
-
-        cmd = 'mount %s %s' % (blockdev, ESP_mnt)
-        ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
-        undo_mount = True
-
-        with open(ESP_mnt + '/startup.nsh', 'w') as f:
-            f.write('\\grub\\grubnetaa64.efi\n')
-        grubdir = ESP_mnt + '/grub'
-        print('SDHC GRUB DIR AT %s' % grubdir)
-        os.makedirs(grubdir)
-        shutil.copy(vmlinuz_gzip, grubdir)
-        shutil.copy(cpio_gzip, grubdir)
-
-        # tftp_dir has "images/hostname" tacked onto it from caller.
-        # Grub itself is pulled live from L4TM repo at setup networking time.
-        grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
-        shutil.copy(grub, grubdir)
-
-        with open(grubdir + '/grub.cfg', 'w') as f:
-            f.write('linux /grub/%s\n' % os.path.basename(vmlinuz_gzip))
-            f.write('initrd /grub/%s\n' % os.path.basename(cpio_gzip))
-            f.write('boot\n')
-
-    except AssertionError as e:
-        print('%s failed: errno = %d: %s' % (str(e), ret, stderr))
-    except RuntimeError as e:
-        print('%s: errno = %d: %s' % (str(e), ret, stderr))
-    except Exception as e:
-        print('%s: errno = %d: %s' % (str(e), ret, stderr))
-
-    if undo_mount:
-        cmd = 'umount ' + ESP_mnt
-        ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
-    if undo_kpartx:
-        cmd = 'kpartx -d %s' % ESP_img
-        ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
-    shutil.copy(ESP_img, args.tftp_dir)
+    return vmlinuz_gzip, cpio_gzip
 
 #==============================================================================
+
 
 def execute(args):
     """
@@ -489,7 +525,9 @@ def execute(args):
         cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
         create_cpio(cpio_file, new_fs_dir)
 
-        compress_bootfiles(args, vmlinuz_file, cpio_file)
+        vmlinuz_gzip, cpio_gzip = compress_bootfiles(
+            args, vmlinuz_file, cpio_file)
+        create_SNBU_image(args, vmlinuz_gzip, cpio_gzip)
 
         # Free up space someday, but not during active development
         # remove_target(build_dir)

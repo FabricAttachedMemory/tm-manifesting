@@ -43,11 +43,14 @@ def node_name(name=None):
     name = '/' + name
     try:
         node = BP.nodes[name][0]
-        ESPURL = ''    # Jinja2 does what I want with zer0-length strings
+        ESPURL = None    # testable value in Jinja2
         status = get_node_status(name)
         if status is not None and status['status'] == 'ready':
-            prefix = request.url.split(_ERS_element)[0]
-            ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
+            ESPpath = '%s/%s/%s.ESP' % (
+                BP.config['TFTP_IMAGES'], node.hostname, node.hostname)
+            if os.path.isfile(ESPpath):
+                prefix = request.url.split(_ERS_element)[0]
+                ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
@@ -64,7 +67,9 @@ def node_ESP(hostname):
     filename = hostname + '.ESP'
     ESPdir = '%s/%s' % (BP.config['TFTP_IMAGES'], hostname)
 
-    return send_from_directory(ESPdir, filename,
+    return send_from_directory(
+        ESPdir,                                     # required #1
+        filename,                                   # required #2
         as_attachment=True,                         # os.path.basename
         mimetype='application/x-raw-disk-image',    # dialogs say "ESP file"
         cache_timeout=0)                            # Not in mainapp.config
@@ -145,7 +150,6 @@ def delete_node_binding(node_coord):
     node_coord = '/' + node_coord
     if node_coord not in BP.node_coords:
         return make_response('The specified node does not exist.', 404)
-
 
     try:
         node_image_dir = node_coord2image_dir(node_coord)
