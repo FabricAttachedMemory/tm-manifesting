@@ -208,7 +208,7 @@ def set_hosts(sys_img, hostname):
         raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
 
 
-def create_cpio(dest_file, src_dir):
+def create_cpio(args, dest_file, src_dir):
     """
         Get the non-boot pieces, ignoring initrd, kernel, and /boot.
 
@@ -296,7 +296,7 @@ apt-get dist-upgrade --assume-yes
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
-        ret, stdin, stderr = piper(cmd, use_call=True)
+        ret, _, _ = piper(cmd, use_call=True)
         assert not ret, 'chroot failed: errno %d' % (ret)
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
@@ -310,12 +310,12 @@ def update_status(args, message, status='building'):
         TODO: docstr
     """
     if _verbose:    # sometimes it's for stdout, sometimes it's for the file
-        print(' - %s: %s' % (args['hostname'], message))
+        print(' - %s: %s' % (args.hostname, message))
     response = {}
-    response['manifest'] = args['manifest']
+    response['manifest'] = args.manifest
     response['status'] = status
     response['message'] = message
-    write_to_file(args['status_file'], json.dumps(response, indent=4))
+    write_to_file(args.status_file, json.dumps(response, indent=4))
 
 #=============================================================================
 # ESP == EFI System Partition, where EFI wants to scan for FS0:.
@@ -326,9 +326,9 @@ def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
 
     # tftp_dir has "images/nodeZZ" tacked onto it from caller.
     # Grub itself is pulled live from L4TM repo at setup networking time.
-    grub = '/'.join(args['tftp_dir'].split('/')[:-2]) + '/grub/grubnetaa64.efi'
+    grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
 
-    ESP_mnt = '%s/mnt' % (args['build_dir'])   # VFAT FS
+    ESP_mnt = '%s/mnt' % (args.build_dir)   # VFAT FS
     os.makedirs(ESP_mnt, exist_ok=True)     # That was easy
 
     undo_mount = False
@@ -386,8 +386,8 @@ def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
 
 def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
     update_status(args, 'Building SNBU SDHC image')
-    ESP_img = '%s/%s.ESP' % (args['build_dir'], args['hostname'])
-    ESP_target = '%s/%s' % (args['tftp_dir'], ESP_img)     # node-specific by now
+    ESP_img = '%s/%s.ESP' % (args.build_dir, args.hostname)
+    ESP_target = '%s/%s' % (args.tftp_dir, ESP_img)     # node-specific by now
     if os.path.exists(ESP_target):                      # shutil.copy below
         os.unlink(ESP_target)
 
@@ -402,7 +402,7 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
         cmd += 'mklabel gpt '
         cmd += 'unit MiB mkpart primary fat32 1 100% '
         cmd += 'set 1 boot on set 1 esp on '
-        cmd += 'name 1 %s ' % args['hostname']
+        cmd += 'name 1 %s ' % args.hostname
         ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
@@ -437,7 +437,7 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
         assert not ret, cmd
 
     if do_copy:
-        shutil.copy(ESP_img, args['tftp_dir'])
+        shutil.copy(ESP_img, args.tftp_dir)
 
 #=============================================================================
 # This is just as fast as gzip standalone program and gives better error
@@ -453,12 +453,12 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
     update_status(args, 'Compressing kernel and file system')
 
-    vmlinuz_gzip = args['tftp_dir'] + '/' + args['hostname'] + '.vmlinuz.gz'
+    vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
     with open(vmlinuz_file, 'rb') as f_in:
         with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-    cpio_gzip = args['tftp_dir'] + '/' + os.path.basename(cpio_file) + '.gz'
+    cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
     with open(cpio_file, 'rb') as f_in:
         with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
             shutil.copyfileobj(f_in, f_out)
@@ -480,40 +480,33 @@ def execute(args):
         Not 200 - failure. 'message' - is a message string that briefly
             explains the error\success status.
     """
-    os.chdir('/tmp/')
-    os.setsid()
-    forked = os.fork()
-    print (' --- Customize ID parent PID: %s' % (forked))
-    if forked != 0:
-        os._exit(0)
-
     global _verbose, _debug
 
-    _verbose = args['verbose']
-    _debug = args['debug']
+    _verbose = args.verbose
+    _debug = args.debug
 
     response = {  # No errors occured yet! Let's keep it this way.
         'status': 200,
         'message': 'System image was created.'
     }
-    args['status_file'] = args['tftp_dir'] + '/status.json'
+    args.status_file = args.tftp_dir + '/status.json'
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
     try:
         update_status(args, 'Untar golden image')
-        new_fs_dir = untar(args['build_dir'], args['golden_tar'])
+        new_fs_dir = untar(args.build_dir, args.golden_tar)
 
         update_status(args, 'Configuration file updates')
 
         # Use hostname and client_id
-        set_hosts(new_fs_dir, args['hostname'])
-        set_hostname(new_fs_dir, args['hostname'])
-        set_client_id(new_fs_dir, args['client_id'])
+        set_hosts(new_fs_dir, args.hostname)
+        set_hostname(new_fs_dir, args.hostname)
+        set_client_id(new_fs_dir, args.client_id)
 
         # Remove kernel/boot files.  This is superfluous as the find/cpio
         # ignores them.  The kernel gets copied to tftp_dir.
-        vmlinuz_file = cleanout_kernel(args['build_dir'], new_fs_dir)
+        vmlinuz_file = cleanout_kernel(args.build_dir, new_fs_dir)
 
         # This is the magic that preserves initrd as rootfs.
         fix_init(new_fs_dir)
@@ -522,15 +515,15 @@ def execute(args):
         # Add packages and tasks from manifest.
         # Even if empty, it does an apt-get update/upgrade/dist-upgrade
         # in case golden image has gone stale.
-        update_status(args, 'Installing ' + str(args['packages']))
+        update_status(args, 'Installing ' + str(args.packages))
         cleanup_sources_list(new_fs_dir)
-        install_packages(new_fs_dir, args['packages'], args['tasks'])
+        install_packages(new_fs_dir, args.packages, args.tasks)
 
         # Create .cpio file from untar.  Filename done here in case
         # we ever want to pass it in as an option.
         update_status(args, 'Generating FS image')
-        cpio_file = '%s/%s.cpio' % (args['build_dir'], args['hostname'])
-        create_cpio(cpio_file, new_fs_dir)
+        cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
+        create_cpio(args, cpio_file, new_fs_dir)
 
         vmlinuz_gzip, cpio_gzip = compress_bootfiles(
             args, vmlinuz_file, cpio_file)
@@ -551,7 +544,7 @@ def execute(args):
 
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
-    os.wait()
+
     return response
 
 
@@ -585,6 +578,6 @@ if __name__ == '__main__':
                         help='Matrix has you. Enter the debugging mode.',
                         action='store_true')
     args, _ = parser.parse_known_args()
-    execute(vars(args))
+    execute(args)
 
     raise SystemExit(0)
