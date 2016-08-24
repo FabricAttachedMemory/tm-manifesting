@@ -596,6 +596,7 @@ if __name__ == '__main__':
                         action='store_true')
     args, _ = parser.parse_known_args()
 
+    args.debug = False # no daemonization if ran from main
     execute(args)
 
     raise SystemExit(0)
