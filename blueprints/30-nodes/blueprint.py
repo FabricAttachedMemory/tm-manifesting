@@ -280,16 +280,20 @@ def build_node(manifest, node_coord):
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
-    if not BP.DEBUG:
-        forked = os.fork()
-        build_error = None
-        if forked == 0:
-            customize_node.execute(build_args)  # let the child build the node.
-
-        os.wait() # wait for the child to clean up after.
-    else:
+    if BP.DEBUG:
         set_trace()
         customize_node.execute(build_args)
+    else:
+        try:
+            forked = os.fork()
+            build_error = None
+            print ('Rocky spawning a rookie %s.' % forked)
+            if forked == 0:
+                customize_node.execute(build_args)  # let the child build the node.
+        except OSError as err:
+            response = make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
+
+        os.wait() # wait for the child to clean up after.
 
     return response
 

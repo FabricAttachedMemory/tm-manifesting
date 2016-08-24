@@ -481,11 +481,15 @@ def execute(args):
             explains the error\success status.
     """
     if not args.debug:
-        os.chdir('/tmp/')
-        os.setsid()
-        forked = os.fork()
-        if forked != 0:     # close the partent to give back the execution
-            os._exit(0)     # to the caller
+        try:
+            os.chdir('/tmp/')
+            os.setsid()
+            forked = os.fork()
+            print('Rocky\'s rookie spawned a rookie %s...' % forked)
+            if forked != 0:     # close the partent to give back the execution
+                os._exit(0)     # to the caller
+        except OSError as err:
+            raise RuntimeError('Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % err)
 
     global _verbose, _debug
 
