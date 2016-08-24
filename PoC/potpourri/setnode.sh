@@ -10,12 +10,14 @@ if [ "$NODES" = all ]; then
 fi
 
 START=`date +%s`
+NODECOUNT=0
 for N in $NODES; do
 	echo $N
 	tm-manifest getnode $N >/dev/null 2>&1
 	[ $? -ne 0 ] && echo "Can't getnode $N" >&2 && exit 
 	tm-manifest unsetnode $N >/dev/null 2>&1
 	tm-manifest setnode $N $MANIFEST	# This status is ok
+	let NODECOUNT=NODECOUNT+1
 done
 let ELAPSED=`date +%s`-$START
 
@@ -29,10 +31,10 @@ function sec2ascii() {
 echo "`sec2ascii $ELAPSED` all bindings started"
 
 FINISHED=0
-while [ $FINISHED -lt 40 ]; do
+while [ $FINISHED -lt $NODECOUNT ]; do
 	sleep 5
 	FINISHED=`find /var/lib/tmms/tftp/images -name status.json | xargs cat | grep ready | grep status | wc -l`
 	let ELAPSED=`date +%s`-$START
-	echo "`sec2ascii $ELAPSED` $FINISHED bindings finished"
+	echo "`sec2ascii $ELAPSED` $FINISHED/$NODECOUNT bindings finished"
 done
 exit 0
