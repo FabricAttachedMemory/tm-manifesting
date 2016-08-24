@@ -496,7 +496,6 @@ def execute(args):
         'status': 200,
         'message': 'System image was created.'
     }
-    #args.status_file = args.tftp_dir + '/status.json'
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
@@ -592,5 +591,7 @@ if __name__ == '__main__':
                         help='Matrix has you. Enter the debugging mode.',
                         action='store_true')
     args, _ = parser.parse_known_args()
+
+    execute(args)
 
     raise SystemExit(0)
