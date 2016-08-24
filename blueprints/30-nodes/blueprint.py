@@ -285,26 +285,14 @@ def build_node(manifest, node_coord):
         try:
             customize_node.execute(build_args)
         except Exception as err:
-            build_error = err
+            print (' -- main fork error: %s' % (str(err)))
+            #build_error = err
+        print(' --- Blueprint\'s CHILD here! [%s]' % build_err)
 
     os.wait()
     if build_error is not None:
         return make_response('Node binding failed: %s' % str(build_error), 418)
-
     #customize_node.execute(build_args)
-    '''
-    try:
-        proc = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
-        # Now that everything is in a child, this call is FAST.
-        # untar and gzip will take a minimum of five seconds. Be
-        # completely sure the process really had time to start.
-        time.sleep(2)
-        proc_status = proc.poll()
-        assert proc_status is None     # still running
-    except Exception as err:    # TSNH =)
-        stdout, stderr = proc.communicate()
-        return make_response('Node binding failed: %s' % stderr.decode(), 418)
-    '''
 
     # FIXME: move this to customize_node
     manifest_tftp_file = manifest.namespace.replace('/', '.')
