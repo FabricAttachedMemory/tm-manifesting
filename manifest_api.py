@@ -28,6 +28,7 @@ try:
     from tmms.utils.utils import piper, create_loopback_files
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
+    from tmms.utils.daemonize3 import Daemon
 except ImportError as e:
     raise SystemExit(
         'Cannot find Python module "tmms"; run "setup.py" and retry.')
@@ -36,6 +37,24 @@ except ImportError as e:
 # Set config variables for future use across the blueprints.
 
 cmdline_args = parse_cmdline_args('n/a')
+
+daemon = Daemon(chdir=False)
+if cmdline_args.daemon_start:
+    daemon.start()
+
+if cmdline_args.daemon_stop:
+    daemon.stop()
+    raise SystemExit()
+
+if cmdline_args.daemon_restart:
+    daemon.stop()
+    daemon.start()
+    raise SystemExit()
+
+if cmdline_args.daemon_status:
+    print(daemon.status())
+    raise SystemExit()
+
 
 try:
     manconfig = ManifestingConfiguration(cmdline_args.config)

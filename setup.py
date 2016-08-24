@@ -70,6 +70,24 @@ def parse_cmdline_args(extra_args_msg):
         '-c', '--config',
         help='Configuration file to be used.\nDefault=%s' % config,
         default=config)
+
+    parser.add_argument(
+        '-D', '--daemon-start',
+        help='Run as a daemon process.',
+        action='store_true')
+    parser.add_argument(
+        '--daemon-stop',
+        help='Stop the daemon',
+        action='store_true')
+    parser.add_argument(
+        '--daemon-status',
+        help='Print status of the daemon',
+        action='store_true')
+    parser.add_argument(
+        '--daemon-restart',
+        help='Restart the daemon',
+        action='store_true')
+
     parser.add_argument(
         '--debug',
         help='Turn on flask debugging.',
