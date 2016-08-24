@@ -16,8 +16,6 @@ from werkzeug.exceptions import BadRequest
 from tmms.utils.utils import piper
 from .node_builder import customize_node
 
-# programmatic import in main requires this form
-#from .node_builder import customize_node
 
 _ERS_element = 'node'
 
