@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 '''TM Nodes'''
+from collections import namedtuple
 from glob import glob
 import json
 import os
@@ -13,7 +14,7 @@ from flask import make_response, send_from_directory
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
-from tmms.utils import customize_node
+from .node_builder import customize_node
 
 # programmatic import in main requires this form
 #from .node_builder import customize_node
@@ -241,16 +242,16 @@ def build_node(manifest, node_coord):
     build_args = {
         'hostname':     hostname,
         'client_id':    client_id,
-        'manifest':     manifest.namespace,     # FIXME: basename?
+        'manifest':     manifest,
         'packages':     packages,
         'tasks':        tasks,
         'golden_tar':   golden_tar,
         'build_dir':    build_dir,
         'tftp_dir':     tftp_dir,
+        'status_file':  tftp_dir + '/status.json',
         'verbose':      BP.VERBOSE,
-        'debug':        BP.DEBUG,
+        'debug':        BP.DEBUG
     }
-
     cmd_args = []
     for key, val in build_args.items():
         if val is not None:     # packages and tasks, default is None
@@ -265,11 +266,14 @@ def build_node(manifest, node_coord):
         response = make_response(
             'Existing manifest changed; image re-build initiated.', 200)
 
+    # dict args to namedtuple: needed to customize_node.execute() func
+    build_args = namedtuple('NodeBuildArgs', build_args.keys())(**build_args)
+
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
         response.set_data(response.get_data().decode() + ' (DRY RUN)')
         print(cmd)      # Now you can cut/paste and run it by hand.
-        # FIMXE: what about status.json?
+        customize_node.update_status(build_args, 'Node was built with a Dry Run.', status='ready')
         return response
     # ---------------------------------
 
@@ -278,27 +282,16 @@ def build_node(manifest, node_coord):
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
-    forked = os.fork()
-    build_error = None
-    print(' --- 30-node parent PID: %s' % (forked))
-    if forked == 0:
-        try:
-            customize_node.execute(build_args)
-        except Exception as err:
-            print (' -- main fork error: %s' % (str(err)))
-            #build_error = err
-        print(' --- Blueprint\'s CHILD here! [%s]' % build_err)
+    if not BP.DEBUG:
+        forked = os.fork()
+        build_error = None
+        if forked == 0:
+            customize_node.execute(build_args)  # let the child build the node.
 
-    os.wait()
-    if build_error is not None:
-        return make_response('Node binding failed: %s' % str(build_error), 418)
-    #customize_node.execute(build_args)
-
-    # FIXME: move this to customize_node
-    manifest_tftp_file = manifest.namespace.replace('/', '.')
-    customize_node.copy_target_into(
-        manifest.fullpath,
-        tftp_dir + '/' + manifest_tftp_file)
+        os.wait() # wait for the child to clean up after.
+    else:
+        set_trace()
+        customize_node.execute(build_args)
 
     return response
 
