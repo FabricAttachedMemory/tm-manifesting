@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 '''TM Nodes'''
-from glob import glob
+
 import json
 import os
 import sys
 import time
+
+from argparse import Namespace
+from glob import glob
 from shutil import copyfile
 from pdb import set_trace
 
@@ -13,8 +16,6 @@ from flask import make_response, send_from_directory
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
-
-# programmatic import in main requires this form
 from .node_builder import customize_node
 
 _ERS_element = 'node'
@@ -240,16 +241,18 @@ def build_node(manifest, node_coord):
     build_args = {
         'hostname':     hostname,
         'client_id':    client_id,
-        'manifest':     manifest.namespace,     # FIXME: basename?
+        'manifest':     manifest,
         'packages':     packages,
         'tasks':        tasks,
         'golden_tar':   golden_tar,
         'build_dir':    build_dir,
         'tftp_dir':     tftp_dir,
+        'status_file':  tftp_dir + '/status.json',
         'verbose':      BP.VERBOSE,
-        'debug':        BP.DEBUG,
+        'debug':        BP.DEBUG
     }
-
+    # Legacy technique called this as a subprocess.  Construct the command
+    # for verbose output and manual invocation for development.
     cmd_args = []
     for key, val in build_args.items():
         if val is not None:     # packages and tasks, default is None
@@ -264,36 +267,36 @@ def build_node(manifest, node_coord):
         response = make_response(
             'Existing manifest changed; image re-build initiated.', 200)
 
+    build_args = Namespace(**build_args)    # mutable
+
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
         response.set_data(response.get_data().decode() + ' (DRY RUN)')
         print(cmd)      # Now you can cut/paste and run it by hand.
-        # FIMXE: what about status.json?
+        customize_node.update_status(
+            build_args, 'Node was built with a Dry Run.', status='ready')
         return response
     # ---------------------------------
 
-    try:    # FIXME: instead of JIT, move this to setup_networking?
-        os.makedirs(build_dir + '/ESP', exist_ok=True)
+    try:
+        os.makedirs(build_dir, exist_ok=True)
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 
-    try:
-        proc = piper(cmd, return_process_obj=True)  # FIXME: stdio to logging
-        # Now that everything is in a child, this call is FAST.
-        # untar and gzip will take a minimum of five seconds. Be
-        # completely sure the process really had time to start.
-        time.sleep(2)
-        proc_status = proc.poll()
-        assert proc_status is None     # still running
-    except Exception as err:    # TSNH =)
-        stdout, stderr = proc.communicate()
-        return make_response('Node binding failed: %s' % stderr.decode(), 418)
+    if BP.DEBUG:
+        set_trace()
+        customize_node.execute(build_args)
+    else:
+        try:
+            forked = os.fork()
+            build_error = None
+            print ('Rocky spawning a rookie %s.' % forked)
+            if forked == 0:
+                customize_node.execute(build_args)  # let the child build the node.
+        except OSError as err:
+            response = make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
 
-    # FIXME: move this to customize_node
-    manifest_tftp_file = manifest.namespace.replace('/', '.')
-    customize_node.copy_target_into(
-        manifest.fullpath,
-        tftp_dir + '/' + manifest_tftp_file)
+        os.wait() # wait for the child to clean up after.
 
     return response
 

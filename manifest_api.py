@@ -159,7 +159,8 @@ def root():
         base_url=request.base_url,
         mirror=mainapp.config['L4TM_MIRROR'],
         rules=mainapp.config['rules'],
-        url_root=request.url_root)
+        url_root=request.url_root,
+        coordinate=mainapp.config['tmconfig'].racks[1]['coordinate'])
 
 ###########################################################################
 # Networking stuff

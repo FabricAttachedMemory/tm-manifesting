@@ -1,0 +1,10 @@
+#!ipxe
+
+set base http://hlinux-deejay.usa.hp.com/hLinuxISO
+initrd ${base}/ipxe.guided.iso || goto oopsie
+kernel ${base}/memdisk iso raw || goto oopsie
+boot || goto oopsie
+
+oopsie:
+echo browse to http://ipxe.org/err/XXXXXXXXX
+shell
