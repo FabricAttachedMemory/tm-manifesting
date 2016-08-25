@@ -180,7 +180,7 @@ def set_environment(args):
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Create /etc/environemnt')
+    update_status(args, 'Create /etc/environment')
     env_file = '%s/etc/environment' % args.new_fs_dir
     try:
         if os.path.exists(env_file):
@@ -549,6 +549,8 @@ def execute(args):
         tmp = extract_bootfiles(args)
         assert len(tmp) == 1, 'Golden image %s had no kernel' % args.golden_tar
         vmlinuz_golden = tmp[0]
+        update_status('Found golden kernel %s' %
+                       os.path.basename(vmlinuz_golden))
 
         # Global config files
         set_environment(args)
@@ -569,7 +571,7 @@ def execute(args):
         if tmp:
             assert len(tmp) < 2, 'Too many custom kernels'
             update_status(args, 'Replacing golden kernel %s with %s' % (
-                vmlinuz_golden, tmp[0]))
+                os.path.basename(vmlinuz_golden), os.path.basename(tmp[0])))
             vmlinuz_golden = tmp[0]
 
         cpio_file = create_cpio(args)
