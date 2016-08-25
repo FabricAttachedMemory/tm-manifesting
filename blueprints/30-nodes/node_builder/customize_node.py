@@ -522,12 +522,14 @@ def execute(args):
     if args.debug:
         args.verbose = True
     else:
+        # Ass-u-me this is the first child in a fork-setsid-fork daemon chain
         try:
-            os.chdir('/tmp/')
+            os.chdir('/tmp')
             os.setsid()
             forked = os.fork()
-            if forked > 0:              # close this parent to give back...
-                raise SystemExit(0)     # ...execution to the grandparent
+            # Release the wait that should be done by original parent
+            if forked > 0:
+                os._exit(0)  # RTFM: this is the preferred exit after fork()
             update_status(args,
                           'Rocky\'s rookie spawned a rookie %s...' % forked)
         except OSError as err:
@@ -598,8 +600,8 @@ def execute(args):
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
 
-    if not args.debug:              # I am a child
-        raise SystemExit(0)         # clean the last child that did the work.
+    if not args.debug:  # I am the grandhild; release the wait() by init()
+        os._exit(0)     # RTFM: this is the preferred exit after fork()
 
     return response
 
