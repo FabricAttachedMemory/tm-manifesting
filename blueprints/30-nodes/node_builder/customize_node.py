@@ -565,7 +565,6 @@ def execute(args):
         install_packages(args)
 
         # Was there a custom kernel?
-        set_trace()
         tmp = extract_bootfiles(args)
         if tmp:
             assert len(tmp) < 2, 'Too many custom kernels'
