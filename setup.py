@@ -62,7 +62,6 @@ def parse_cmdline_args(extra_args_msg):
     if not os.path.isfile(config):  # Use the sample supplied with repo
         config = os.path.dirname(os.path.realpath(__file__)) + '/tmms'
     assert os.path.isfile(config), 'This is very bad'
-    print('Using config file %s' % config)
 
     parser = argparse.ArgumentParser(
         description='Setup arguments intended for tmms developers only')
@@ -70,6 +69,24 @@ def parse_cmdline_args(extra_args_msg):
         '-c', '--config',
         help='Configuration file to be used.\nDefault=%s' % config,
         default=config)
+
+    parser.add_argument(
+        '-D', '--daemon-start',
+        help='Run as a daemon process.',
+        action='store_true')
+    parser.add_argument(
+        '--daemon-stop',
+        help='Stop the daemon',
+        action='store_true')
+    parser.add_argument(
+        '--daemon-status',
+        help='Print status of the daemon',
+        action='store_true')
+    parser.add_argument(
+        '--daemon-restart',
+        help='Restart the daemon',
+        action='store_true')
+
     parser.add_argument(
         '--debug',
         help='Turn on flask debugging.',
@@ -93,6 +110,10 @@ def parse_cmdline_args(extra_args_msg):
         help=extra_args_msg,
         default=())
     args = parser.parse_args()
+
+    if not args.daemon_stop:
+        print('Using config file %s' % config)
+
     assert os.geteuid() == 0, 'You must be root'    # after parse check
     return args
 
