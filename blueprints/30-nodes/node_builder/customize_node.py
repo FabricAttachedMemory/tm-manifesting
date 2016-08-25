@@ -26,87 +26,89 @@ from tmms.utils.utils import find, piper, untar
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
 from tmms.utils.file_utils import write_to_file, workdir
 
-_verbose = None     # Poor man's class
-_debug = None
-
 #==============================================================================
 
 
-def cleanout_kernel(target_dir, sys_img):
+def cleanout_kernel(args):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
-    These files are not needed for diskless boot.  Move them to target_dir
-    for future use.
+    These files are not needed in the rootfs for diskless boot.  Move them
+    to args.build_dir for future use.
 
-    :param 'kernel_dest': [str] where to move the unecessary files.
-    :param 'sys_img': [str] where to find the unecessary files.
+    :param 'args.build_dir': [str] where to move the unecessary files.
+    :param 'args.new_fs_dir': [str] where to find the unecessary files.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    boot_dir = '%s/boot/' % (sys_img)
+    update_status(args, 'Remove any /boot/[vmlinuz,initrd]')
+    boot_dir = '%s/boot/' % args.new_fs_dir
     vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # one list
     initrd = glob('%s/initrd.img*' % (boot_dir))    # two lists
     try:
         for source in vmlinuz + initrd:            # move them all
-            # FIXME: we need a move
             copy_into = os.path.basename(source)
-            copy_target_into(source, '%s/%s' % (target_dir, copy_into))
+            copy_target_into(source, '%s/%s' % (args.build_dir, copy_into))
             remove_target(source)
-        # I want to return the kernel I found and moved.   In an error
-        # condition (such as one of the unit tests) it may not be there.
-        vmlinuz = glob('%s/vmlinuz*' % (target_dir))
-        return vmlinuz[0] if vmlinuz else None
+        # Return the kernel(s) that may have been found.  Let the caller
+        # decide if the count is an error.
+        vmlinuzes = glob('%s/vmlinuz*' % (args.build_dir))
+        return vmlinuzes
     except Exception as err:
-        raise RuntimeError('Errror occured cleanout_kernel(): %s' % str(err))
+        raise RuntimeError('cleanout_kernel() failed: %s' % str(err))
 
 
-def fix_init(sys_img):
+def fix_init(args):
     """
         Set correct symbolic link to a chrooted /init file from /sbin/init
 
-    :param 'verbose': [bool] Make it talk.
-    :param 'debug': [bool] set_trace if exception was caught.
+    :param 'args.new_fs_dir': [str] where to find the fs being customized
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
+    update_status(args, 'Set /init')
     try:
-        with workdir(sys_img):      # At the root
+        with workdir(args.new_fs_dir):  # At the root
             if os.path.exists('init'):
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
     except RuntimeError as err:         # Expecting this from make_symlink...
         raise RuntimeError(str(err))    # ...so let it print the err message
     except Exception as err:
-        raise RuntimeError('Unexpected error in fix_init(): %s' % str(err))
+        raise RuntimeError('fix_init() failed: %s' % str(err))
 
 #==============================================================================
-# setup_golden_image leaves a UUID-based mount that fails.  Also, FIXME
-# rootfs needs some kind of TLC to show up in df.
+# setup_golden_image leaves a UUID-based mount that fails.
 
 
-def fix_rootfs(sys_img):
+def fix_rootfs(args):
+    """
+        Set correct symbolic link to a chrooted /init file from /sbin/init
+
+    :param 'args.new_fs_dir': [str] where to find the fs being customized
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
     try:
-        with workdir(sys_img):      # At the root
-            with open('etc/fstab', 'w') as f:    # no leading slash!!!
+        with workdir(args.new_fs_dir):          # At the root
+            with open('etc/fstab', 'w') as f:   # no leading slash!!!
                 f.write('proc /proc proc defaults 0 0\n')
     except Exception as e:
-        raise RuntimeError('Error occured while fixing rootfs: %s' % str(e))
+        raise RuntimeError('fix_rootfs() failed: %s' % str(e))
 
 #==============================================================================
 
 
-def cleanup_sources_list(sys_img):
+def cleanup_sources_list(args):
     """
         Check if /etc/apt/source.list.d/base.list file exists. If so, move it
     into /etc/apt/sources.list, because base.list is causing collisions.
 
-    :param 'sys_img': [str] path to the file system location to chroot to.
+    :param 'args.new_fs_dir': [str] path to the file system being customized.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    sources_list = '%s/etc/apt/sources.list' % sys_img
-    sources_base = '%s/etc/apt/sources.list.d/base.list' % sys_img
+    update_status(args, 'Installing ' + str(args.packages))
+    sources_list = '%s/etc/apt/sources.list' % args.new_fs_dir
+    sources_base = '%s/etc/apt/sources.list.d/base.list' % args.new_fs_dir
 
     if not os.path.exists(sources_base):
-        if _verbose:
-            print('/etc/apt/sources.list.d/ is clean. Nothing to do here...')
+        update_status('/etc/apt/sources.list.d/ is empty, nothing to do.')
         return None
 
     sources_updated = set_sources_areas(
@@ -117,8 +119,7 @@ def cleanup_sources_list(sys_img):
         remove_target(sources_list)
         write_to_file(sources_list, sources_updated)
     except RuntimeError as err:
-        raise RuntimeError('Error occured while cleaning sources.list!\n\
-                            %s' % (err))
+        raise RuntimeError('clean_sources_list() failed: %s' % str(err))
 
 
 def set_sources_areas(sources_list, areas):
@@ -150,57 +151,86 @@ def set_sources_areas(sources_list, areas):
 #==============================================================================
 
 
-def set_client_id(sys_img, client_id):
+def set_client_id(args):
     """
         Augment dhclient configuration file
 
-    :param 'sys_img': [str] path to the file system location to mess with.
-    :param 'hostname': [str] hostname to be used for given system image.
+    :param 'new_fs_dir': [str] path to the file system location to customize.
+    :param 'client_id': [str] hostname to be used for given system image.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    dhclient_conf = '%s/etc/dhcp/dhclient.conf' % (sys_img)
+    update_status(args, 'Set ClientID for dhcpc')
+    dhclient_conf = '%s/etc/dhcp/dhclient.conf' % args.new_fs_dir
     try:
         with open(dhclient_conf, 'a') as f:
-            f.write('\nsend dhcp-client-identifier "%s";\n' % client_id)
+            f.write('\nsend dhcp-client-identifier "%s";\n' % args.client_id)
     except Exception as err:
         raise RuntimeError('Cannot set DHCP client ID: %s' % str(err))
 
 #==============================================================================
 
 
-def set_hostname(sys_img, hostname):
+def set_environment(args):
     """
-        Set new hostname on the file system image.
+        Set new /etc/environment http_proxy stuff on the file system image.
 
-    :param 'sys_img': [str] path to the file system location to mess with.
+    :param 'new_fs_dir': [str] path to the file system location to customize.
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
+    update_status(args, 'Create /etc/environemnt')
+    env_file = '%s/etc/environment' % args.new_fs_dir
+    try:
+        if os.path.exists(env_file):
+            remove_target(env_file)
+
+        proxy = getattr(args, 'web_proxy', 'web-proxy.corp.hpecorp.net:8080')
+        no_proxy = '10.0.0.0/8'     # FIXME: calculate something for real HW
+        content = [
+            'http_proxy=http://%s' % proxy,
+            'https_proxy=https://%s' % proxy,
+            'no_proxy=127.0.0.0/8,%s' % no_proxy
+        ]
+        content = '\n'.join(content)
+        write_to_file(env_file, content)
+    except RuntimeError as err:
+        raise RuntimeError('Cannot set /etc/environment: s' % str(err))
+
+
+def set_hostname(args):
+    """
+        Set new /etc/hostname on the file system image.
+
+    :param 'new_fs_dir': [str] path to the file system location to customize.
     :param 'hostname': [str] hostname to be used for given system image.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    hostname_file = '%s/etc/hostname' % (sys_img)
+    update_status(args, 'Create /etc/hostname')
+    hostname_file = '%s/etc/hostname' % args.new_fs_dir
     try:
         if os.path.exists(hostname_file):
             remove_target(hostname_file)
-        write_to_file(hostname_file, hostname)
+        write_to_file(hostname_file, args.hostname)
     except RuntimeError as err:
         raise RuntimeError('Cannot set /etc/hostname: %s' % str(err))
 
 
-def set_hosts(sys_img, hostname):
+def set_hosts(args):
     """
         Set new /etc/hosts on the file system image.
 
-    :param 'sys_img': [str] path to the file system location to mess with.
+    :param 'new_fs_dir': [str] path to the file system location to customize.
     :param 'hostname': [str] hostname to be used for given system image.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    hosts_file = '%s/etc/hosts' % (sys_img)
+    update_status(args, 'Create /etc/hosts')
+    hosts_file = '%s/etc/hosts' % args.new_fs_dir
     try:
         if os.path.exists(hosts_file):
             remove_target(hosts_file)
 
         content = []
         content.append('127.0.0.1   localhost')     # visual alignment
-        content.append('127.1.0.1   %s' % hostname)
+        content.append('127.1.0.1   %s' % args.hostname)
         content = '\n'.join(content)
 
         write_to_file(hosts_file, content)
@@ -208,45 +238,45 @@ def set_hosts(sys_img, hostname):
         raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
 
 
-def create_cpio(args, dest_file, src_dir):
+def create_cpio(args):
     """
         Get the non-boot pieces, ignoring initrd, kernel, and /boot.
 
     :param 'dest_file': [str] path to save cpio archive
-    :param 'src_dir': [str] folder to create .cpio from.
+    :param 'args.new_fs_dir': [str] folder to create .cpio from.
     :return: returncode of Popen() process.
     """
-    # FIXME: do a test to insure dest_dir is not a subdir of src_dir
-    update_status(args, 'Create %s from %s' % (dest_file, src_dir))
+    cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
+    update_status(args, 'Create %s from %s' % (cpio_file, args.new_fs_dir))
     try:
         # Skip things even though they may have been moved
         found_data = find(
-            src_dir,
+            args.new_fs_dir,
             ignore_files=['vmlinuz', 'initrd.img'],
             ignore_dirs=['boot'])
 
         cmd = 'cpio --create --format \'newc\''
         cpio_stdin = '\n'.join(found_data).encode()  # needed for Popen pipe.
 
-        with open(dest_file, 'w') as dest_obj:
+        with open(cpio_file, 'w') as dest_obj:
             # create CPIO relative to the 'find' path, to avoid '/' in archive
-            # names.  Note: searching outside of  untar folder results in a
+            # names.  Note: searching outside of untar folder results in a
             # "full path" string (e.g. whatever/untar/boot...., instead
             # ./boot...). This causes Kernel Panic when trying to boot with
             # such a cpio file.
-            with workdir(src_dir):
+            with workdir(args.new_fs_dir):
                 ret, cpio_out, cpio_err = piper(
                     cmd, stdin=cpio_stdin, stdout=dest_obj)
                 assert not ret, 'cpio failed: %s' % cpio_err
 
         # output find data to a log file
-        if _verbose:
+        if args.verbose:
             with open('/tmp/man_find.log', 'w') as file_obj:
                 file_obj.write('\n'.join(found_data))   # FIXME proper logging
 
     except Exception as err:
         raise RuntimeError('Couldn\'t create "%s" from "%s": %s' % (
-            dest_file, src_dir, str(err)))
+            cpio_file, args.new_fs_dir, str(err)))
 
 
 #==============================================================================
@@ -264,6 +294,7 @@ def install_packages(sys_img, pkg_list, task_list):
     :param 'sys_img': [str] path to filesystem image to install packages to.
     :param 'pkg_list': [list] of packages to be installed.
     """
+    update_status(args, 'Installing ' + str(args.packages))
 
     script_header = """#!/bin/bash
 # Created %s
@@ -309,7 +340,7 @@ def update_status(args, message, status='building'):
         status must be one of 'building', 'ready', or 'error'
         TODO: docstr
     """
-    if _verbose:    # sometimes it's for stdout, sometimes it's for the file
+    if args.verbose:    # sometimes it's for stdout, sometimes the file
         print(' - %s: %s' % (args.hostname, message))
     response = {}
     response['manifest'] = args.manifest.namespace
@@ -441,13 +472,14 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
 
 #=============================================================================
 # This is just as fast as gzip standalone program and gives better error
-# handling.  500M cpio file takes about 20 seconds for reduction to 180M (both
-# methods, gzip command defaults to level 6).
-# TMAS PXE is about 100 MB / hour xfer then 500 seconds to uncompress 180M
-#          or about two hours to boot
-# FAME PXE is about   6 MB / sec  xfer then  15 seconds to uncompress 180M
-#          or about one minute to boot
-# REAL HW  is about xxx MB per hour; xxx seconds to uncompress 180M
+# handling.  500M cpio file takes about 20 seconds for reduction to 180M.
+# Use gzip command's default compression level (6).  For 180M (base) FS:
+# TMAS PXE is about 100 MB / hour xfer then 500 seconds to uncompress
+#          so about two hours to boot
+# FAME PXE is about   6 MB / sec  xfer then  30 seconds to uncompress
+#          so about one minute to boot
+# MFT/FRD  is about  xx MB / sec  xfer then  xx seconds to uncompress
+#          so about  xx seconds to boot
 
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
@@ -485,16 +517,13 @@ def execute(args):
             os.chdir('/tmp/')
             os.setsid()
             forked = os.fork()
-            print('Rocky\'s rookie spawned a rookie %s...' % forked)
-            if forked != 0:     # close the partent to give back the execution
-                os._exit(0)     # to the caller
+            if forked > 0:              # close this parent to give back...
+                raise SystemExit(0)     # ...execution to the grandparent
+            update_status(args,
+                          'Rocky\'s rookie spawned a rookie %s...' % forked)
         except OSError as err:
-            raise RuntimeError('Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % err)
-
-    global _verbose, _debug
-
-    _verbose = args.verbose
-    _debug = args.debug
+            raise RuntimeError(
+                'Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % str(err))
 
     response = {  # No errors occured yet! Let's keep it this way.
         'status': 200,
@@ -505,48 +534,48 @@ def execute(args):
     # is done inside those functions that throw RuntimeError.
     try:
         update_status(args, 'Untar golden image')
-        new_fs_dir = untar(args.build_dir, args.golden_tar)
+        args.new_fs_dir = untar(args.build_dir, args.golden_tar)
+        tmp = cleanout_kernel(args)
+        assert len(tmp) == 1, 'Golden image %s had no kernel' % args.golden_tar
+        vmlinuz_golden = tmp[0]
 
-        update_status(args, 'Configuration file updates')
+        # Global config files
+        set_environment(args)
+        set_hostname(args)
+        set_hosts(args)
+        set_client_id(args)
 
-        # Use hostname and client_id
-        set_hosts(new_fs_dir, args.hostname)
-        set_hostname(new_fs_dir, args.hostname)
-        set_client_id(new_fs_dir, args.client_id)
+        # MAGIC: turn a transient initrd into a persistent rootfs.
+        fix_init(args)
+        fix_rootfs(args)
 
-        # Remove kernel/boot files.  This is superfluous as the find/cpio
-        # ignores them.  The kernel gets copied to tftp_dir.
-        vmlinuz_file = cleanout_kernel(args.build_dir, new_fs_dir)
+        # FINALLY! Add packages and tasks from manifest.
+        cleanup_sources_list(args)
+        install_packages(args.new_fs_dir, args.packages, args.tasks)
 
-        # This is the magic that preserves initrd as rootfs.
-        fix_init(new_fs_dir)
-        fix_rootfs(new_fs_dir)
+        # Was there a custom kernel?
+        tmp = cleanout_kernel(args)
+        if tmp:
+            assert len(tmp) < 2, 'Too many custom kernels'
+            update_status(args, 'Replacing golden kernel %s with %s' % (
+                vmlinuz_golden, tmp[0]))
+            vmlinuz_golden = tmp[0]
 
-        # Add packages and tasks from manifest.
-        # Even if empty, it does an apt-get update/upgrade/dist-upgrade
-        # in case golden image has gone stale.
-        update_status(args, 'Installing ' + str(args.packages))
-        cleanup_sources_list(new_fs_dir)
-        install_packages(new_fs_dir, args.packages, args.tasks)
-
-        # Create .cpio file from untar.  Filename done here in case
-        # we ever want to pass it in as an option.
-        update_status(args, 'Generating FS image')
-        cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
-        create_cpio(args, cpio_file, new_fs_dir)
+        cpio_file = create_cpio(args)
 
         vmlinuz_gzip, cpio_gzip = compress_bootfiles(
-            args, vmlinuz_file, cpio_file)
+            args, vmlinuz_golden, cpio_file)
         create_SNBU_image(args, vmlinuz_gzip, cpio_gzip)
 
         # Free up space someday, but not during active development
-        # remove_target(build_dir)
+        # remove_target(args.build_dir)
 
         update_status(args, 'PXE files ready to boot', 'ready')
 
+        # Leave a copy of the controlling manifest for post-mortems
         manifest_tftp_file = args.manifest.namespace.replace('/', '.')
         copy_target_into(args.manifest.fullpath,
-                            args.tftp_dir + '/' + manifest_tftp_file)
+                         args.tftp_dir + '/' + manifest_tftp_file)
 
     except RuntimeError as err:     # Caught earlier and re-thrown as this
         response['status'] = 505
@@ -559,8 +588,8 @@ def execute(args):
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
 
-    if not args.debug:
-        os._exit(0)                 # clean the last child that did the work.
+    if not args.debug:              # I am a child
+        raise SystemExit(0)         # clean the last child that did the work.
 
     return response
 
@@ -591,12 +620,9 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose',
                         help='Make it talk. Verbosity levels from 1 to 5',
                         action='store_true')
-    parser.add_argument('--debug',
-                        help='Matrix has you. Enter the debugging mode.',
-                        action='store_true')
     args, _ = parser.parse_known_args()
 
-    args.debug = False # no daemonization if ran from main
+    args.debug = True  # suppress daemonization
     execute(args)
 
     raise SystemExit(0)
