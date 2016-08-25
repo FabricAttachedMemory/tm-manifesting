@@ -4,6 +4,7 @@ Daemonize a process in python3.  Acts like daemon(3), taken from somewhere
 on Stack Overflow.  There wasn't a package for python3 in Jessie in 2016.
 '''
 import atexit
+import errno
 import time
 import os
 import signal
@@ -44,6 +45,7 @@ class Daemon(object):
         pid = self.spawn_a_child()
         self.detach()
         pid = self.spawn_a_child()
+        self.delete_pidfile()
         self.create_pidfile(os.getpid())
 
         if not self.no_share_stream:
@@ -149,8 +151,10 @@ class Daemon(object):
             return None
         try:
             os.kill(pid, 0)
-        except OSError:
-            return None
+        except OSError as err:
+            if err.errno == errno.ESRCH:
+                return None
+            raise RuntimeError ('Faild to check PID=%s status: ' % (pid, str(err)))
         else:
             return pid
 

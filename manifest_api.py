@@ -47,11 +47,11 @@ try:
     if cmdline_args.daemon_stop:
         print('Shutting down the daemon...')
         daemon.stop()
-        raise SystemExit()
+        raise SystemExit(0)
 
     if cmdline_args.daemon_status:
         print(daemon.status())
-        raise SystemExit()
+        raise SystemExit(0)
 except RuntimeError as err:
     raise SystemExit(str(err))
 
