@@ -312,7 +312,7 @@ def update_status(args, message, status='building'):
     if _verbose:    # sometimes it's for stdout, sometimes it's for the file
         print(' - %s: %s' % (args.hostname, message))
     response = {}
-    response['manifest'] = args.manifest
+    response['manifest'] = args.manifest.namespace
     response['status'] = status
     response['message'] = message
     write_to_file(args.status_file, json.dumps(response, indent=4))
@@ -480,6 +480,17 @@ def execute(args):
         Not 200 - failure. 'message' - is a message string that briefly
             explains the error\success status.
     """
+    if not args.debug:
+        try:
+            os.chdir('/tmp/')
+            os.setsid()
+            forked = os.fork()
+            print('Rocky\'s rookie spawned a rookie %s...' % forked)
+            if forked != 0:     # close the partent to give back the execution
+                os._exit(0)     # to the caller
+        except OSError as err:
+            raise RuntimeError('Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % err)
+
     global _verbose, _debug
 
     _verbose = args.verbose
@@ -489,7 +500,6 @@ def execute(args):
         'status': 200,
         'message': 'System image was created.'
     }
-    args.status_file = args.tftp_dir + '/status.json'
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
@@ -534,6 +544,10 @@ def execute(args):
 
         update_status(args, 'PXE files ready to boot', 'ready')
 
+        manifest_tftp_file = args.manifest.namespace.replace('/', '.')
+        copy_target_into(args.manifest.fullpath,
+                            args.tftp_dir + '/' + manifest_tftp_file)
+
     except RuntimeError as err:     # Caught earlier and re-thrown as this
         response['status'] = 505
         response['message'] = 'Filesystem image build failed: %s' % str(err)
@@ -544,6 +558,9 @@ def execute(args):
 
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
+
+    if not args.debug:
+        os._exit(0)                 # clean the last child that did the work.
 
     return response
 
@@ -578,6 +595,8 @@ if __name__ == '__main__':
                         help='Matrix has you. Enter the debugging mode.',
                         action='store_true')
     args, _ = parser.parse_known_args()
+
+    args.debug = False # no daemonization if ran from main
     execute(args)
 
     raise SystemExit(0)
