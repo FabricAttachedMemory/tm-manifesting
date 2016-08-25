@@ -98,12 +98,13 @@ for p in paths:
         BP.register(mainapp)
         ngood += 1
     except ImportError as e:
-        set_trace()
         print('No blueprint at %s' % p, file=sys.stderr)
+        set_trace()
+        pass
     except AttributeError as e:
-        print('blueprint at %s has no register()' % p, file=sys.stderr)
+        print('\nblueprint %s has no register()' % p, file=sys.stderr)
     except Exception as e:
-        print('blueprint at %s failed: %s' % (p, e), file=sys.stderr)
+        print('\nblueprint %s failed:\n%s' % (p, e), file=sys.stderr)
 
 if ngood != len(paths):
     raise SystemExit('Not all blueprints finished registration')

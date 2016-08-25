@@ -38,12 +38,24 @@ def main(args):
     assert statvfs.f_bsize * statvfs.f_bavail > (10 * (1 << 30)), \
         'Need at least 10G on "%s"' % (destdir)
 
-    cmd = '''%s --no-default-configs --hostname=GOLDEN
+    vmdlog = '/golden.arm.log'
+    vmdimage = '/golden.arm.img'
+    vmdtarball = '/golden.arm.tar'
+    cmd = '''%s --no-default-configs
              --config=%s
-             --mirror=%s''' % (
+             --log=%s
+             --image=%s
+             --tarball=%s
+             --mirror=%s
+             --distribution=%s
+          ''' % (
         vmdebootstrap,
         vmdconfig,
-        manconfig['L4TM_MIRROR'])
+        vmdlog,
+        vmdimage,
+        vmdtarball,
+        manconfig['L4TM_MIRROR'],
+        manconfig['L4TM_RELEASE'])
 
     ret, _, _ = piper(cmd, use_call=True)     # Watch it all go by
     assert not ret, 'vmdebootstrap failed: %s:' % (errno.errorcode[ret])
