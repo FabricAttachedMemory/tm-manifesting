@@ -549,8 +549,8 @@ def execute(args):
         tmp = extract_bootfiles(args)
         assert len(tmp) == 1, 'Golden image %s had no kernel' % args.golden_tar
         vmlinuz_golden = tmp[0]
-        update_status('Found golden kernel %s' %
-                       os.path.basename(vmlinuz_golden))
+        update_status(args, 'Found golden kernel %s' %
+                      os.path.basename(vmlinuz_golden))
 
         # Global config files
         set_environment(args)
