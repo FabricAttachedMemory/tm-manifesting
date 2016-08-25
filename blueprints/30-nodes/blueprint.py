@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 '''TM Nodes'''
-from collections import namedtuple
-from glob import glob
+
 import json
 import os
 import sys
 import time
+
+from argparse import Namespace
+from glob import glob
 from shutil import copyfile
 from pdb import set_trace
 
@@ -15,7 +17,6 @@ from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
 from .node_builder import customize_node
-
 
 _ERS_element = 'node'
 
@@ -250,6 +251,8 @@ def build_node(manifest, node_coord):
         'verbose':      BP.VERBOSE,
         'debug':        BP.DEBUG
     }
+    # Legacy technique called this as a subprocess.  Construct the command
+    # for verbose output and manual invocation for development.
     cmd_args = []
     for key, val in build_args.items():
         if val is not None:     # packages and tasks, default is None
@@ -264,19 +267,19 @@ def build_node(manifest, node_coord):
         response = make_response(
             'Existing manifest changed; image re-build initiated.', 200)
 
-    # dict args to namedtuple: needed to customize_node.execute() func
-    build_args = namedtuple('NodeBuildArgs', build_args.keys())(**build_args)
+    build_args = Namespace(**build_args)    # mutable
 
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
         response.set_data(response.get_data().decode() + ' (DRY RUN)')
         print(cmd)      # Now you can cut/paste and run it by hand.
-        customize_node.update_status(build_args, 'Node was built with a Dry Run.', status='ready')
+        customize_node.update_status(
+            build_args, 'Node was built with a Dry Run.', status='ready')
         return response
     # ---------------------------------
 
-    try:    # FIXME: instead of JIT, move this to setup_networking?
-        os.makedirs(build_dir + '/ESP', exist_ok=True)
+    try:
+        os.makedirs(build_dir, exist_ok=True)
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
 

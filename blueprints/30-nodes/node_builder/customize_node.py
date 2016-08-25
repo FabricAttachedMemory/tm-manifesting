@@ -29,31 +29,32 @@ from tmms.utils.file_utils import write_to_file, workdir
 #==============================================================================
 
 
-def cleanout_kernel(args):
+def extract_bootfiles(args):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
     These files are not needed in the rootfs for diskless boot.  Move them
-    to args.build_dir for future use.
+    to args.build_dir for future use.  Return any kernel(s) that are found.
+    Let the caller decide if the count is an error.
 
     :param 'args.build_dir': [str] where to move the unecessary files.
     :param 'args.new_fs_dir': [str] where to find the unecessary files.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Remove any /boot/[vmlinuz,initrd]')
+    update_status(args, 'Extract any /boot/[vmlinuz,initrd]')
     boot_dir = '%s/boot/' % args.new_fs_dir
     vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # one list
     initrd = glob('%s/initrd.img*' % (boot_dir))    # two lists
+    vmlinuzes = []
     try:
         for source in vmlinuz + initrd:            # move them all
-            copy_into = os.path.basename(source)
-            copy_target_into(source, '%s/%s' % (args.build_dir, copy_into))
+            copy_into = '%s/%s' % (args.build_dir, os.path.basename(source))
+            copy_target_into(source, copy_into)
+            if '/vmlinuz' in copy_into:
+                vmlinuzes.append(copy_into)
             remove_target(source)
-        # Return the kernel(s) that may have been found.  Let the caller
-        # decide if the count is an error.
-        vmlinuzes = glob('%s/vmlinuz*' % (args.build_dir))
         return vmlinuzes
     except Exception as err:
-        raise RuntimeError('cleanout_kernel() failed: %s' % str(err))
+        raise RuntimeError('extract_bootfiles() failed: %s' % str(err))
 
 
 def fix_init(args):
@@ -66,7 +67,7 @@ def fix_init(args):
     update_status(args, 'Set /init')
     try:
         with workdir(args.new_fs_dir):  # At the root
-            if os.path.exists('init'):
+            if os.path.exists('init'):  # no leading slash!!!
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
     except RuntimeError as err:         # Expecting this from make_symlink...
@@ -74,17 +75,19 @@ def fix_init(args):
     except Exception as err:
         raise RuntimeError('fix_init() failed: %s' % str(err))
 
-#==============================================================================
-# setup_golden_image leaves a UUID-based mount that fails.
+#=============================================================================
+# setup_golden_image leaves a UUID-based mount in /etc/fstab that fails.
+# Simplify life.
 
 
 def fix_rootfs(args):
     """
-        Set correct symbolic link to a chrooted /init file from /sbin/init
+        Create simpler /etc/fstab appropriate for rootfs.
 
     :param 'args.new_fs_dir': [str] where to find the fs being customized
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
+    update_status(args, 'Set /etc/fstab')
     try:
         with workdir(args.new_fs_dir):          # At the root
             with open('etc/fstab', 'w') as f:   # no leading slash!!!
@@ -103,7 +106,7 @@ def cleanup_sources_list(args):
     :param 'args.new_fs_dir': [str] path to the file system being customized.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Installing ' + str(args.packages))
+    update_status(args, 'Set /etc/apt/sources*')
     sources_list = '%s/etc/apt/sources.list' % args.new_fs_dir
     sources_base = '%s/etc/apt/sources.list.d/base.list' % args.new_fs_dir
 
@@ -244,7 +247,7 @@ def create_cpio(args):
 
     :param 'dest_file': [str] path to save cpio archive
     :param 'args.new_fs_dir': [str] folder to create .cpio from.
-    :return: returncode of Popen() process.
+    :return: cpio_file
     """
     cpio_file = '%s/%s.cpio' % (args.build_dir, args.hostname)
     update_status(args, 'Create %s from %s' % (cpio_file, args.new_fs_dir))
@@ -273,6 +276,7 @@ def create_cpio(args):
         if args.verbose:
             with open('/tmp/man_find.log', 'w') as file_obj:
                 file_obj.write('\n'.join(found_data))   # FIXME proper logging
+        return cpio_file
 
     except Exception as err:
         raise RuntimeError('Couldn\'t create "%s" from "%s": %s' % (
@@ -282,19 +286,22 @@ def create_cpio(args):
 #==============================================================================
 
 
-def install_packages(sys_img, pkg_list, task_list):
+def install_packages(args):
     """
         Install list of packages into the filesystem image.
     Function will generate a bash script with lines of "apt-get install"
     in it.   This script is placed under the file system. Then, this function
-    will execute this script under the chrooted to "sys_img". Also,
+    will execute this script under the chrooted to "args.new_fs_dir". Also,
     every action performed by generated install.sh script is logged into the
-    'sys_img + "/manifesting.log"' file.
+    'args.new_fs_dir + "/manifesting.log"' file.
 
-    :param 'sys_img': [str] path to filesystem image to install packages to.
-    :param 'pkg_list': [list] of packages to be installed.
+    :param 'args.new_fs_dir': [str] path to filesystem image to customize.
+    :param 'args.packages': [list] of packages 'apt-get install'.
+    :param 'args.tasks': [list] of tasks for 'tasksel'.
     """
-    update_status(args, 'Installing ' + str(args.packages))
+    msg = 'Installing ' + str(args.packages) if args.packages else \
+        'Updating/upgrading base packages'
+    update_status(args, msg)
 
     script_header = """#!/bin/bash
 # Created %s
@@ -304,26 +311,26 @@ apt-get update
 apt-get upgrade --assume-yes
 apt-get dist-upgrade --assume-yes
 """ % time.ctime()
-    script_file = sys_img + '/install.sh'
+    script_file = args.new_fs_dir + '/install.sh'
     with open(script_file, 'w') as file_obj:
         file_obj.write(script_header)
 
-        file_obj.write('\n# Packages: %s\n' % pkg_list)
-        if pkg_list is not None:
-            for pkg in pkg_list.split(','):
+        file_obj.write('\n# Packages: %s\n' % args.packages)
+        if args.packages is not None:
+            for pkg in args.packages.split(','):
                 cmd = 'apt-get install --assume-yes %s\n' % pkg
                 file_obj.write(cmd)
 
-        file_obj.write('\n# Tasks: %s\n' % task_list)
-        if task_list is not None:
-            for task in task_list.split(','):
+        file_obj.write('\n# Tasks: %s\n' % args.tasks)
+        if args.tasks is not None:
+            for task in args.tasks.split(','):
                 cmd = 'tasksel install %s\n' % task
                 file_obj.write(cmd)
 
     os.chmod(script_file, 0o744)
 
     try:
-        cmd = '/usr/sbin/chroot %s %s ' % (sys_img, '/install.sh')
+        cmd = '/usr/sbin/chroot %s %s ' % (args.new_fs_dir, '/install.sh')
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
@@ -512,7 +519,9 @@ def execute(args):
         Not 200 - failure. 'message' - is a message string that briefly
             explains the error\success status.
     """
-    if not args.debug:
+    if args.debug:
+        args.verbose = True
+    else:
         try:
             os.chdir('/tmp/')
             os.setsid()
@@ -535,7 +544,7 @@ def execute(args):
     try:
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir, args.golden_tar)
-        tmp = cleanout_kernel(args)
+        tmp = extract_bootfiles(args)
         assert len(tmp) == 1, 'Golden image %s had no kernel' % args.golden_tar
         vmlinuz_golden = tmp[0]
 
@@ -551,10 +560,11 @@ def execute(args):
 
         # FINALLY! Add packages and tasks from manifest.
         cleanup_sources_list(args)
-        install_packages(args.new_fs_dir, args.packages, args.tasks)
+        install_packages(args)
 
         # Was there a custom kernel?
-        tmp = cleanout_kernel(args)
+        set_trace()
+        tmp = extract_bootfiles(args)
         if tmp:
             assert len(tmp) < 2, 'Too many custom kernels'
             update_status(args, 'Replacing golden kernel %s with %s' % (
