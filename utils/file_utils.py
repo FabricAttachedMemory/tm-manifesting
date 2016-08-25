@@ -119,6 +119,7 @@ def workdir(path):
         Change script's work directory to perform a set of operation.
     Set original directory back when done.
     """
+    assert path, 'Missing path'
     try:
         orig_dir = os.getcwd()
         os.chdir(path)
