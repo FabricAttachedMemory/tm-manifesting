@@ -38,23 +38,22 @@ except ImportError as e:
 
 cmdline_args = parse_cmdline_args('n/a')
 
-daemon = Daemon(chdir=False)
-if cmdline_args.daemon_start:
-    daemon.start()
+daemon = Daemon()  # FIXME: changedir to an appropriate location
+try:
+    if cmdline_args.daemon_start:
+        print('Starting the daemon.')
+        daemon.start()
 
-if cmdline_args.daemon_stop:
-    daemon.stop()
-    raise SystemExit()
+    if cmdline_args.daemon_stop:
+        print('Shutting down the daemon...')
+        daemon.stop()
+        raise SystemExit()
 
-if cmdline_args.daemon_restart:
-    daemon.stop()
-    daemon.start()
-    raise SystemExit()
-
-if cmdline_args.daemon_status:
-    print(daemon.status())
-    raise SystemExit()
-
+    if cmdline_args.daemon_status:
+        print(daemon.status())
+        raise SystemExit()
+except RuntimeError as err:
+    raise SystemExit(str(err))
 
 try:
     manconfig = ManifestingConfiguration(cmdline_args.config)

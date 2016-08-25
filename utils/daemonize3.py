@@ -8,14 +8,23 @@ import time
 import os
 import signal
 import sys
+from pdb import set_trace
+
 
 class Daemon(object):
-    """ Daemonization controller """
-    """ Script based of this: https://gist.github.com/marazmiki/3618191 """
+    """
+     Daemonization controller
+     Script based of this: https://gist.github.com/marazmiki/3618191
 
-    def __init__(self, pid_file=None, chdir=True, noclose=False):
+     This class keeps track of the PID of the daemon by creating a pid_file in the
+    specified location. It allows to check the status, start and stop the daemon.
+    If the process was interupted and the PID file was not cleaned up - the next
+    daemon start will check if PID is alive and override it if it is dead.
+    """
+
+    def __init__(self, pid_file=None, chdir=None, no_share_stream=False):
         self.chdir = chdir
-        self.noclose = noclose
+        self.no_share_stream = no_share_stream
 
         if pid_file is None:
             self.pid_file = '/var/lib/tmms/server.pid'
@@ -24,8 +33,12 @@ class Daemon(object):
 
 
     def start(self):
-        """ Start damonization """
-        pid = self.get_pid()
+        """
+            Start damonization. First, check if there is a PID file for the server
+        already exists and if it is still running. Do not allow overrides, unless
+        PID is already dead. Clean up and run the daemon.
+        """
+        pid = self.isAlive
         if pid:
             raise RuntimeError('Process already running... PID: %s' % pid)
         pid = self.spawn_a_child()
@@ -33,7 +46,7 @@ class Daemon(object):
         pid = self.spawn_a_child()
         self.create_pidfile(os.getpid())
 
-        if not self.noclose:
+        if not self.no_share_stream:
             dev_null = open('/dev/null', 'w')
             os.dup2(dev_null.fileno(), sys.stdin.fileno())  # yes, error on read
             os.dup2(dev_null.fileno(), sys.stdout.fileno())
@@ -41,11 +54,14 @@ class Daemon(object):
 
 
     def stop(self):
-        """ Stop the daemon """
+        """
+            Stop the daemon. Throw a RuntimeError if PID doesn't exist or system
+        failed to kill an existed process.
+        """
         pid = self.get_pid()
         if not pid:
             # FIXME: LOGGER here
-            raise RuntimeError('No PID found for this daemon!')
+            raise RuntimeError('Daemon is not running. Nothing to stop.')
         try:
             while True:
                 os.kill(pid, signal.SIGTERM)
@@ -58,8 +74,8 @@ class Daemon(object):
 
 
     def status(self):
-        """ Get status of the daemon: running, failed, stopped """
-        pid = self.get_pid()
+        """ Get status string of the daemon. """
+        pid = self.isAlive
         if not pid:
             return 'Not Running'
         else:
@@ -69,7 +85,10 @@ class Daemon(object):
     def detach(self):
         """ Detach from current directory and from the parent process."""
         if self.chdir:
-            os.chdir('/')
+            if isinstance(self.chdir, str):
+                os.chdir(self.chdir)
+            else:
+                os.chdir('/')
             # FIXME: LOGGER here
         os.setsid()
         os.umask(0o022)
@@ -116,3 +135,22 @@ class Daemon(object):
         except TypeError as err:
             pid = None
         return pid
+
+
+    @property
+    def isAlive(self):
+        """
+            Check if the PID saved in the pid_file is currently running.
+
+        :return: None - process is not running or doesn't exists. PID - otherwise.
+        """
+        pid = self.get_pid()
+        if pid is None:
+            return None
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return None
+        else:
+            return pid
+

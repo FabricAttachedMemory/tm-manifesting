@@ -62,7 +62,6 @@ def parse_cmdline_args(extra_args_msg):
     if not os.path.isfile(config):  # Use the sample supplied with repo
         config = os.path.dirname(os.path.realpath(__file__)) + '/tmms'
     assert os.path.isfile(config), 'This is very bad'
-    print('Using config file %s' % config)
 
     parser = argparse.ArgumentParser(
         description='Setup arguments intended for tmms developers only')
@@ -111,6 +110,10 @@ def parse_cmdline_args(extra_args_msg):
         help=extra_args_msg,
         default=())
     args = parser.parse_args()
+
+    if not args.daemon_status and not args.daemon_stop:
+        print('Using config file %s' % config)
+
     assert os.geteuid() == 0, 'You must be root'    # after parse check
     return args
 
