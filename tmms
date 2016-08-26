@@ -27,13 +27,17 @@ MANIFESTING_ROOT = '/var/lib/tmms'
 # served by a dnsmasq instance configured by TMMS.
 TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
 
-# L4TM repo information, needed to build file system images for nodes
-L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
-L4TM_RELEASE = 'catapult'
+# L4TM repo information needed to build file system images for nodes.
+# If you run your own local mirror, use that.
+L4TM_MIRROR = 'http://hpelinux.ftc.rdlabs.hpecorp.net/l4tm'
 
-# Remove 'main' for a much faster start (3 seconds vs 20), however you
-# will be working with a partial repo.
-L4TM_AREAS = ( 'contrib', 'non-free' )
+# 'alpha' is a testing branch updated on every source update.  Change
+# to 'catapult' for well-tested, stable (weekly) builds.  
+L4TM_RELEASE = 'alpha'
+
+# Remove 'main' for a much faster start (seconds vs tens of seconds), however
+# you will be working with a partial package set.
+L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
 
 # NIC connected to the node network on which DHCP and TFTP will be served
 # (usually something like ethX).  If the interface cannot be found,
@@ -45,7 +49,7 @@ PXE_INTERFACE = 'NoSuchInterfaceUnlessYouAreBOFH'
 # Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
 # in their place.  Values are "None" (user has powerful iptables fu),
 # "DHCP" (provides DHCP firewall) and "DHCPNAT" (DHCP firewall plus NAT).
-PXE_FIREWALL = 'None'
+PXE_FIREWALL = 'DHCP'
 
 # Domain name for nodes in this instance.  Forty nodes are configured
 # meaning TMMS must generate a list of 40 IP addresses.  Three formats

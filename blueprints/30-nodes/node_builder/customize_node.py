@@ -56,100 +56,62 @@ def extract_bootfiles(args):
     except Exception as err:
         raise RuntimeError('extract_bootfiles() failed: %s' % str(err))
 
+#=============================================================================
+# MAGIC: turn a transient initrd into a persistent rootfs with two corrective
+# actions on the golden image:
+# 1. Set correct symbolic link to a chrooted /init to /sbin/init
+# 2. Remove the UUID-based mount in /etc/fstab that fails.  Actually,
+#    just rewrite the whole thing.
 
-def fix_init(args):
+
+def persist_initrd(args):
     """
-        Set correct symbolic link to a chrooted /init file from /sbin/init
 
     :param 'args.new_fs_dir': [str] where to find the fs being customized
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Set /init')
+    update_status(args, 'Make initrd persistent as rootfs')
     try:
         with workdir(args.new_fs_dir):  # At the root
             if os.path.exists('init'):  # no leading slash!!!
                 os.unlink('init')
             make_symlink('sbin/init', 'init')
+            with open('etc/fstab', 'w') as f:   # no leading slash!!!
+                f.write('proc /proc proc defaults 0 0\n')
     except RuntimeError as err:         # Expecting this from make_symlink...
         raise RuntimeError(str(err))    # ...so let it print the err message
     except Exception as err:
-        raise RuntimeError('fix_init() failed: %s' % str(err))
-
-#=============================================================================
-# setup_golden_image leaves a UUID-based mount in /etc/fstab that fails.
-# Simplify life.
-
-
-def fix_rootfs(args):
-    """
-        Create simpler /etc/fstab appropriate for rootfs.
-
-    :param 'args.new_fs_dir': [str] where to find the fs being customized
-    :return: 'None' on success. Raise 'RuntimeError' on problems.
-    """
-    update_status(args, 'Set /etc/fstab')
-    try:
-        with workdir(args.new_fs_dir):          # At the root
-            with open('etc/fstab', 'w') as f:   # no leading slash!!!
-                f.write('proc /proc proc defaults 0 0\n')
-    except Exception as e:
-        raise RuntimeError('fix_rootfs() failed: %s' % str(e))
+        raise RuntimeError('persist_initrd() failed: %s' % str(err))
 
 #==============================================================================
 
 
 def cleanup_sources_list(args):
     """
-        Check if /etc/apt/source.list.d/base.list file exists. If so, move it
-    into /etc/apt/sources.list, because base.list is causing collisions.
+        Golden image from (vm)debootstrap leave two pieces of useless info:
+    1. sources.list refers to us.debian.org
+    2. source.list.d/base.list is copied from the running host.
+    Neither helps, both are wrong, blow it away.
 
     :param 'args.new_fs_dir': [str] path to the file system being customized.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     update_status(args, 'Set /etc/apt/sources*')
     sources_list = '%s/etc/apt/sources.list' % args.new_fs_dir
-    sources_base = '%s/etc/apt/sources.list.d/base.list' % args.new_fs_dir
-
-    if not os.path.exists(sources_base):
-        update_status('/etc/apt/sources.list.d/ is empty, nothing to do.')
-        return None
-
-    sources_updated = set_sources_areas(
-        sources_base, ['main', 'contrib', 'non-free'])
+    sources_base = '%s.d/base.list' % sources_list
 
     try:
         remove_target(sources_base)
-        remove_target(sources_list)
-        write_to_file(sources_list, sources_updated)
+
+        content = [
+            '# Created by TMMS for %s on %s' % (args.hostname, time.ctime()),
+            '# a.k.a. %s' % args.client_id,
+            'deb %s %s %s' % (
+                args.repo_mirror, args.repo_release, ' '.join(args.repo_areas))
+        ]
+        write_to_file(sources_list, '\n'.join(content))
     except RuntimeError as err:
         raise RuntimeError('clean_sources_list() failed: %s' % str(err))
-
-
-def set_sources_areas(sources_list, areas):
-    """
-        Set mirror areas in the sources.list, e.g each line that starts with
-    'deb' will be modified the end of its line to provided "areas":
-    deb http://l4tm.mirror cattleprod main --> areas = ['non-free', 'contrib']
-    deb http://l4tm.mirror cattleprod non-free contrib
-
-    :param 'sources_list': [str] path to a sources.list file to be modified.
-    :param 'areas': [list] of areas to be set ['main', 'contrib', 'non-free']
-    :return: [str] modified sources.list content.
-    """
-    file_content = None
-    with open(sources_list, 'r') as file_obj:
-        file_content = file_obj.read()
-
-    sources_updated = []
-    for line in file_content.split('\n'):
-        if not line.startswith('deb'):
-            sources_updated.append(line)
-            continue
-        mirror = line.split(' ')[:3]
-        mirror.extend(['main', 'contrib', 'non-free'])
-        sources_updated.append(' '.join(mirror))
-
-    return '\n'.join(sources_updated)
 
 #==============================================================================
 
@@ -180,7 +142,7 @@ def set_environment(args):
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Create /etc/environemnt')
+    update_status(args, 'Create /etc/environment')
     env_file = '%s/etc/environment' % args.new_fs_dir
     try:
         if os.path.exists(env_file):
@@ -431,14 +393,22 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
 
     # Step 1: create the image file, burn GPT and ESP on it.
 
+    whitney_FW_image = True     # FW updates for Whitney need 128M hole
+    if whitney_FW_image:
+        img_size = 384 << 20
+        ESP_offset = 129
+    else:
+        img_size = 256 << 20    # Downloads and boots much faster
+        ESP_offset = 1
+
     with open(ESP_img, 'wb') as f:
-        os.posix_fallocate(f.fileno(), 0, 256 << 20)
+        os.posix_fallocate(f.fileno(), 0, img_size)
     undo_kpartx = do_copy = False     # until I make it that far.
 
     try:    # piper catches many things, asserts get me out early
         cmd = 'parted -s %s ' % ESP_img    # Yes, -s goes right here
         cmd += 'mklabel gpt '
-        cmd += 'unit MiB mkpart primary fat32 1 100% '
+        cmd += 'unit MiB mkpart primary fat32 %d 100%% ' % ESP_offset
         cmd += 'set 1 boot on set 1 esp on '
         cmd += 'name 1 %s ' % args.hostname
         ret, stdout, stderr = piper(cmd)
@@ -549,6 +519,8 @@ def execute(args):
         tmp = extract_bootfiles(args)
         assert len(tmp) == 1, 'Golden image %s had no kernel' % args.golden_tar
         vmlinuz_golden = tmp[0]
+        update_status(args, 'Found golden kernel %s' %
+                      os.path.basename(vmlinuz_golden))
 
         # Global config files
         set_environment(args)
@@ -556,9 +528,7 @@ def execute(args):
         set_hosts(args)
         set_client_id(args)
 
-        # MAGIC: turn a transient initrd into a persistent rootfs.
-        fix_init(args)
-        fix_rootfs(args)
+        persist_initrd(args)
 
         # FINALLY! Add packages and tasks from manifest.
         cleanup_sources_list(args)
@@ -569,7 +539,7 @@ def execute(args):
         if tmp:
             assert len(tmp) < 2, 'Too many custom kernels'
             update_status(args, 'Replacing golden kernel %s with %s' % (
-                vmlinuz_golden, tmp[0]))
+                os.path.basename(vmlinuz_golden), os.path.basename(tmp[0])))
             vmlinuz_golden = tmp[0]
 
         cpio_file = create_cpio(args)
@@ -620,6 +590,12 @@ if __name__ == '__main__':
                         help='Manifest namespace.')
     parser.add_argument('--golden_tar',
                         help='Location of pristine FS image tarball')
+    parser.add_argument('--repo_mirror',
+                        help='URL of L4TM mirror')
+    parser.add_argument('--repo_release',
+                        help='release to use on mirror')
+    parser.add_argument('--repo_areas',
+                        help='areas to use from a release on mirror')
     parser.add_argument('--packages',
                         help='Extra packages to "apt-get install" on new FS.')
     parser.add_argument('--tasks',

@@ -216,6 +216,7 @@ def bind_node_to_manifest(node_coord=None):
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
         assert manifest is not None, "The specified manifest does not exist."
+        manifest.validate_packages_tasks()
         response = build_node(manifest, node_coord)
     except BadRequest as e:
         response = make_response(e.get_response(), resp_status)
@@ -266,6 +267,9 @@ def build_node(manifest, node_coord):
         'hostname':     hostname,
         'client_id':    client_id,
         'manifest':     manifest,
+        'repo_mirror':  BP.config['L4TM_MIRROR'],
+        'repo_release': BP.config['L4TM_RELEASE'],
+        'repo_areas':   BP.config['L4TM_AREAS'],
         'packages':     packages,
         'tasks':        tasks,
         'golden_tar':   golden_tar,
@@ -314,9 +318,10 @@ def build_node(manifest, node_coord):
         try:
             forked = os.fork()
             build_error = None
-            print ('Rocky spawning a rookie %s.' % forked)
             if forked == 0:
-                customize_node.execute(build_args)  # let the child build the node.
+                # The child builds the node.  It should NOT return.
+                customize_node.execute(build_args)
+            print ('Rocky spawning a rookie %s.' % forked)
         except OSError as err:
             response = make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
 
