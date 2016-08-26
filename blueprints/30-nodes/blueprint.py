@@ -62,7 +62,7 @@ def node_name(name=None):
     try:
         node = BP.nodes[name][0]
         ESPURL = None    # testable value in Jinja2
-        sizeMB = 0
+        ESPsizeMB = 0
         status = get_node_status(name)
         if status is not None and status['status'] == 'ready':
             ESPpath = '%s/%s/%s.ESP' % (
@@ -70,7 +70,7 @@ def node_name(name=None):
             if os.path.isfile(ESPpath):
                 prefix = request.url.split(_ERS_element)[0]
                 ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
-                sizeMB = os.stat(ESPpath).st_size >> 20
+                ESPsizeMB = os.stat(ESPpath).st_size >> 20
         manifest_list = BP.blueprints['manifest'].get_all() # all manifests' names with namespace
 
         return render_template(
@@ -81,7 +81,7 @@ def node_name(name=None):
             status=status,
             base_url=request.url.split(name)[0],
             ESPURL=ESPURL,
-            sizeMB=sizeMB
+            ESPsizeMB=ESPsizeMB
         )
     except Exception as e:
         return make_response('Kaboom: %s' % str(e), 404)
