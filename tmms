@@ -29,7 +29,7 @@ TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
 
 # L4TM repo information needed to build file system images for nodes.
 # If you run your own local mirror, use that.
-L4TM_MIRROR = 'http://hpel-repo.ftc.rdlabs.hpecorp.net/l4tm'
+L4TM_MIRROR = 'http://hpelinux.ftc.rdlabs.hpecorp.net/l4tm'
 
 # 'alpha' is a testing branch updated on every source update.  Change
 # to 'catapult' for well-tested, stable (weekly) builds.  
