@@ -194,6 +194,7 @@ def bind_node_to_manifest(node_coord=None):
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
         assert manifest is not None, "The specified manifest does not exist."
+        manifest.validate_packages_tasks()
         response = build_node(manifest, node_coord)
     except BadRequest as e:
         response = make_response(e.get_response(), resp_status)
@@ -242,6 +243,9 @@ def build_node(manifest, node_coord):
         'hostname':     hostname,
         'client_id':    client_id,
         'manifest':     manifest,
+        'repo_mirror':  BP.config['L4TM_MIRROR'],
+        'repo_release': BP.config['L4TM_RELEASE'],
+        'repo_areas':   BP.config['L4TM_AREAS'],
         'packages':     packages,
         'tasks':        tasks,
         'golden_tar':   golden_tar,
