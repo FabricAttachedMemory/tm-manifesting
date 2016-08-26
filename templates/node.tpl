@@ -12,14 +12,23 @@ Manifest Binding Details
 <p>
 <b>{{node.hostname}} @ {{node.coordinate}}</b>
 </p>
-{% if status.status == 'ready' %}
+{% if status.status == 'ready' or status.status == 'error' %}
+
+    <p>
+    {% if status.status == 'error' %}
+	Binding to "{{status.manifest}}" failed:<p>{{status.message}}</p>
+    {% else %}
+	Currently bound to "{{status.manifest}}"
+    {% endif %}
+    <p>
+
 	<form action='{{base_url}}{{node.coordinate}}' method='POST' enctype="multipart/form-data">
-                Currently bound to "{{status.manifest}}"&nbsp;
 		<input type='submit' name='unbind' value='Unbind'
 		 onClick='window.location.reload()'>
         </form>
 
-{% elif status.status != 'building' %}
+{% elif not status or status.status != 'building' %}
+
  	<form action='{{base_url}}{{node.coordinate}}' method='POST' enctype="multipart/form-data">
 	Select a manifest&nbsp;&nbsp;
 	<select name='manifest_sel'>

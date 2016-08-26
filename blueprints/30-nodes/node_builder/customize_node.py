@@ -246,7 +246,16 @@ def create_cpio(args):
 
 
 #==============================================================================
-
+# Automatically answering yes is harder than it looks.
+# --assume-yes and -y might not be forceful enough to overwrite a confg file.
+# --force-yes is TOO forceful in some occasions, although probably not here.
+#  http://superuser.com/questions/164553/automatically-answer-yes-when-using-apt-get-install
+# and
+# http://www.microhowto.info/howto/perform_an_unattended_installation_of_a_debian_package.html
+# have the best answers.
+# export DEBIAN_FRONTEND=noninteractive
+# apt-get update -q
+# apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 
 def install_packages(args):
     """
@@ -269,9 +278,10 @@ def install_packages(args):
 # Created %s
 set -ue
 exec > /install.log 2>&1  # /tmp/ is cleaned out of boot
+export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get upgrade --assume-yes
-apt-get dist-upgrade --assume-yes
+apt-get upgrade -q --assume-yes
+apt-get dist-upgrade -q --assume-yes
 """ % time.ctime()
     script_file = args.new_fs_dir + '/install.sh'
     with open(script_file, 'w') as file_obj:
@@ -280,7 +290,7 @@ apt-get dist-upgrade --assume-yes
         file_obj.write('\n# Packages: %s\n' % args.packages)
         if args.packages is not None:
             for pkg in args.packages.split(','):
-                cmd = 'apt-get install --assume-yes %s\n' % pkg
+                cmd = 'apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
                 file_obj.write(cmd)
 
         file_obj.write('\n# Tasks: %s\n' % args.tasks)
