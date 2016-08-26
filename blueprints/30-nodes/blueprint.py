@@ -37,11 +37,28 @@ def node():
         url_base=request.url)
 
 
+@BP.route('/%s/<path:name>' % _ERS_element, methods=('POST', ))
+@BP.route('/%s//<path:name>' % _ERS_element, methods=('POST', ))
+def web_node_delete(name=None):
+    if 'unbind' in request.form:
+        response = delete_node_binding(name)
+        if response.status_code == 204: # web page will pring nothing...            response.status_code = 200  #...
+            response.status_code = 200
+        return response
+
+    if 'bind' in request.form:
+        manname = request.form['manifest_sel']
+        manifest = BP.manifest_lookup(manname)
+        return build_node(manifest, name)
+    return make_response('POST request was not handled.', 501)
+
+
 @BP.route('/%s/<path:name>' % _ERS_element)
 @BP.route('/%s//<path:name>' % _ERS_element)    # Postel's law
 def node_name(name=None):
     '''name will never have a leading / but now always needs one.'''
     name = '/' + name
+
     try:
         node = BP.nodes[name][0]
         ESPURL = None    # testable value in Jinja2
@@ -52,11 +69,16 @@ def node_name(name=None):
             if os.path.isfile(ESPpath):
                 prefix = request.url.split(_ERS_element)[0]
                 ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
+
+        manifest_list = BP.blueprints['manifest'].get_all() # all manifests' names with namespace
+
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
             node=node,
+            manifests=manifest_list,
             status=status,
+            base_url=request.url.split(name)[0],
             ESPURL=ESPURL
         )
     except Exception as e:

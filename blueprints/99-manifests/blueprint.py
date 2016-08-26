@@ -313,6 +313,9 @@ def _lookup(manifest_name):    # Can be sub/path/name
     return _data.get(manifest_name, None)
 
 
+def get_all():
+    return tuple(_data.keys())
+
 def is_file_allowed(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in BP.allowed_files
 
@@ -349,6 +352,7 @@ def register(mainapp):  # take what you like and leave the rest
     BP.mainapp = mainapp
     BP.config = mainapp.config
     BP.lookup = _lookup
+    BP.get_all = get_all
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     BP.UPLOADS = BP.config['MANIFEST_UPLOADS']
     _load_data()
