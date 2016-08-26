@@ -49,7 +49,7 @@ Manifest Binding Details
     {% if ESPURL is none %}
         <dd>No SDHC/USB image was built.</dd>
     {% else %}
-        <dd>SDHC/USB image: <a href="{{ ESPURL }}">{{ node.hostname }}.ESP (256M)</a></dd>
+    <dd>SDHC/USB image: <a href="{{ ESPURL }}">{{ node.hostname }}.ESP ({{ sizeMB }}M)</a></dd>
     {% endif %}
 {% endif %}
 <dl>
