@@ -39,7 +39,7 @@ def node():
 
 @BP.route('/%s/<path:name>' % _ERS_element, methods=('POST', ))
 @BP.route('/%s//<path:name>' % _ERS_element, methods=('POST', ))
-def node_delete_html(name=None):
+def web_node_delete(name=None):
     if 'unbind' in request.form:
         response = delete_node_binding(name)
         if response.status_code == 204: # web page will pring nothing...            response.status_code = 200  #...
@@ -236,8 +236,6 @@ def build_node(manifest, node_coord):
     :param 'node_coord': [int\str] node number or name.
     :return: flask's response data.
     """
-    #return make_response('DRY RUN TESTING WEB', 200)
-
     golden_tar = BP.config['GOLDEN_IMAGE']
     if not os.path.exists(golden_tar):
         return make_response('Missing "Golden Image"', 505)
