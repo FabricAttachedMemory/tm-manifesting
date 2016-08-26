@@ -92,7 +92,11 @@ def _load_data():
         for arch in ('binary-all', 'binary-arm64'):
             print('---------- %s/%s/Packages.gz...' % (area, arch), end='')
             sys.stdout.flush()
-            pkgresp = HTTP_REQUESTS.get(repo % (area, arch))
+            pkgarea = repo % (area, arch)
+            pkgresp = HTTP_REQUESTS.get(pkgarea)
+            if pkgresp.status_code != 200:
+                print('not found')
+                continue
             print('%s bytes' % pkgresp.headers['content-length'])
 
             print('Uncompressing...', end='')

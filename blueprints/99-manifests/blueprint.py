@@ -235,13 +235,16 @@ class ManifestDestiny(object):
         illegal = list(keys - molegal - frozenset((_UPFROM, )))
         assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
 
-        nosuch = BP.mainapp.blueprints['package'].filter(m['packages'])
-        assert not nosuch, 'no such package(s) ' + ', '.join(nosuch)
-
-        nosuch = BP.mainapp.blueprints['task'].filter(m['tasks'])
-        assert not nosuch, 'no such task(s) ' + ', '.join(nosuch)
-
         return m
+
+    def validate_packages_tasks(self):
+        '''Defer until binding time'''
+        man = self.thedict
+        nosuch = BP.mainapp.blueprints['package'].filter(man['packages'])
+        assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
+
+        nosuch = BP.mainapp.blueprints['task'].filter(man['tasks'])
+        assert not nosuch, 'no such task(s): ' + ', '.join(nosuch)
 
     def __init__(self, dirpath, basename, contentstr=None):
         '''If contentstr is given, it is an upload, else read a file.'''
@@ -321,12 +324,12 @@ _data = None
 def _load_data():
     global _data
     _data = {}
-    try:    # don't die in a daemon
-        manfiles = [    # List comprehension
-            (dirpath, f) for dirpath, dirnames, fnames in os.walk(BP.UPLOADS)
-            for f in fnames
-        ]
-        for dirpath, basename in manfiles:
+    manfiles = [    # List comprehension
+        (dirpath, f) for dirpath, dirnames, fnames in os.walk(BP.UPLOADS)
+        for f in fnames
+    ]
+    for dirpath, basename in manfiles:
+        try:
             this = ManifestDestiny(dirpath, basename)
 
             # Start with a full path, then a relative part, then the namespace
@@ -338,8 +341,8 @@ def _load_data():
             # search is expected by manifest name, (e.g. manifest.json, not
             # path/manifest.json)
             _data[manname] = this
-    except Exception as e:
-        pass
+        except Exception as e:
+            pass
 
 
 def register(mainapp):  # take what you like and leave the rest

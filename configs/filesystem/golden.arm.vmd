@@ -8,13 +8,13 @@
 #    b. mv /etc/apt/sources.list.d/base.list /etc/apt/sources.list
 
 [config]
-log = /var/lib/tmms/sys-images/golden/golden.arm.log
-image = /var/lib/tmms/sys-images/golden/golden.arm.img
-tarball = /var/lib/tmms/sys-images/golden/golden.arm.tar
+log =
+image =
+tarball =
 mirror = 
 
 arch = arm64
-distribution = catapult
+distribution =
 variant = buildd
 foreign = /usr/bin/qemu-aarch64-static
 
@@ -46,7 +46,7 @@ enable-dhcp = True
 root-password = iforgot
 
 customize =
-hostname = l4tmXX
+hostname = GOLDEN
 user = l4tm/iforgot
 serial-console = True
 serial-console-command = /sbin/getty -L ttyAM0 115200 vt100
