@@ -294,9 +294,10 @@ def build_node(manifest, node_coord):
         try:
             forked = os.fork()
             build_error = None
-            print ('Rocky spawning a rookie %s.' % forked)
             if forked == 0:
-                customize_node.execute(build_args)  # let the child build the node.
+                # The child builds the node.  It should NOT return.
+                customize_node.execute(build_args)
+            print ('Rocky spawning a rookie %s.' % forked)
         except OSError as err:
             response = make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
 

@@ -393,14 +393,22 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
 
     # Step 1: create the image file, burn GPT and ESP on it.
 
+    whitney_FW_image = True     # FW updates for Whitney need 128M hole
+    if whitney_FW_image:
+        img_size = 384 << 20
+        ESP_offset = 129
+    else:
+        img_size = 256 << 20    # Downloads and boots much faster
+        ESP_offset = 1
+
     with open(ESP_img, 'wb') as f:
-        os.posix_fallocate(f.fileno(), 0, 256 << 20)
+        os.posix_fallocate(f.fileno(), 0, img_size)
     undo_kpartx = do_copy = False     # until I make it that far.
 
     try:    # piper catches many things, asserts get me out early
         cmd = 'parted -s %s ' % ESP_img    # Yes, -s goes right here
         cmd += 'mklabel gpt '
-        cmd += 'unit MiB mkpart primary fat32 1 100% '
+        cmd += 'unit MiB mkpart primary fat32 %d 100%% ' % ESP_offset
         cmd += 'set 1 boot on set 1 esp on '
         cmd += 'name 1 %s ' % args.hostname
         ret, stdout, stderr = piper(cmd)
