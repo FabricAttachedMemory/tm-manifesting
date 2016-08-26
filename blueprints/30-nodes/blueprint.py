@@ -45,6 +45,7 @@ def node_name(name=None):
     try:
         node = BP.nodes[name][0]
         ESPURL = None    # testable value in Jinja2
+        sizeMB = 0
         status = get_node_status(name)
         if status is not None and status['status'] == 'ready':
             ESPpath = '%s/%s/%s.ESP' % (
@@ -52,12 +53,14 @@ def node_name(name=None):
             if os.path.isfile(ESPpath):
                 prefix = request.url.split(_ERS_element)[0]
                 ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
+                sizeMB = os.stat(ESPpath).st_size >> 20
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
             node=node,
             status=status,
-            ESPURL=ESPURL
+            ESPURL=ESPURL,
+            sizeMB=sizeMB
         )
     except Exception as e:
         return make_response('Kaboom: %s' % str(e), 404)
