@@ -12,52 +12,50 @@ Manifest Binding Details
 <p>
 <b>{{node.hostname}} @ {{node.coordinate}}</b>
 </p>
-{% if status.status == 'ready' or status.status == 'error' %}
 
+<p>
+{% if status is none %}
+    No manifest is currently bound to this node.</dd>
+    {% set action = 'bind' %}
+{% elif status.status == 'building' %}
+    Building image for manifest "{{ status.manifest }}": {{ status.message }}
+    {% set action = 'NADA' %}
+{% elif status.status == 'error' %}
+    Binding to "{{status.manifest}}" failed:<p>{{status.message}}</p>
+    {% set action = 'bind' %}
+{% elif status.status == 'ready' %}
+    Currently bound to "{{status.manifest}}"
+    {% set action = 'unbind' %}
     <p>
-    {% if status.status == 'error' %}
-	Binding to "{{status.manifest}}" failed:<p>{{status.message}}</p>
+    {% if ESPURL is none %}
+    	No SDHC/USB image was built.
     {% else %}
-	Currently bound to "{{status.manifest}}"
+        SDHC/USB image: <a href="{{ ESPURL }}">{{ node.hostname }}.ESP ({{ ESPsizeMB }}M)</a>
     {% endif %}
-    <p>
+    </p>
+{% endif %}
 
+<p>
+{% if action == 'unbind' %}
 	<form action='{{base_url}}{{node.coordinate}}' method='POST' enctype="multipart/form-data">
-		<input type='submit' name='unbind' value='Unbind'
-		 onClick='window.location.reload()'>
+		<input type='submit' name='unbind' value='Unbind'/>
         </form>
 
-{% elif not status or status.status != 'building' %}
+{% elif action == 'bind' %}
 
  	<form action='{{base_url}}{{node.coordinate}}' method='POST' enctype="multipart/form-data">
 	Select a manifest&nbsp;&nbsp;
 	<select name='manifest_sel'>
                 {% for manifest in manifests %}
-                    <option value="{{manifest}}">{{manifest}}</option>
+                    <option value="{{ manifest }}">{{ manifest }}</option>
                 {% endfor %}
         </select>
         &nbsp; and then click &nbsp;
-	    <input type="submit" name='bind' value='Bind'>
+	    <input type="submit" name='bind' value='Bind'/>
         </form>
-    </p>
 {% endif %}
 </p>
 
-<p>
-{% if status is none %}
-        No manifest is currently bound to this node.</dd>
-{% elif status.status == 'building' %}
-        Building image for manifest "{{ status.manifest }}: {{ status.message }}
-{% elif status.status == 'ready' %}
-    "{{ status.manifest }}" binding is complete; {{ status.message }}.
-    <p>
-    {% if ESPURL is none %}
-    	No SDHC/USB image was built.
-    {% else %}
-    SDHC/USB image: <a href="{{ ESPURL }}">{{ node.hostname }}.ESP ({{ ESPsizeMB }}M)</a>
-{% endif %}
-{% endif %}
-</p>
 
 </BODY>
 </HTML>
