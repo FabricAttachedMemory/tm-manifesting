@@ -27,34 +27,7 @@ To exercise the APIs, get a browser plugin like
 
 <!------------------------------------------------------------------------>
 
-<DT><a href="{{ base_url }}packages" target='packages'>Packages</a>
-<DD>
-Read-only views of all available L4TM packages and their details.
-The source repo is <a href="{{ mirror }}" target='repo'>{{ mirror }}</a>.
-</DD>
-<p>
-<DD>{{ base_url }}api/packages</DD>
-<DD>{{ base_url }}api/package/&lt;name&gt;</DD>
-</DT>
-<p>
-
-<!------------------------------------------------------------------------>
-
-<DT><a href="{{ base_url }}tasks" target='tasks'>Tasks</a>
-<DD>
-Read-only views of all available "tasks" (predefined collections
-of packages).  Tasks may be included in a manifest, or post-installed on a node
-via the "tasksel" tool.
-</DD>
-<p>
-<DD>{{ base_url }}api/tasks</DD>
-<DD>{{ base_url }}api/task/&lt;name&gt;</DD>
-</DT>
-<p>
-
-<!------------------------------------------------------------------------>
-
-<DT><a href="{{ base_url }}manifest" target='manifests'>Manifests</a>
+<DT><a href="{{ base_url }}manifest/" target='manifests'>Manifests</a>
 <DD>
 Upload, view, and delete manifest JSON documents as defined in the ERS.
 </DD>
@@ -66,7 +39,7 @@ Upload, view, and delete manifest JSON documents as defined in the ERS.
 
 <!------------------------------------------------------------------------>
 
-<DT><a href="{{ base_url }}node" target='nodes'>Nodes</a>
+<DT><a href="{{ base_url }}node/" target='nodes'>Nodes</a>
 <DD>
 Apply a manifest to a node by creating a kernel and custom file
 system image and moving those items into the TFTP hierarchy.
@@ -78,6 +51,34 @@ NOTE: this does NOT reboot the node; that's done by the Assembly Agent.
 <p>
 <DD>{{ base_url }}api/node</DD>
 <DD>{{ base_url }}api/node/&lt;name&gt;</DD>
+</DT>
+<p>
+
+<!------------------------------------------------------------------------>
+
+<DT><a href="{{ base_url }}packages/" target='packages'>Packages</a>
+<DD>
+Read-only views of all available L4TM packages and their details.
+The source repo is <a href="{{ mirror }}" target='repo'>{{ mirror }}</a>,
+release {{release}}.
+</DD>
+<p>
+<DD>{{ base_url }}api/packages</DD>
+<DD>{{ base_url }}api/package/&lt;name&gt;</DD>
+</DT>
+<p>
+
+<!------------------------------------------------------------------------>
+
+<DT><a href="{{ base_url }}tasks/" target='tasks'>Tasks</a>
+<DD>
+Read-only views of all available "tasks" (predefined collections
+of packages).  Tasks may be included in a manifest, or post-installed on a node
+via the "tasksel" tool.
+</DD>
+<p>
+<DD>{{ base_url }}api/tasks</DD>
+<DD>{{ base_url }}api/task/&lt;name&gt;</DD>
 </DT>
 <p>
 
