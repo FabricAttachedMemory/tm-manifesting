@@ -32,7 +32,7 @@ def webpage_show_all_tar(name=None):
         _ERS_element + '_all.tpl',
         label=__doc__,
         keys=sorted(_data.keys()),
-        url_base=request.url)
+        base_url=request.url)
 
 
 @BP.route('/%s/<name>' % _ERS_element)

@@ -32,7 +32,7 @@ def render_all(okmsg='', errmsg=''):
         label=__doc__,
         keys=sorted(_data.keys()),
         okmsg=okmsg,
-        url_base=request.url)
+        base_url=request.url)
 
 
 @BP.route('/%s/' % _ERS_element)
