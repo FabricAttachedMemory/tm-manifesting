@@ -313,6 +313,10 @@ def build_node(manifest, node_coord):
         customize_node.execute(build_args)      # SHOULD return
         return response
 
+    # Before the child, to eliminate race condition if returning from
+    # here to web-based actions.
+    customize_node.update_status(
+        build_args, 'Preparing to build PXE images.', status='building')
     try:
         forked = os.fork()
     except OSError as err:
