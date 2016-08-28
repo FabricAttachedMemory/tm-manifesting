@@ -12,7 +12,7 @@ from shutil import copyfile
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify
-from flask import make_response, send_from_directory
+from flask import make_response, send_from_directory, redirect
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
@@ -29,33 +29,30 @@ BP = Blueprint(_ERS_element, __name__)
 
 
 @BP.route('/%s/' % _ERS_element)
-def node():
+def web_node_all():
     return render_template(
         _ERS_element + '_all.tpl',
         label=__doc__,
         nodes=BP.nodes,
-        url_base=request.url)
+        base_url=request.url)
 
 
 @BP.route('/%s/<path:name>' % _ERS_element, methods=('POST', ))
 @BP.route('/%s//<path:name>' % _ERS_element, methods=('POST', ))
-def web_node_delete(name=None):
+def web_node_button_action(name=None):
+    # Either way, name has no leading slash.
     if 'unbind' in request.form:
-        response = delete_node_binding(name)
-        if response.status_code == 204: # web page will pring nothing...            response.status_code = 200  #...
-            response.status_code = 200
-        return response
-
-    if 'bind' in request.form:
+        delete_node_binding(name)
+    elif 'bind' in request.form:
         manname = request.form['manifest_sel']
         manifest = BP.manifest_lookup(manname)
-        return build_node(manifest, name)
-    return make_response('POST request was not handled.', 501)
+        build_node(manifest, name)
+    return redirect(request.base_url)
 
 
 @BP.route('/%s/<path:name>' % _ERS_element)
 @BP.route('/%s//<path:name>' % _ERS_element)    # Postel's law
-def node_name(name=None):
+def web_node_status(name=None):
     '''name will never have a leading / but now always needs one.'''
     name = '/' + name
 
@@ -88,7 +85,7 @@ def node_name(name=None):
 
 
 @BP.route('/%s/ESP/<path:hostname>' % _ERS_element)
-def node_ESP(hostname):
+def web_node_send_ESP(hostname):
     filename = hostname + '.ESP'
     ESPdir = '%s/%s' % (BP.config['TFTP_IMAGES'], hostname)
 
@@ -242,7 +239,7 @@ def build_node(manifest, node_coord):
     if not os.path.exists(golden_tar):
         return make_response('Missing "Golden Image"', 505)
 
-    # each node gets its own set of dirs
+    # Each node gets its own set of dirs.  'nodes[]' matches snippets.
     hostname = BP.nodes[node_coord][0].hostname
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     build_dir = os.path.join(sys_imgs, hostname)
@@ -313,21 +310,34 @@ def build_node(manifest, node_coord):
 
     if BP.DEBUG:
         set_trace()
-        customize_node.execute(build_args)
-    else:
+        customize_node.execute(build_args)      # SHOULD return
+        return response
+
+    try:
+        forked = os.fork()
+    except OSError as err:
+        return make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
+
+    if forked > 0: # wait for the child1 to exit.
         try:
-            forked = os.fork()
-            build_error = None
-            if forked == 0:
-                # The child builds the node.  It should NOT return.
-                customize_node.execute(build_args)
-            print ('Rocky spawning a rookie %s.' % forked)
-        except OSError as err:
-            response = make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
+            pid, retval = os.waitpid(forked, 0)
+            if retval:
+                response.status_code = 500
+        except OSError as e:
+            response.status_code = 500
+        return response
 
-        os.wait() # wait for the child to clean up after.
-
-    return response
+    # The child makes a grandchild to build the node.  Close the flask socket.
+    # Yes there's a window on multiple requestors, but I'm not ready for
+    # eventlets yet.
+    for i in range(3, 20):
+        try:
+            print(i)
+            os.close(i)
+        except Exception as e:
+            print(i, str(e))
+        customize_node.execute(build_args)      # should NOT return
+        raise SystemExit('Unexpected return TO child1')
 
 ###########################################################################
 
