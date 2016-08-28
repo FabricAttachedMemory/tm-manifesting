@@ -10,7 +10,7 @@
 </H1>
 
 {% for key in keys %}
-    <a href="{{ url_base }}{{ key }}">{{ key }}</a><br>
+    <a href="{{ base_url }}{{ key }}">{{ key }}</a><br>
 {% endfor %}
 
 <p>
