@@ -92,6 +92,7 @@ def listall():
     status_code = 200
     if not all_manifests:
         status_code = 204
+    BP.config['logging'].info('** manifest ** :: %s' % (msg))
     return make_response(msg, status_code)
 
 
@@ -106,6 +107,7 @@ def show_manifest_json(manname='/'):
     :return: json string with the full contents of the manifest,
             404 status code if manifest was not found.
     """
+    BP.config['logging'].info('** manifest ** :: Request manifest json for %s' % (manname))
     if manname.endswith('/'):
         return list_manifests_by_prefix(manname.lstrip('/'))
 
@@ -178,8 +180,10 @@ def api_upload(prefix=''):
         response = manifest.response
 
     except Exception as e:
+        BP.config['logging'].error('** manifest ** :: Upload failed: %s' % (e))
         response = make_response('Upload failed: %s' % str(e), 422)
 
+    BP.config['logging'].info('** manifest ** :: %s' % (response.response[0].decode()))
     _load_data()
     return response
 
@@ -206,9 +210,11 @@ def delete_manifest(manname=None):
         if not BP.config['DRYRUN']:
             os.remove(manifest_server_path)
             # TODO: cleanout prefix folders of the manifests if it is empty!
-    except EnvironmentError:
+    except EnvironmentError as err:
+        BP.config['logging'].error('** manifest ** :: Failed to remove requested manifest: %s' % (err))
         response = make_response('Failed to remove requested manifest!', 500)
 
+    BP.config['logging'].info('** manifest ** :: %s' % (response.response[0].decode()))
     _load_data()
     return response
 

@@ -232,7 +232,10 @@ def bind_node_to_manifest(node_coord=None):
     except (AssertionError, ValueError) as err:
         response = make_response(str(err), resp_status)
 
-    BP.config['logging'].info(response.response[0].decode())
+    if response.status_code >= 400:
+        BP.config['logging'].error(response.response[0].decode())
+    else:
+        BP.config['logging'].info(response.response[0].decode())
     return response
 
 ###########################################################################
@@ -377,6 +380,7 @@ def get_node_status(node_coord):
         with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
     except FileNotFoundError as err:    # Unbound
+        BP.config['logging'].info('No binding for node %s' % (node_coord))
         return None
     except Exception as err:       # TCNH =)
         status = {
@@ -384,6 +388,7 @@ def get_node_status(node_coord):
             'manifest': 'unknown',
             'status':   'error'
         }
+    BP.config['logging'].info('Status for node %s: %s' % (node_coord, jsonify(status)))
     return status
 
 

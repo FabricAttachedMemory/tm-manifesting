@@ -333,10 +333,10 @@ def update_status(args, message, status='building'):
     directory.
         Status must be one of 'building', 'ready', or 'error'
     """
-    logging.info('Updating node\'s status. %s : %s' % (args.hostname, message) )
     if 'dryrun' in args:   # when don't want to change the state of the environment.
         if args.dryrun:
             return
+    logging.info('Updating node\'s status. %s : %s' % (args.hostname, message) )
     if args.verbose:    # sometimes it's for stdout, sometimes the file
         print(' - %s: %s' % (args.hostname, message))
     response = {}
