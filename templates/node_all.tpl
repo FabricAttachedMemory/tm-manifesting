@@ -10,7 +10,7 @@
 </H1>
 
 {% for node in nodes %}
-    <a href="{{ url_base }}{{ node.coordinate }}">{{ node.coordinate }}</a> @ {{ node.hostname }}<br>
+    <a href="{{ base_url }}{{ node.coordinate }}">{{ node.coordinate }}</a> @ {{ node.hostname }}<br>
 {% endfor %}
 </BODY>
 </HTML>

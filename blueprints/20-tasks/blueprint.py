@@ -20,13 +20,12 @@ BP = Blueprint(_ERS_element, __name__)
 @BP.route('/%ss/' % _ERS_element)       # Plural form of element name to query all tasks
 @BP.route('/%s/<name>' % _ERS_element)  # Singular - to get one task.
 def webpage(name=None):
-
     if name is None:
         return render_template(
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
-            url_base=request.url)
+            base_url=request.url)
 
     return render_template(
         _ERS_element + '.tpl',

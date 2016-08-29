@@ -30,8 +30,7 @@ def _webpage(name=None):
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
-            url_base='/manifesting/%s/' % _ERS_element) # singular
-            # FIXME: remove hardcoded "manifesting" from above
+            base_url=request.url)
 
     return render_template(
         _ERS_element + '.tpl',
