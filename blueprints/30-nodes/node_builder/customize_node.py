@@ -521,6 +521,7 @@ def execute(args):
             update_status(args,
                           'Rocky\'s rookie spawned a rookie %s...' % forked)
         except OSError as err:
+            logging.debug('Faild to spawn a child: %s ' % err)
             raise RuntimeError(
                 'Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % str(err))
 
@@ -529,7 +530,7 @@ def execute(args):
         'message': 'System image was created.'
     }
 
-    logging.info(' --- Starting building process --- ')
+    logging.info(' --- Starting building process ---')
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
@@ -579,9 +580,11 @@ def execute(args):
                          args.tftp_dir + '/' + manifest_tftp_file)
 
     except RuntimeError as err:     # Caught earlier and re-thrown as this
+        logging.error('Failed to customize image! RuntimeError: %s' % err)
         response['status'] = 505
         response['message'] = 'Filesystem image build failed: %s' % str(err)
     except Exception as err:        # Suppress Flask traceback
+        logging.error('Failed to customize image! Exception: %s' % err)
         response['status'] = 505
         response['message'] = 'Unexpected error: %d: %s' % (
             sys.exc_info()[2].tb_lineno, str(err))
