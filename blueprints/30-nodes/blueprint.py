@@ -47,7 +47,7 @@ def web_node_button_action(name=None):
         manname = request.form['manifest_sel']
         manifest = BP.manifest_lookup(manname)
         build_node(manifest, name)
-    return redirect(request.base_url)
+    return redirect(request.base_url)   # Eliminates browser caching of POST
 
 
 @BP.route('/%s/<path:name>' % _ERS_element)
@@ -55,7 +55,6 @@ def web_node_button_action(name=None):
 def web_node_status(name=None):
     '''name will never have a leading / but now always needs one.'''
     name = '/' + name
-
     try:
         node = BP.nodes[name][0]
         ESPURL = None    # testable value in Jinja2
@@ -68,13 +67,14 @@ def web_node_status(name=None):
                 prefix = request.url.split(_ERS_element)[0]
                 ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
                 ESPsizeMB = os.stat(ESPpath).st_size >> 20
-        manifest_list = BP.blueprints['manifest'].get_all() # all manifests' names with namespace
 
+        # all manifests' names with namespace
+        manifests = sorted(BP.blueprints['manifest'].get_all())
         return render_template(
             _ERS_element + '.tpl',
             label=__doc__,
             node=node,
-            manifests=manifest_list,
+            manifests=manifests,
             status=status,
             base_url=request.url.split(name)[0],
             ESPURL=ESPURL,

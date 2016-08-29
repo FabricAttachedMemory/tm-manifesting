@@ -257,6 +257,7 @@ def create_cpio(args):
 # apt-get update -q
 # apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 
+
 def install_packages(args):
     """
         Install list of packages into the filesystem image.
@@ -269,6 +270,7 @@ def install_packages(args):
     :param 'args.new_fs_dir': [str] path to filesystem image to customize.
     :param 'args.packages': [list] of packages 'apt-get install'.
     :param 'args.tasks': [list] of tasks for 'tasksel'.
+    :return [boolean] True if it worked, False otherwise with updated status.
     """
     msg = 'Installing ' + str(args.packages) if args.packages else \
         'Updating/upgrading base packages'
@@ -284,12 +286,15 @@ apt-get upgrade -q --assume-yes
 apt-get dist-upgrade -q --assume-yes
 """ % time.ctime()
     script_file = args.new_fs_dir + '/install.sh'
+    downloads = []
     with open(script_file, 'w') as file_obj:
         file_obj.write(script_header)
 
         file_obj.write('\n# Packages: %s\n' % args.packages)
         if args.packages is not None:
             for pkg in args.packages.split(','):
+                if pkg.startswith('http://'):
+                    downloads.append(pkg)
                 cmd = 'apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
                 file_obj.write(cmd)
 
@@ -298,6 +303,11 @@ apt-get dist-upgrade -q --assume-yes
             for task in args.tasks.split(','):
                 cmd = 'tasksel install %s\n' % task
                 file_obj.write(cmd)
+
+        for pkg in downloads:
+            pkgresp = HTTP_REQUESTS.get(pkg)
+            if pkresp.status_code != 200:
+                raise RuntimeError('Could not download "%s"' % pkg)
 
     os.chmod(script_file, 0o744)
 
@@ -308,6 +318,7 @@ apt-get dist-upgrade -q --assume-yes
         # tail followed and status updated, MFT' time.
         ret, _, _ = piper(cmd, use_call=True)
         assert not ret, 'chroot failed: errno %d' % (ret)
+        return True
     except Exception as err:
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
 
@@ -523,6 +534,7 @@ def execute(args):
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
+    # When some of them fail they'll handle last update_status themselves.
     try:
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir, args.golden_tar)
