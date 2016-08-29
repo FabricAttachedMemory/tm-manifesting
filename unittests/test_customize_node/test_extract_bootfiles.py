@@ -3,7 +3,8 @@
     Test cleanup_kernel function of customize_node.py script.
 """
 from pdb import set_trace
-
+from argparse import Namespace
+import glob
 import os
 import sys
 import unittest
@@ -41,10 +42,20 @@ class CleanupKernelTest(unittest.TestCase):
         Try to move boot/ files into tmp directory using
         customize_node.cleanout_kernel function.
         """
-        CN.cleanout_kernel(self.tmp_folder, self.fs_img)
+        args = {'build_dir' : self.tmp_folder,
+                'new_fs_dir' : self.fs_img,
+                'dryrun' : True}
+
+        args = Namespace(**args)
+
+        init_files = glob.glob(self.fs_img + '/boot/init*')
+        vmlinuz_files = glob.glob(self.fs_img + '/boot/vmlinuz*')
+        boot_files = init_files + vmlinuz_files
+        boot_files = [os.path.basename(basename) for basename in boot_files]
+
+        CN.extract_bootfiles(args)
         # FIXME: Hardcoded names need to be matched to config.py
-        boot_files = ['initrd.img-4.5.0-3-arm64-l4tm-tmas',
-                         'vmlinuz-4.5.0-3-arm64-l4tm-tmas']
+
         for boot_file in boot_files:
             # set_trace()   # doesn't work from test_all.sh, run this directly
             boot_old = '%s/boot/%s' % (self.fs_img, boot_file)
@@ -54,25 +65,6 @@ class CleanupKernelTest(unittest.TestCase):
             self.assertTrue(os.path.exists(boot_new),
                             '"%s" was not found!' % (boot_new))
 
-
-    def test_cleanout_kernel_exception(self):
-        """
-            Assume there is a mock filesystem image already created.  Try
-        to move boot/ files into tmp directory using
-        customize_node.cleanout_kernel function. In this test we are trying
-        to catch an error, thus the boot files will not exist, so that the
-        RuntimeError will be thrown.
-        """
-        boot_dir = '%s/boot/' % self.fs_img
-        rmtree(boot_dir)
-        self.assertFalse(os.path.isdir(boot_dir), 'Couldn\'t remove boot/!')
-
-        self.assertRaises(RuntimeError,
-            CN.cleanout_kernel(self.tmp_folder, self.fs_img),
-            'Unexpected error was raised!')
-
-
-    #TODO: test exceptions!
 
 if __name__ == '__main__':
     unittest.main()

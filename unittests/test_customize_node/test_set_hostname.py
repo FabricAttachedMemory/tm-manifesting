@@ -3,7 +3,7 @@
     Test set_hostname function of customize_node.py script.
 """
 from pdb import set_trace
-
+from argparse import Namespace
 import os
 import sys
 import unittest
@@ -42,16 +42,17 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
         """
         hostname_test = 'Abyss'
         hostname_file = '%s/etc/hostname' % self.fs_img
+        args = {'new_fs_dir' : self.fs_img,
+                'hostname' : hostname_test,
+                'dryrun' : True}
+        args = Namespace(**args)
 
-        CN.set_hostname(self.fs_img, hostname_test)
+        CN.set_hostname(args)
         hostname_new = None
         with open(hostname_file, 'r') as file_obj:
             hostname_new = file_obj.read()
         self.assertTrue(hostname_test in hostname_new,
                 'Hostname was not set to "%s"!' % hostname_test)
-
-
-    #TODO: Test exceptions!
 
 
 if __name__ == '__main__':

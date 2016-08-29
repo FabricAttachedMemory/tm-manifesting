@@ -318,7 +318,7 @@ apt-get dist-upgrade -q --assume-yes
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/install.log is updated.  That could be
         # tail followed and status updated, MFT' time.
-        ret, _, _ = piper(cmd, use_call=True)
+        ret, stdout, stderr = piper(cmd, use_call=True)
         assert not ret, 'chroot failed: errno %d' % (ret)
         return True
     except Exception as err:
@@ -329,10 +329,14 @@ apt-get dist-upgrade -q --assume-yes
 
 def update_status(args, message, status='building'):
     """
-        status must be one of 'building', 'ready', or 'error'
-        TODO: docstr
+        Update status of the node at the given state in its tftp/images/nodeX
+    directory.
+        Status must be one of 'building', 'ready', or 'error'
     """
     logging.info('Updating node\'s status. %s : %s' % (args.hostname, message) )
+    if 'dryrun' in args:   # when don't want to change the state of the environment.
+        if args.dryrun:
+            return
     if args.verbose:    # sometimes it's for stdout, sometimes the file
         print(' - %s: %s' % (args.hostname, message))
     response = {}

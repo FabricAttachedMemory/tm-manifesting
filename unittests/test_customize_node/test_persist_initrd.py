@@ -81,5 +81,7 @@ class FixInitTest(unittest.TestCase):
             self.assertTrue(True)
 
 
+    #TODO: test more exceptions!
+
 if __name__ == '__main__':
     unittest.main()
