@@ -15,6 +15,8 @@ from glob import glob
 import gzip
 import json
 import os
+import logging
+import logging.config
 import tarfile
 import shutil   # explicit namespace differentiates from our custom FS routines
 import sys
@@ -309,6 +311,7 @@ def update_status(args, message, status='building'):
         status must be one of 'building', 'ready', or 'error'
         TODO: docstr
     """
+    logging.info('Updating node\'s status. %s : %s' % (args.hostname, message) )
     if args.verbose:    # sometimes it's for stdout, sometimes the file
         print(' - %s: %s' % (args.hostname, message))
     response = {}
@@ -489,6 +492,9 @@ def execute(args):
         Not 200 - failure. 'message' - is a message string that briefly
             explains the error\success status.
     """
+    logging.basicConfig(filename=args.build_dir + '/build.log', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
+
     if args.debug:
         args.verbose = True
     else:
@@ -497,8 +503,10 @@ def execute(args):
             os.chdir('/tmp')
             os.setsid()
             forked = os.fork()
+            logging.debug('Spawning parent PID=%s' % (forked))
             # Release the wait that should be done by original parent
             if forked > 0:
+                logging.debug('Closing parent PID=%s.' % (forked))
                 os._exit(0)  # RTFM: this is the preferred exit after fork()
             update_status(args,
                           'Rocky\'s rookie spawned a rookie %s...' % forked)
@@ -510,6 +518,8 @@ def execute(args):
         'status': 200,
         'message': 'System image was created.'
     }
+
+    logging.info(' --- Starting building process --- ')
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
@@ -569,7 +579,9 @@ def execute(args):
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
 
+    logging.info('Node is finished building with thre response: %s' % (response))
     if not args.debug:  # I am the grandhild; release the wait() by init()
+        logging.debug('Closing the build child.')
         os._exit(0)     # RTFM: this is the preferred exit after fork()
 
     return response
