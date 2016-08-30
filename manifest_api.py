@@ -108,16 +108,16 @@ for p in paths:
         ngood += 1
         mainapp.config['logging'].info('Loading blueprint "%s"' % (p))
     except ImportError as e:
-        mainapp.config['logging'].error('No blueprint at %s' % p, file=sys.stderr)
+        mainapp.config['logging'].error('No blueprint at %s' % p)
         print('No blueprint at %s' % p, file=sys.stderr)
         if mainapp.config['DEBUG']:
             set_trace()
         pass
     except AttributeError as e:
-        mainapp.config['logging'].error('\nblueprint %s has no register()' % p, file=sys.stderr)
+        mainapp.config['logging'].error('\nblueprint %s has no register()' % p)
         print('\nblueprint %s has no register()' % p, file=sys.stderr)
     except Exception as e:
-        mainapp.config['logging'].error('\nblueprint %s failed:\n%s' % (p, e), file=sys.stderr)
+        mainapp.config['logging'].error('\nblueprint %s failed:\n%s' % (p, e))
         print('\nblueprint %s failed:\n%s' % (p, e), file=sys.stderr)
 
 if ngood != len(paths):
