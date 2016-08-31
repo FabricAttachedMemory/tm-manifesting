@@ -6,6 +6,7 @@
 import argparse
 import glob
 import logging
+import logging.config
 import netifaces as NIF
 import os
 import sys
@@ -78,15 +79,18 @@ mainapp.config['API_VERSION'] = 1.0
 mainapp.config['url_prefix'] = '/manifesting'
 mainapp.config['VERBOSE'] = \
     cmdline_args.verbose if sys.stdin.isatty() else 0
+mainapp.config['auto-update'] = cmdline_args.auto_update
 mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
 mainapp.config['DRYRUN'] = cmdline_args.dry_run
 mainapp.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0     # For node ESP files
 
-mainapp.config['LOGFILE'] = '/var/log/tmms.log'     # For node ESP files
+mainapp.config['LOGFILE'] = '/var/log/tmms.log'
 
-logging.basicConfig(filename=mainapp.config['LOGFILE'], format='%(asctime)s :: %(levelname)s :: %(message)s',
+logging.basicConfig(filename=mainapp.config['LOGFILE'], format='%(asctime)s :: %(levelname)s <%(name)s>:: %(message)s',
                     level=logging.INFO)
-mainapp.config['logging'] = logging
+
+#mainapp.config['logging'] = logging
+mainapp.config['logging'] = logging.getLogger('manifest_api')
 
 ###########################################################################
 # Must come after mainapp setup because Mobius
@@ -255,7 +259,7 @@ if __name__ == '__main__':
     set_iptables(mainapp.config)
     dnsmasq_proc = start_dnsmasq(mainapp.config)
     mainapp.run(
-        debug=mainapp.config['DEBUG'],
+        debug=mainapp.config['auto-update'],
         use_reloader=mainapp.config['DEBUG'],
         host=mainapp.config['HOST'],
         port=mainapp.config['PORT'],

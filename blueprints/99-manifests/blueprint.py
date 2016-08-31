@@ -92,7 +92,7 @@ def listall():
     status_code = 200
     if not all_manifests:
         status_code = 204
-    BP.config['logging'].info('** manifest ** :: %s' % (msg))
+    BP.logging.info(msg)
     return make_response(msg, status_code)
 
 
@@ -107,15 +107,16 @@ def show_manifest_json(manname='/'):
     :return: json string with the full contents of the manifest,
             404 status code if manifest was not found.
     """
-    BP.config['logging'].info('** manifest ** :: Request manifest json for %s' % (manname))
     if manname.endswith('/'):
         return list_manifests_by_prefix(manname.lstrip('/'))
 
     found_manifest = _lookup(manname)
 
     if not found_manifest:
+        BP.logging.error('Manifest %s does not exist!' % manname)
         return make_response('The specified manifest does not exist.', 404)
 
+    BP.logging.info('Show manifest json: %s' % (jsonify(found_manifest.thedict)) )
     return make_response(jsonify(found_manifest.thedict), 200)
 
 
@@ -146,6 +147,7 @@ def list_manifests_by_prefix(prefix=None):
     else:
         response = make_response(jsonify(result), 200)
 
+    BP.logging.error(response.response[0].decode())
     return response
 
 # Must have a string greater or equal to 1. Thats the RULE for Flask's rules
@@ -180,10 +182,10 @@ def api_upload(prefix=''):
         response = manifest.response
 
     except Exception as e:
-        BP.config['logging'].error('** manifest ** :: Upload failed: %s' % (e))
+        BP.logging.error('Manifest upload failed: %s' % (e))
         response = make_response('Upload failed: %s' % str(e), 422)
 
-    BP.config['logging'].info('** manifest ** :: %s' % (response.response[0].decode()))
+    BP.logging.info(response.response[0].decode())
     _load_data()
     return response
 
@@ -202,6 +204,7 @@ def delete_manifest(manname=None):
     response = make_response('The specified manifest has been deleted.', 204)
 
     if not found_manifest:
+        BP.logging.error('No manifest for %s' % manname)
         return make_response('The specified manifest does not exist.', 404)
 
     manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + manname
@@ -211,10 +214,10 @@ def delete_manifest(manname=None):
             os.remove(manifest_server_path)
             # TODO: cleanout prefix folders of the manifests if it is empty!
     except EnvironmentError as err:
-        BP.config['logging'].error('** manifest ** :: Failed to remove requested manifest: %s' % (err))
+        BP.logging.error('Failed to remove %s manifest: %s' % (manname, err))
         response = make_response('Failed to remove requested manifest!', 500)
 
-    BP.config['logging'].info('** manifest ** :: %s' % (response.response[0].decode()))
+    BP.logging.info(response.response[0].decode())
     _load_data()
     return response
 
@@ -360,5 +363,9 @@ def register(mainapp):  # take what you like and leave the rest
     BP.lookup = _lookup
     BP.get_all = get_all
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+
+    BP.logging = BP.config['logging']
+    BP.logging.name = '99-manifests_BP'
+
     BP.UPLOADS = BP.config['MANIFEST_UPLOADS']
     _load_data()

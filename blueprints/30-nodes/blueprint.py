@@ -108,7 +108,7 @@ def get_all_nodes():
     """
     response = jsonify({'nodes': list(BP.node_coords)})
     response.status_code = 200
-    BP.config['logging'].info(response.response[0].decode())
+    BP.logging.info(response.response[0].decode())
     return response
 
 
@@ -123,12 +123,12 @@ def get_all_bindings():
         response = jsonify({
             'No Content': 'There are no manifests associated with any nodes.'})
         response.status_code = 204
-        BP.config['logging'].error(response.response[0].decode())
+        BP.logging.error(response.response[0].decode())
         return response
 
     response = jsonify({'mappings': nodes_info})
     response.status_code = 200
-    BP.config['logging'].info(response.response[0].decode())
+    BP.logging.info(response.response[0].decode())
     return response
 
 
@@ -142,15 +142,15 @@ def get_node_bind_info(node_coord=None):
     # we need to add leading /.
     node_coord = '/' + node_coord
     if not BP.nodes[node_coord]:
-        BP.config['logging'].error('The specified node does not exist: %s' % (node_coord))
+        BP.logging.error('The specified node does not exist: %s' % (node_coord))
         return make_response('The specified node does not exist.', 404)
 
     result = get_node_status(node_coord)
     if result is None:
-        BP.config['logging'].info('No Content: %s' % (node_coord))
+        BP.logging.info('No Content: %s' % (node_coord))
         return make_response('No Content', 204)
 
-    BP.config['logging'].info('%s' % (jsonify(result)))
+    BP.logging.info('%s' % (jsonify(result)))
     return make_response(jsonify(result), 200)
 
 
@@ -177,6 +177,7 @@ def delete_node_binding(node_coord):
     # we need to add leading /.
     node_coord = '/' + node_coord
     if node_coord not in BP.node_coords:
+        BP.logging.error('Failed to delete %s! No such node!' % (node_coord))
         return make_response('The specified node does not exist.', 404)
 
     try:
@@ -184,10 +185,10 @@ def delete_node_binding(node_coord):
         for node_file in glob(node_image_dir + '/*'):
             os.remove(node_file)
     except OSError as err:
-        BP.config['logging'].error('Failed to delete binding: %s' % (err))
+        BP.logging.error('Failed to delete binding: %s' % (err))
         return make_response('Failed to delete binding: %s' % err, 500)
 
-    BP.config['logging'].info('Successful node cleanup: %s' % (node_coord))
+    BP.logging.info('Successful node delete: %s' % (node_coord))
     return make_response('Successful cleanup.', 204)
 
 ####################### API (PUT) ###############################
@@ -206,7 +207,7 @@ def bind_node_to_manifest(node_coord=None):
     """
     node_coord = '/' + node_coord   # Postel's Law, node_coord is naked.
     try:
-        BP.config['logging'].info('Binding manifest to a node [%s].' % (node_coord))
+        BP.logging.info('Binding manifest to a node [%s].' % (node_coord))
 
         resp_status = 409   # Conflict
         assert get_node_status(node_coord) is None, 'Node is already bound.'
@@ -233,9 +234,10 @@ def bind_node_to_manifest(node_coord=None):
         response = make_response(str(err), resp_status)
 
     if response.status_code >= 400:
-        BP.config['logging'].error(response.response[0].decode())
+        BP.logging.error(response.response[0].decode())
     else:
-        BP.config['logging'].info(response.response[0].decode())
+        BP.logging.info(response.response[0].decode())
+
     return response
 
 ###########################################################################
@@ -380,7 +382,7 @@ def get_node_status(node_coord):
         with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
     except FileNotFoundError as err:    # Unbound
-        BP.config['logging'].info('No binding for node %s' % (node_coord))
+        BP.logging.error('No binding for node %s' % (node_coord))
         return None
     except Exception as err:       # TCNH =)
         status = {
@@ -388,7 +390,7 @@ def get_node_status(node_coord):
             'manifest': 'unknown',
             'status':   'error'
         }
-    BP.config['logging'].info('Status for node %s: %s' % (node_coord, jsonify(status)))
+    BP.logging.info('<get_node_status> for %s: %s' % (node_coord, json.dumps(status, indent=4)))
     return status
 
 
@@ -428,5 +430,7 @@ def register(mainapp):  # take what you like and leave the rest
     BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
+    BP.logging = mainapp.config['logging']
+    BP.logging.name = '30-node_BP'
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
     _data = _load_data()
