@@ -3,7 +3,7 @@
     Test set_hosts function of customize_node.py script.
 """
 from pdb import set_trace
-
+from argparse import Namespace
 import os
 import sys
 import unittest
@@ -42,8 +42,12 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
         """
         hosts_file = '%s/etc/hosts' % self.fs_img
         hostname = 'Abyss'
+        args = {'new_fs_dir' : self.fs_img,
+                'hostname' : hostname,
+                'dryrun' : True }
+        args = Namespace(**args)
 
-        CN.set_hosts(self.fs_img, hostname)
+        CN.set_hosts(args)
 
         hosts_new = None
         with open(hosts_file, 'r') as file_obj:
@@ -53,9 +57,6 @@ class CustomizeNodeRoutineTest(unittest.TestCase):
         hostname_line = '127.1.0.1   %s' % hostname
         self.assertTrue(localhost_line in hosts_new, '"%s" is not in etc/hosts!' % localhost_line)
         self.assertTrue(hostname_line in hosts_new, '"%s" is not in etc/hosts!' % hostname_line)
-
-
-    #TODO: Test exceptions!
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
     Test create_cpio function of customize_node.py script.
 """
 from pdb import set_trace
-
+from argparse import Namespace
 import os
 import sys
 import unittest
@@ -37,13 +37,23 @@ class CreateCpioTest(unittest.TestCase):
 
     def test_create_cpio(self):
         """
+            Test create_cpio func of customize_imga.py script.
+        Validate a .cpio file is created in expected location with a provided
+        hostname for the node.
         """
-        cpio_file = '%s/fs_img.cpio' % self.tmp_folder
-        CN.create_cpio(cpio_file, self.fs_img)
+        hostname = 'unittest_host'
+        cpio_file = '%s/%s.cpio' % (self.tmp_folder, hostname)
+        args = {'new_fs_dir' : self.fs_img,
+                'dest_file' : cpio_file,
+                'hostname' : hostname,
+                'build_dir' : self.tmp_folder,
+                'verbose' : False,
+                'dryrun' : True}
+        args = Namespace(**args)
+
+        CN.create_cpio(args)
+
         self.assertTrue(os.path.exists(cpio_file), 'cpio file was not created!')
-
-
-    #TODO: Test exceptions!
 
 
 if __name__ == '__main__':

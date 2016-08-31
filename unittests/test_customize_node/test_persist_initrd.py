@@ -3,7 +3,7 @@
     Test fix_init function of customize_node.py script.
 """
 from pdb import set_trace
-
+from argparse import Namespace
 import os
 import sys
 import unittest
@@ -39,13 +39,17 @@ class FixInitTest(unittest.TestCase):
             Assume there is a mock filesystem image already created. Thus, try
         to create a symbolic link from fs_img/sbin/init into fs_img/init.
         """
-        CN.fix_init(self.fs_img)
+        args = {'new_fs_dir' : self.fs_img,
+                'dryrun' : True}
+        args = Namespace(**args)
+
+        CN.persist_initrd(args)
         new_init = '%s/init' % self.fs_img
 
         self.assertTrue(os.path.exists(new_init),
                 'Symlink to "%s" was not created!' % new_init)
 
-        CN.fix_init(self.fs_img)
+        CN.persist_initrd(args)
         self.assertTrue(os.path.exists(new_init),
                 'Recreating symlink to "%s" faild! Couldn\'t remove old init!' % new_init)
 
@@ -59,15 +63,19 @@ class FixInitTest(unittest.TestCase):
         """
         orig_init = '%s/sbin/init' % self.fs_img
         os.remove(orig_init)
+        args = {'new_fs_dir' : self.fs_img,
+                'dryrun' : True}
+        args = Namespace(**args)
+
         try:
-            CN.fix_init(self.fs_img)
+            CN.persist_initrd(args)
             self.assertTrue(False, ms='No RuntimeError for fix_init with incorrect env.')
         except RuntimeError:
             self.assertTrue(True)
 
-        wrong_fsimg = '/tmp/'
+        args.new_fs_dir = '/tmp/'
         try:
-            CN.fix_init(wrong_fsimg)
+            CN.persist_initrd(args)
             self.assertTrue(False, 'RuntimeError was not raised for wrong init env.')
         except RuntimeError:
             self.assertTrue(True)
