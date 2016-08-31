@@ -95,8 +95,6 @@ mainapp.config['logging'] = logging.getLogger('manifest_api')
 ###########################################################################
 # Must come after mainapp setup because Mobius
 
-mainapp.config['logging'].info('********* mainap_api.py *********')
-
 paths = sorted([p for p in glob.glob('blueprints/*')])
 if not paths:
     raise SystemExit('Cannot find any blueprints')
@@ -259,8 +257,8 @@ if __name__ == '__main__':
     set_iptables(mainapp.config)
     dnsmasq_proc = start_dnsmasq(mainapp.config)
     mainapp.run(
-        debug=mainapp.config['auto-update'],
-        use_reloader=mainapp.config['DEBUG'],
+        debug=mainapp.config['DEBUG'],
+        use_reloader=mainapp.config['auto-update'],
         host=mainapp.config['HOST'],
         port=mainapp.config['PORT'],
         threaded=False)
