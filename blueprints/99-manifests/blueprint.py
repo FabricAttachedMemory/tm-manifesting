@@ -87,13 +87,15 @@ def listall():
         GET request that returns a JSON response of all the manifests
     uploaded to the server.
     """
+    set_trace()
     all_manifests = sorted(list(_data.keys()))
     msg = json.dumps({'manifests': all_manifests}, indent=4)
     status_code = 200
     if not all_manifests:
         status_code = 204
-    BP.logging.info(msg)
-    return make_response(msg, status_code)
+    response = make_response(msg, status_code)
+    BP.logging.info(response.response[0].decode())
+    return response
 
 
 # @BP.route('/api/%s/' % _ERS_element) MAKES DUPLICATE RULE???  unittests pass
@@ -112,12 +114,13 @@ def show_manifest_json(manname='/'):
 
     found_manifest = _lookup(manname)
 
+    response = None
     if not found_manifest:
-        BP.logging.error('Manifest %s does not exist!' % manname)
-        return make_response('The specified manifest does not exist.', 404)
+        response = make_response('The specified manifest does not exist.', 404)
+    else:
+        response = make_response(jsonify(found_manifest.thedict), 200)
 
-    BP.logging.info('Show manifest json: %s' % (jsonify(found_manifest.thedict)) )
-    return make_response(jsonify(found_manifest.thedict), 200)
+    BP.logging.info(response)
 
 
 def list_manifests_by_prefix(prefix=None):
