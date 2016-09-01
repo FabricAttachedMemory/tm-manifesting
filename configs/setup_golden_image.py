@@ -38,9 +38,8 @@ def main(args):
     assert statvfs.f_bsize * statvfs.f_bavail > (10 * (1 << 30)), \
         'Need at least 10G on "%s"' % (destdir)
 
-    vmdlog = '/golden.arm.log'
-    vmdimage = '/golden.arm.img'
-    vmdtarball = '/golden.arm.tar'
+    vmdlog = destdir + '/golden.arm.log'
+    vmdimage = destdir + '/golden.arm.img'
     cmd = '''%s --no-default-configs
              --config=%s
              --log=%s
@@ -53,7 +52,7 @@ def main(args):
         vmdconfig,
         vmdlog,
         vmdimage,
-        vmdtarball,
+        destfile,
         manconfig['L4TM_MIRROR'],
         manconfig['L4TM_RELEASE'])
 
