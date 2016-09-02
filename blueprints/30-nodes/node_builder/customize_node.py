@@ -202,6 +202,42 @@ def set_hosts(args):
     except RuntimeError as err:
         raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
 
+#==============================================================================
+
+
+def set_l4tm_pubkey(args):
+    """
+        Add the l4tm_pubkey data to /home/l4tm/.ssh/authorized_keys.
+    Where it comes from is your problem, but ssh-key -t rsa is a good start.
+
+    :param 'l4tm_pubkey': [str] RSA public key
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
+    update_status(args, 'Set authorized keys file for user l4tm')
+    if args.l4tm_pubkey is None:
+        return
+    with workdir(args.new_fs_dir):
+        with open('etc/passwd', 'r') as f:
+            for line in f:
+                if line.startswith('l4tm:'):
+                    _, _, uid, gid, gecos, home, shell = line.split(':')
+                    uid = int(uid)
+                    gid = int(gid)
+                    dotssh = home[1:] + '/.ssh'     # relative to workdir
+                    auth = dotssh + '/authorized_keys'
+                    break
+            else:
+                raise RuntimeError('Cannot find user l4tm')
+        os.makedirs(dotssh, mode=0o700, exist_ok=True)
+        with open(auth, 'w+') as f:
+            f.write('\n')
+            f.write(args.l4tm_pubkey)
+        os.chmod(auth, 0o600)
+        os.chown(auth, uid, gid)
+        os.chown(dotssh, uid, gid)
+
+#==============================================================================
+
 
 def create_cpio(args):
     """
@@ -552,6 +588,7 @@ def execute(args):
         set_hostname(args)
         set_hosts(args)
         set_client_id(args)
+        set_l4tm_pubkey(args)
 
         persist_initrd(args)
 

@@ -225,13 +225,15 @@ class ManifestDestiny(object):
             m = json.loads(contentstr)
         except Exception as e:
             raise RuntimeError('not JSON')
-        legal = frozenset(
+        legal = frozenset(  # Required
             ('name', 'description', 'release', 'tasks', 'packages')
         )
         keys = frozenset(m.keys())
         missing = list(legal - keys)
         assert not len(missing), 'Missing key(s): ' + ', '.join(missing)
-        molegal = legal.union(frozenset(('comment', '_comment')))
+
+        molegal = legal.union(frozenset(    # Optional
+            ('comment', '_comment', 'l4tm_pubkey')))
         illegal = list(keys - molegal - frozenset((_UPFROM, )))
         assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
 
