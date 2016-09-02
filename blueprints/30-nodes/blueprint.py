@@ -259,6 +259,7 @@ def build_node(manifest, node_coord):
         tasks = ','.join(tasks)
     else:
         tasks = None     # sentinel for following loop
+    l4tm_pubkey = manifest.thedict.get('l4tm_pubkey', None)
 
     build_args = {
         'hostname':     hostname,
@@ -269,6 +270,7 @@ def build_node(manifest, node_coord):
         'repo_areas':   BP.config['L4TM_AREAS'],
         'packages':     packages,
         'tasks':        tasks,
+        'l4tm_pubkey':  l4tm_pubkey,
         'golden_tar':   golden_tar,
         'build_dir':    build_dir,
         'tftp_dir':     tftp_dir,

@@ -29,11 +29,11 @@ TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
 
 # L4TM repo information needed to build file system images for nodes.
 # If you run your own local mirror, use that.
-L4TM_MIRROR = 'http://hpelinux.ftc.rdlabs.hpecorp.net/l4tm'
+L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
 
 # 'alpha' is a testing branch updated on every source update.  Change
 # to 'catapult' for well-tested, stable (weekly) builds.  
-L4TM_RELEASE = 'alpha'
+L4TM_RELEASE = 'catapult'
 
 # Remove 'main' for a much faster start (seconds vs tens of seconds), however
 # you will be working with a partial package set.
@@ -79,3 +79,10 @@ PXE_FIREWALL = 'DHCP'
 #    will get x.y.z.1, node02 gets x.y.z.2, etc.
 
 TMDOMAIN = 'have.it.your.way,10.11.10.0/24'
+
+# For testing purposes, use at your own risk.  This is for the single normal
+# "l4tm" account configured in the stock golden image, which also comes with
+# sudo.  The key should be all on one line, no spaces, no embedded linefeed.
+# It will be put in ~l4tm/.ssh/authorized_keys.
+
+# L4TM_PUBKEY = 'allonelinenoLineFeedsNOSPACESitwilloverrunyourterminalwidth'
