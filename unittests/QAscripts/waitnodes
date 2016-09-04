@@ -1,0 +1,68 @@
+#!/bin/bash
+
+###########################################################################
+# Wait for ping and ssh responses, no extra tools required.  Well, ping :-).
+# Command line processing; usually called from startnodes.
+
+NODES="$@"
+N_WANTED=$#
+
+[ -z "$NETNAME" ] && echo "export NETNAME=something" >&1 && exit 1
+
+set -u
+
+function all_running() {	# Optional $1 means wait
+    while true; do
+	N_RUNNING=`pgrep -a qemu-system-aar | grep $NETNAME | wc -l`
+	let DEAD=$N_WANTED-$N_RUNNING
+	[ $DEAD -eq 0 ] && return
+	[ $# -eq 0 ] && echo "$DEAD qemu(s) are not running" >&2 && exit 1
+	echo "Waiting for $DEAD qemu(s) to start..."
+	sleep 1
+    done
+}
+
+###########################################################################
+# Main
+
+all_running wait	# settling time if called from startnodes
+
+HOSTNAMES=`for N in $NODES; do printf "node%02d " $N; done`
+
+WAITING=$HOSTNAMES
+START=`date +%s`
+while [ "$WAITING" ]; do
+    all_running
+    echo "Ping wait on $WAITING"
+    WAITING=
+    for H in $HOSTNAMES; do	# yeah do them all each time
+	ping -c1 $H >/dev/null 2>&1
+	[ $? -ne 0 ] && WAITING="$WAITING $H"
+    done
+done
+
+WAITING=$HOSTNAMES
+while [ "$WAITING" ]; do
+    END=`date +%s`
+    let ELAPSED=$END-$START
+    echo -e "\n$ELAPSED seconds"
+
+    all_running
+    echo "SSH wait on $WAITING"
+    WAITING=
+    for H in $HOSTNAMES; do	# yeah do them all each time
+	# I saw one drop out once.
+	echo "Re-ping and test sshd for $H..."
+	ping -c1 $H >/dev/null 2>&1
+	[ $? -ne 0 ] && echo "$H unpingable" >&2 && WAITING="$WAITING $H" && continue
+	# First time, the timeout is about 20 seconds.  Second time is about 3.
+	# From the Google
+	(echo > /dev/tcp/$H/22) >/dev/null 2>&1
+	[ $? -ne 0 ] && WAITING="$WAITING $H"
+    done
+done
+END=`date +%s`
+let ELAPSED=$END-$START
+echo "$ELAPSED seconds total (ping + ssh)"
+
+exit 0
