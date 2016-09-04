@@ -106,7 +106,7 @@ def get_all_nodes():
     """
         List all nodes coordinates known to the server.
     """
-    response = jsonify({'nodes': list(BP.node_coords)})
+    response = jsonify({'nodes': list(BP.node_coords)})	# already sorted
     response.status_code = 200
     return response
 
@@ -136,8 +136,22 @@ def get_node_bind_info(node_coord=None):
         List status json of the manifest bound to the node.
     """
     # Two rules invoke Postel's Law of liberal reception.  Either way,
-    # we need to add leading /.
-    node_coord = '/' + node_coord
+    # we need to add leading /.  Assist humans: allow an integer 1-40.
+    try:
+        nodenum = int(node_coord)
+        try:	# Range check and sparse check
+            # Numbers and assumptions true for FRD.  FIXME: move into TMConfig
+            # and export a "nodenum" property
+            assert 1 <= nodenum <= 40, 'nodenum out of range 1-40'
+            node = ((nodenum - 1) % 10) + 1
+            enc = ((nodenum - 1) // 10) + 1
+            rack1 = BP.config['tmconfig'].racks[1]
+            node_coord = rack1.enclosures[enc].nodes[node].coordinate
+            assert node_coord is not None, 'empty slot in a sparse rack'
+        except AssertionError as e:
+            return make_response('Node %d does not exist.' % nodenum, 404)
+    except ValueError:	# assume it's a coordinate path
+        node_coord = '/' + node_coord
     if not BP.nodes[node_coord]:
         return make_response('The specified node does not exist.', 404)
 
@@ -411,7 +425,7 @@ def register(mainapp):  # take what you like and leave the rest
         BP.nodes = BP.config['tmconfig'].allNodes
     except Exception:
         BP.nodes = BP.config['tmconfig'].nodes
-    BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
+    BP.node_coords = list([node.coordinate for node in BP.nodes])  # ordered
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
