@@ -27,13 +27,11 @@ def main(args):
     _cleanup_sysarg(sys.argv, args)
     try:
         print(cmdlookup[sys.argv[1]](sys.argv[2:], **args))
-    except (AssertionError, KeyError) as e:
-        print(str(e))
+    except Exception as e:              # Show me the stack trace NOT!
         if args['debug']:
             set_trace()
             pass
-    except Exception as e:  # Show me the stack trace NOT!
-        raise SystemExit(str(e))
+        raise SystemExit(str(e))	# shell callers need non-zero exit
 
 
 if __name__ == '__main__':

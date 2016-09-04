@@ -56,8 +56,13 @@ class TmManifest(tm_base.TmCmd):
         Select the manifest for the specified node and construct a kernel
         and root FS that the node will use the next time it boots.
         """
-        assert len(target) >= 2, \
-            'Missing argument: put <manifest name> <manifest file>!'
+        # This violates the ERS but it's silly to mandate an argument that
+        # can be empty when the condition can be detected unambiguously.
+        # The ERS-specified method still works.
+        if len(target) == 1 and os.path.isfile(target[0]):
+            target.insert(0, '')	# null prefix
+        assert len(target) == 2, \
+            'Missing argument: put [prefix] filename'
         file_real_path = os.path.realpath(target[1])
 
         with open(file_real_path, 'r') as file_obj:

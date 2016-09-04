@@ -50,8 +50,9 @@ class TmNode(tm_base.TmCmd):
         """
         super().show(target, **options)
         node_coord = self.show_name
-        assert node_coord.startswith('/'), 'Illegal node coordinate'
-        api_url = "%s%s%s" % (self.url, 'node/', node_coord[1:])
+        if node_coord.startswith('/'):	# assist humans: allow an integer
+            node_coord = node_coord[1:]
+        api_url = "%s%s%s" % (self.url, 'node/', node_coord)
         data = self.http_request(api_url)
         return self.to_json(data)
 
