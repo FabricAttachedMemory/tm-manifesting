@@ -33,12 +33,16 @@ WAITING=$HOSTNAMES
 START=`date +%s`
 while [ "$WAITING" ]; do
     all_running
-    echo "Ping wait on $WAITING"
     WAITING=
+    echo -en "\nPing"
     for H in $HOSTNAMES; do	# yeah do them all each time
+	echo -n " $H"
 	ping -c1 $H >/dev/null 2>&1
-	[ $? -ne 0 ] && WAITING="$WAITING $H"
+	[ $? -ne 0 ] && WAITING="$WAITING $H" && echo -n " (no ping)"
+	echo -n ";"
     done
+    echo 
+    [ "$WAITING" ] && echo "Ping failed on $WAITING" && sleep 3
 done
 
 WAITING=$HOSTNAMES
@@ -48,19 +52,30 @@ while [ "$WAITING" ]; do
     echo -e "\n$ELAPSED seconds"
 
     all_running
-    echo "SSH wait on $WAITING"
     WAITING=
+    echo -en "\nRe-ping and test sshd for"
     for H in $HOSTNAMES; do	# yeah do them all each time
-	# I saw one drop out once.
-	echo "Re-ping and test sshd for $H..."
+	# Either kernel panic (maybe a dropped TFTP packet?) or systemd
+	# hang at "bring up network interface"
+	echo -n " $H"
 	ping -c1 $H >/dev/null 2>&1
-	[ $? -ne 0 ] && echo "$H unpingable" >&2 && WAITING="$WAITING $H" && continue
-	# First time, the timeout is about 20 seconds.  Second time is about 3.
-	# From the Google
-	(echo > /dev/tcp/$H/22) >/dev/null 2>&1
-	[ $? -ne 0 ] && WAITING="$WAITING $H"
+	if [ $? -ne 0 ]; then
+	    echo -n " (no ping)"
+	    WAITING="$WAITING $H"
+	else
+	    # From the Google.  First time, the timeout is about 20 seconds.
+	    # Second time is about 3.
+	    (echo > /dev/tcp/$H/22) >/dev/null 2>&1
+	    if [ $? -ne 0 ]; then
+		echo -n " (no ssh)"
+		WAITING="$WAITING $H"
+	    fi
+	fi
+	echo -n ";"
     done
+    [ "$WAITING" ] && echo -e "\nSSH failed on $WAITING" && sleep 5
 done
+echo
 END=`date +%s`
 let ELAPSED=$END-$START
 echo "$ELAPSED seconds total (ping + ssh)"

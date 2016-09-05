@@ -18,6 +18,8 @@ fi
 
 set -u
 
+STARTNODE=startnode.arm		# Hardcoded now; in the future, who knows?
+
 ###########################################################################
 # What's already running?
 
@@ -28,12 +30,18 @@ SCREEN=`screen -list | grep $NETNAME`
 [ "$SCREEN" ] && echo "screen is already running $SCREEN" >&2 && exit 1
 
 ###########################################################################
-# Go
+# Go.  
 
 screen -S $NETNAME -dm		# Session name, detached
 for N in $NODES; do
-	TITLE=node`printf "%02d" $N`	# Haven't got -t $TITLE to work yet
-	screen -S $NETNAME -X screen famenode.arm $N
+	TITLE=node`printf "%02d" $N`
+	screen -S $NETNAME -X screen -t $TITLE $STARTNODE $N
 done
+
+echo "Attach last node from shell: screen -r $NETNAME"
+echo "Attach nodeXX from shell:    screen -r $NETNAME -p nodeXX"
+echo "Prompt for window name:      ctl-a then '"
+echo "Navigate list of windows:    ctl-a then \""
+echo "Quit (detach):               ctl-a then d"
 
 exec waitnodes $NODES

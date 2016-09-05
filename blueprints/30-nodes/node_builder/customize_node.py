@@ -366,16 +366,18 @@ def update_status(args, message, status='building'):
         status must be one of 'building', 'ready', or 'error'
         TODO: docstr
     """
-    if 'dryrun' in args:   # when don't want to change the state of the environment.
-        if args.dryrun:
-            return
+    if getattr(args, 'dryrun', False):
+        return
     if args.verbose:    # sometimes it's for stdout, sometimes the file
         print(' - %s: %s' % (args.hostname, message))
     response = {}
     response['manifest'] = args.manifest.namespace
     response['status'] = status
     response['message'] = message
-    write_to_file(args.status_file, json.dumps(response, indent=4))
+    # Rally DE118: make it an atomic update
+    newstatus = args.status_file + '.new'
+    write_to_file(newstatus, json.dumps(response, indent=4))
+    os.replace(newstatus, args.status_file)
 
 #=============================================================================
 # ESP == EFI System Partition, where EFI wants to scan for FS0:.

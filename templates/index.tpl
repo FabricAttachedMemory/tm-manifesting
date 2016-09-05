@@ -1,6 +1,7 @@
 <!doctype html>
 <HTML>
 <HEAD><TITLE>Manifesting API 4 The Machine</TITLE>
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 </HEAD>
 
 <BODY>
