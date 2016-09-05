@@ -259,10 +259,6 @@ def build_node(manifest, node_coord):
     build_dir = os.path.join(sys_imgs, hostname)
     tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
 
-    # See setup_grub.py on client ID.  Trust me.
-    rack_prefix = node_coord.split('Enclosure')[0]
-    client_id = rack_prefix + 'EncNum' + node_coord.split('EncNum')[1]
-
     packages = manifest.thedict['packages']
     if packages:
         packages = ','.join(packages)
@@ -277,7 +273,7 @@ def build_node(manifest, node_coord):
 
     build_args = {
         'hostname':     hostname,
-        'client_id':    client_id,
+        'node_coord':   node_coord,
         'manifest':     manifest,
         'repo_mirror':  BP.config['L4TM_MIRROR'],
         'repo_release': BP.config['L4TM_RELEASE'],

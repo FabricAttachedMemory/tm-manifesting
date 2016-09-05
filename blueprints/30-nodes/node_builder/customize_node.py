@@ -105,7 +105,7 @@ def cleanup_sources_list(args):
 
         content = [
             '# Created by TMMS for %s on %s' % (args.hostname, time.ctime()),
-            '# a.k.a. %s' % args.client_id,
+            '# a.k.a. %s' % args.node_coord,
             'deb %s %s %s' % (
                 args.repo_mirror, args.repo_release, ' '.join(args.repo_areas))
         ]
@@ -121,14 +121,14 @@ def set_client_id(args):
         Augment dhclient configuration file
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
-    :param 'client_id': [str] hostname to be used for given system image.
+    :param 'node_coord': [str] full machine coordinate used as client ID.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     update_status(args, 'Set ClientID for dhcpc')
     dhclient_conf = '%s/etc/dhcp/dhclient.conf' % args.new_fs_dir
     try:
         with open(dhclient_conf, 'a') as f:
-            f.write('\nsend dhcp-client-identifier "%s";\n' % args.client_id)
+            f.write('\nsend dhcp-client-identifier "%s";\n' % args.node_coord)
     except Exception as err:
         raise RuntimeError('Cannot set DHCP client ID: %s' % str(err))
 
@@ -648,8 +648,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--hostname',
                         help='Hostname to use for the FS image')
-    parser.add_argument('--client_id',
-                        help='DHCP client ID in full machine coordinates."')
+    parser.add_argument('--node_coord',
+                        help='Full machine coordinate of this node."')
     parser.add_argument('--manifest',
                         help='Manifest namespace.')
     parser.add_argument('--golden_tar',
