@@ -99,6 +99,7 @@ PFLASH="-drive if=pflash,format=raw,file=$EFIROM,readonly \
 # by default.  Once inside, "mount -oremount,size=10000M rootfs /" would
 # bump it.  If I want to reach 40 nodes I should keep this sane.
 
+CONSOLE="-serial stdio -nographic"
 CONSOLE="-serial stdio"
 CONSOLE="-nographic"
 
