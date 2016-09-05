@@ -100,9 +100,11 @@ class BindNodeTest(unittest.TestCase):
         self.assertTrue(self.node_status_fields(status),
             'Illegal status while building image: %s' % status['status'])
 
-        # Don't know why interpolation doesn't work in-situ
+        # Don't know why interpolation doesn't work in-situ.
         msg = '%s: expected status "building", got "%s" (%s)' % (
             node, status['status'], status['message'])
+
+        # This test can fail if the server is run --debug; don't do dat!
         self.assertTrue(status['status'] == 'building', msg)
 
         while status['status'] == 'building':
