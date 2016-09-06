@@ -108,7 +108,8 @@ def get_all_nodes():
     """
     response = jsonify({'nodes': list(BP.node_coords)})
     response.status_code = 200
-    BP.logging.info(response.response[0].decode())
+
+    BP.logging(response)    #utils.logging.logger will handle log Level
     return response
 
 
@@ -123,12 +124,10 @@ def get_all_bindings():
         response = jsonify({
             'No Content': 'There are no manifests associated with any nodes.'})
         response.status_code = 204
-        BP.logging.error(response.response[0].decode())
-        return response
-
-    response = jsonify({'mappings': nodes_info})
-    response.status_code = 200
-    BP.logging.info(response.response[0].decode())
+    else:
+        response = jsonify({'mappings': nodes_info})
+        response.status_code = 200
+    BP.logging(response)    #utils.logging.logger will handle log Level
     return response
 
 
@@ -143,15 +142,15 @@ def get_node_bind_info(node_coord=None):
     node_coord = '/' + node_coord
     if not BP.nodes[node_coord]:
         BP.logging.error('The specified node does not exist: %s' % (node_coord))
-        return make_response('The specified node does not exist.', 404)
-
-    result = get_node_status(node_coord)
-    if result is None:
-        BP.logging.info('No Content: %s' % (node_coord))
-        return make_response('No Content', 204)
-
-    BP.logging.info('%s' % (jsonify(result)))
-    return make_response(jsonify(result), 200)
+        response = make_response('The specified node does not exist.', 404)
+    else:
+        result = get_node_status(node_coord)
+        if result is None:
+            response = make_response('No Content', 204)
+        else:
+            response = make_response(jsonify(result), 200)
+    BP.logging(response)    #utils.logging.logger will handle log Level
+    return response
 
 
 def node_coord2image_dir(node_coord):
@@ -176,20 +175,20 @@ def delete_node_binding(node_coord):
     # Two rules invoke Postel's Law of liberal reception.  Either way,
     # we need to add leading /.
     node_coord = '/' + node_coord
+    response = None
     if node_coord not in BP.node_coords:
-        BP.logging.error('Failed to delete %s! No such node!' % (node_coord))
-        return make_response('The specified node does not exist.', 404)
+        response = make_response('The specified node does not exist.', 404)
+    else:
+        try:
+            node_image_dir = node_coord2image_dir(node_coord)
+            for node_file in glob(node_image_dir + '/*'):
+                os.remove(node_file)
+            response = make_response('Successful cleanup.', 204)
+        except OSError as err:
+            respoonse = make_response('Failed to delete binding: %s' % err, 500)
 
-    try:
-        node_image_dir = node_coord2image_dir(node_coord)
-        for node_file in glob(node_image_dir + '/*'):
-            os.remove(node_file)
-    except OSError as err:
-        BP.logging.error('Failed to delete binding: %s' % (err))
-        return make_response('Failed to delete binding: %s' % err, 500)
-
-    BP.logging.info('Successful node delete: %s' % (node_coord))
-    return make_response('Successful cleanup.', 204)
+    BP.logging(response)    #utils.logging.logger will handle log Level
+    return response
 
 ####################### API (PUT) ###############################
 

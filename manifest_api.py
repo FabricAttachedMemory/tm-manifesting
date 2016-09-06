@@ -28,6 +28,7 @@ from tm_librarian.tmconfig import TMConfig
 try:
     from tmms.setup import parse_cmdline_args
     from tmms.utils.utils import piper, create_loopback_files
+    from tmms.utils.logging import Logger
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
     from tmms.utils.daemonize3 import Daemon
@@ -90,7 +91,8 @@ logging.basicConfig(filename=mainapp.config['LOGFILE'], format='%(asctime)s :: %
                     level=logging.INFO)
 
 #mainapp.config['logging'] = logging
-mainapp.config['logging'] = logging.getLogger('manifest_api')
+#mainapp.config['logging'] = logging.getLogger('manifest_api')
+mainapp.config['logging'] = Logger(mainapp.config['LOGFILE'], 'manifest_api')
 
 ###########################################################################
 # Must come after mainapp setup because Mobius
@@ -108,7 +110,6 @@ for p in paths:
         BP.BP.DEBUG = mainapp.config['DEBUG']      #
         BP.register(mainapp)
         ngood += 1
-        mainapp.config['logging'].info('Loading blueprint "%s"' % (p))
     except ImportError as e:
         mainapp.config['logging'].error('No blueprint at %s' % p)
         print('No blueprint at %s' % p, file=sys.stderr)
