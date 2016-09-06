@@ -11,15 +11,41 @@ N_WANTED=$#
 
 set -u
 
-function all_running() {	# Optional $1 means wait
+LOG=/tmp/waitnodes.$NETNAME.log
+echo -e "\n-----------------------\nSTARTING NEW RUN AT `date`" >> $LOG
+
+###########################################################################
+
+function log() {
+	echo -e "$@"
+	echo -e "$@" >> $LOG
+}
+
+###########################################################################
+
+function all_running() {	# Optional $1 means wait, else die
     while true; do
 	N_RUNNING=`pgrep -a qemu-system-aar | grep $NETNAME | wc -l`
 	let DEAD=$N_WANTED-$N_RUNNING
 	[ $DEAD -eq 0 ] && return
-	[ $# -eq 0 ] && echo "$DEAD qemu(s) are not running" >&2 && exit 1
-	echo "Waiting for $DEAD qemu(s) to start..."
+	[ $# -eq 0 ] && log "$DEAD qemu(s) are not running" >&2 && exit 1
+	log "Waiting for $DEAD qemu(s) to start..."
 	sleep 1
     done
+}
+
+###########################################################################
+# Pretty-print the time elapsed.  Reset ELAPSED_START as needed.
+
+ELAPSED_START=`date +%s`
+
+function elapsed() {
+    END=`date +%s`
+    let E=$END-$ELAPSED_START
+    let H=$E/3600
+    let M=$E/60
+    let S=$E%60
+    printf "%2d:%02d:%02d" $H $M $S
 }
 
 ###########################################################################
@@ -42,14 +68,14 @@ while [ "$WAITING" ]; do
 	echo -n ";"
     done
     echo 
-    [ "$WAITING" ] && echo "Ping failed on $WAITING" && sleep 3
+    [ "$WAITING" ] && log "Ping failed on $WAITING" && sleep 3
 done
 
 WAITING=$HOSTNAMES
+LAST_WAITING=
+LAST_COUNT=0
 while [ "$WAITING" ]; do
-    END=`date +%s`
-    let ELAPSED=$END-$START
-    echo -e "\n$ELAPSED seconds"
+    log "\n`elapsed` elapsed, count = $LAST_COUNT"
 
     all_running
     WAITING=
@@ -73,11 +99,22 @@ while [ "$WAITING" ]; do
 	fi
 	echo -n ";"
     done
-    [ "$WAITING" ] && echo -e "\nSSH failed on $WAITING" && sleep 5
+    if [ "$WAITING" ]; then
+	log "\nSSH failed on $WAITING"
+	sleep 10	# Combine with count to give it a minute
+	if [ "$WAITING" != "$LAST_WAITING" ]; then
+	    LAST_WAITING="$WAITING"
+	    LAST_COUNT=0
+	else
+	    let LAST_COUNT=$LAST_COUNT+1
+	    if [ $LAST_COUNT -gt 5 ]; then
+	    	log "\nSTUCK ON $WAITING"
+		WAITING=	# exit the loop
+		break		# really really
+	    fi
+	fi
+    fi
 done
-echo
-END=`date +%s`
-let ELAPSED=$END-$START
-echo "$ELAPSED seconds total (ping + ssh)"
+log "\n`elapsed` total (ping + ssh)"
 
 exit 0
