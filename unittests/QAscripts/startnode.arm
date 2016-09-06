@@ -112,7 +112,7 @@ ZBRIDGE=
 if [ "$FAM" ]; then
 
     FAME="-object \
-          memory-backend-file,size=256G,mem-path=$FAM,id=FAM,share=on \
+          memory-backend-file,size=$FAMSIZE,mem-path=$FAM,id=FAM,share=on \
           -device ivshmem,x-memdev=FAM"
 
     ZBRIDGE="-device ivshmem,shm=z${DECIMAL}csr,size=1 \
