@@ -30,7 +30,7 @@ function all_running() {	# Optional $1 means wait, else die
 	[ $DEAD -eq 0 ] && return
 	[ $# -eq 0 ] && log "$DEAD qemu(s) are not running" >&2 && exit 1
 	log "Waiting for $DEAD qemu(s) to start..."
-	sleep 1
+	sleep 2
     done
 }
 
@@ -49,37 +49,56 @@ function elapsed() {
 }
 
 ###########################################################################
+# Common function to eventually give up.  Count and sleeps combine for
+# a minute per unique WAITLIST.
+
+LAST_COUNT=0
+LAST_WAITLIST=
+
+function waitlimit() {	# $1: topic; $2: current wait list
+    log "`elapsed` elapsed for $1, count = $LAST_COUNT; waiting on $2"
+    if [ -z "$2" -o "$2" != "$LAST_WAITLIST" ]; then
+	LAST_WAITLIST="$2"
+	LAST_COUNT=0
+	[ "$2" ] && sleep 10
+	return
+    fi
+    let LAST_COUNT=$LAST_COUNT+1
+    [ $LAST_COUNT -le 5 ] && sleep 10 && return
+    log "\n$1 STUCK ON $2\n\n`elapsed` total ($1)"
+    exit 1
+}
+
+###########################################################################
 # Main
 
 all_running wait	# settling time if called from startnodes
 
 HOSTNAMES=`for N in $NODES; do printf "node%02d " $N; done`
 
-WAITING=$HOSTNAMES
-START=`date +%s`
-while [ "$WAITING" ]; do
+WAITLIST=$HOSTNAMES
+LAST_WAITLIST=
+while [ "$WAITLIST" ]; do
     all_running
-    WAITING=
+    WAITLIST=
     echo -en "\nPing"
     for H in $HOSTNAMES; do	# yeah do them all each time
 	echo -n " $H"
 	ping -c1 $H >/dev/null 2>&1
-	[ $? -ne 0 ] && WAITING="$WAITING $H" && echo -n " (no ping)"
+	[ $? -ne 0 ] && WAITLIST="$WAITLIST $H" && echo -n " (no ping)"
 	echo -n ";"
     done
-    echo 
-    [ "$WAITING" ] && log "Ping failed on $WAITING" && sleep 3
+    echo; echo
+    waitlimit "Ping" "$WAITLIST"
 done
 
-WAITING=$HOSTNAMES
-LAST_WAITING=
-LAST_COUNT=0
-while [ "$WAITING" ]; do
-    log "\n`elapsed` elapsed, count = $LAST_COUNT"
+WAITLIST=$HOSTNAMES
+LAST_WAITLIST=
+while [ "$WAITLIST" ]; do
 
     all_running
-    WAITING=
-    echo -en "\nRe-ping and test sshd for"
+    WAITLIST=
+    echo -en "\nRe-ping and test sshd to"
     for H in $HOSTNAMES; do	# yeah do them all each time
 	# Either kernel panic (maybe a dropped TFTP packet?) or systemd
 	# hang at "bring up network interface"
@@ -87,34 +106,20 @@ while [ "$WAITING" ]; do
 	ping -c1 $H >/dev/null 2>&1
 	if [ $? -ne 0 ]; then
 	    echo -n " (no ping)"
-	    WAITING="$WAITING $H"
+	    WAITLIST="$WAITLIST $H"
 	else
 	    # From the Google.  First time, the timeout is about 20 seconds.
-	    # Second time is about 3.
+	    # Second time it's about 3.
 	    (echo > /dev/tcp/$H/22) >/dev/null 2>&1
 	    if [ $? -ne 0 ]; then
 		echo -n " (no ssh)"
-		WAITING="$WAITING $H"
+		WAITLIST="$WAITLIST $H"
 	    fi
 	fi
 	echo -n ";"
     done
-    if [ "$WAITING" ]; then
-	log "\nSSH failed on $WAITING"
-	sleep 10	# Combine with count to give it a minute
-	if [ "$WAITING" != "$LAST_WAITING" ]; then
-	    LAST_WAITING="$WAITING"
-	    LAST_COUNT=0
-	else
-	    let LAST_COUNT=$LAST_COUNT+1
-	    if [ $LAST_COUNT -gt 5 ]; then
-	    	log "\nSTUCK ON $WAITING"
-		WAITING=	# exit the loop
-		break		# really really
-	    fi
-	fi
-    fi
+    echo; echo
+    waitlimit "ping + ssh" "$WAITLIST"
 done
-log "\n`elapsed` total (ping + ssh)"
 
 exit 0
