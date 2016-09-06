@@ -3,3 +3,12 @@
 
 %:
 	dh $@ --with=python2,python3
+
+override_dh_auto_clean:
+	ls
+
+override_dh_auto_install:
+	ls
+
+override_dh_auto_build:
+	ls

@@ -106,7 +106,7 @@ def get_all_nodes():
     """
         List all nodes coordinates known to the server.
     """
-    response = jsonify({'nodes': list(BP.node_coords)})
+    response = jsonify({'nodes': list(BP.node_coords)})	# already sorted
     response.status_code = 200
 
     BP.logging(response)    #utils.logging.logger will handle log Level
@@ -138,8 +138,22 @@ def get_node_bind_info(node_coord=None):
         List status json of the manifest bound to the node.
     """
     # Two rules invoke Postel's Law of liberal reception.  Either way,
-    # we need to add leading /.
-    node_coord = '/' + node_coord
+    # we need to add leading /.  Assist humans: allow an integer 1-40.
+    try:
+        nodenum = int(node_coord)
+        try:	# Range check and sparse check
+            # Numbers and assumptions true for FRD.  FIXME: move into TMConfig
+            # and export a "nodenum" property
+            assert 1 <= nodenum <= 40, 'nodenum out of range 1-40'
+            node = ((nodenum - 1) % 10) + 1
+            enc = ((nodenum - 1) // 10) + 1
+            rack1 = BP.config['tmconfig'].racks[1]
+            node_coord = rack1.enclosures[enc].nodes[node].coordinate
+            assert node_coord is not None, 'empty slot in a sparse rack'
+        except AssertionError as e:
+            return make_response('Node %d does not exist.' % nodenum, 404)
+    except ValueError:	# assume it's a coordinate path
+        node_coord = '/' + node_coord
     if not BP.nodes[node_coord]:
         BP.logging.error('The specified node does not exist: %s' % (node_coord))
         response = make_response('The specified node does not exist.', 404)
@@ -260,10 +274,6 @@ def build_node(manifest, node_coord):
     build_dir = os.path.join(sys_imgs, hostname)
     tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
 
-    # See setup_grub.py on client ID.  Trust me.
-    rack_prefix = node_coord.split('Enclosure')[0]
-    client_id = rack_prefix + 'EncNum' + node_coord.split('EncNum')[1]
-
     packages = manifest.thedict['packages']
     if packages:
         packages = ','.join(packages)
@@ -274,16 +284,18 @@ def build_node(manifest, node_coord):
         tasks = ','.join(tasks)
     else:
         tasks = None     # sentinel for following loop
+    l4tm_pubkey = manifest.thedict.get('l4tm_pubkey', None)
 
     build_args = {
         'hostname':     hostname,
-        'client_id':    client_id,
+        'node_coord':   node_coord,
         'manifest':     manifest,
         'repo_mirror':  BP.config['L4TM_MIRROR'],
         'repo_release': BP.config['L4TM_RELEASE'],
         'repo_areas':   BP.config['L4TM_AREAS'],
         'packages':     packages,
         'tasks':        tasks,
+        'l4tm_pubkey':  l4tm_pubkey,
         'golden_tar':   golden_tar,
         'build_dir':    build_dir,
         'tftp_dir':     tftp_dir,
@@ -426,7 +438,7 @@ def register(mainapp):  # take what you like and leave the rest
         BP.nodes = BP.config['tmconfig'].allNodes
     except Exception:
         BP.nodes = BP.config['tmconfig'].nodes
-    BP.node_coords = frozenset([node.coordinate for node in BP.nodes])
+    BP.node_coords = list([node.coordinate for node in BP.nodes])  # ordered
     BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
     BP.logging = mainapp.config['logging']

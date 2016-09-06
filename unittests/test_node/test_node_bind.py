@@ -27,9 +27,10 @@ class BindNodeTest(unittest.TestCase):
         """
         """
         cls.tmcmd = TMCMD.tmnode
-        cls.tmconfig = TMConfig('/etc/tmconfig')
+        cls.tmconfig = TMConfig('/etc/tmconfig')    # FIXME: observe /etc/tmms
         try:
-            cls.coords = sorted([node.coordinate for node in cls.tmconfig.nodes])
+            cls.coords = list(  # ordered by node_id
+                [node.coordinate for node in cls.tmconfig.allNodes])
         except Exception:
             cls.coords = sorted([node.coordinate for node in cls.tmconfig.allNodes])
 
@@ -60,7 +61,7 @@ class BindNodeTest(unittest.TestCase):
         self.assertTrue('nodes' in output['200'],
                         'listall does not comply with ERS. No "nodes" key.')
 
-        self.assertTrue(sorted(self.coords) == sorted(output['200']['nodes']),
+        self.assertTrue(set(self.coords) == set(output['200']['nodes']),
                         'listall does not comply with ERS. Not all coords match tmconfig.')
 
 
@@ -100,9 +101,11 @@ class BindNodeTest(unittest.TestCase):
         self.assertTrue(self.node_status_fields(status),
             'Illegal status while building image: %s' % status['status'])
 
-        # Don't know why interpolation doesn't work in-situ
+        # Don't know why interpolation doesn't work in-situ.
         msg = '%s: expected status "building", got "%s" (%s)' % (
             node, status['status'], status['message'])
+
+        # This test can fail if the server is run --debug; don't do dat!
         self.assertTrue(status['status'] == 'building', msg)
 
         while status['status'] == 'building':

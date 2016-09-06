@@ -46,7 +46,7 @@ class CleanupSourcesListTest(unittest.TestCase):
 
         args = {'new_fs_dir' : self.fs_img,
                 'hostname' : 'unittest_hostname',
-                'client_id' : 'unittest_clientID',
+                'node_coord' : 'unittest_node_coordinate',
                 'repo_mirror' : 'unittest/repo/url',
                 'repo_release' : 'unittest_release',
                 'repo_areas' : ['test_area_1', 'test_area_2'],
@@ -66,7 +66,7 @@ class CleanupSourcesListTest(unittest.TestCase):
             sources_data = file_obj.read()
 
         self.assertTrue(args.hostname in sources_data, 'Hostname not in sources.list.')
-        self.assertTrue(args.client_id in sources_data, 'ClientID not in sources.list.')
+        self.assertTrue(args.node_coord in sources_data, 'node_coord not in sources.list.')
         self.assertTrue(args.repo_mirror in sources_data, 'Repo mirror not in sources.list.')
         self.assertTrue(args.repo_release in sources_data, 'Repo release not in sources.list.')
         self.assertTrue(' '.join(args.repo_areas) in sources_data, 'Repo areas not in sources.list.')

@@ -37,8 +37,6 @@ from configs.build_config import ManifestingConfiguration
 from utils.utils import basepath, piper
 from utils.file_utils import make_symlink, make_dir
 
-_maxnodes = 40  # Revised FRD for 2016
-
 ###########################################################################
 # Templates for config files
 
@@ -51,7 +49,10 @@ _maxnodes = 40  # Revised FRD for 2016
 
 _grub_cfg_template = '''
 # Command/data prefix is (tftp)/grub; module prefix is (tftp)/grub/arm64-efi
-# so "insmod videoinfo" just works.
+# so "insmod videoinfo" just works.  Both TMAS and FAME have a countdown
+# multiplier of about ten, and there's not really any menu choices, so
+
+set timeout=1
 
 set gfxmode=auto
 set gfxmodepayload=text
@@ -76,8 +77,10 @@ configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 
 _grub_menu_template = '''
 set default=0
+# FAME and TMAS jack this X10.  Real HW will not care.
+set timeout=1
+
 set menu_color_highlight=white/brown
-set timeout=10
 
 menuentry '{hostname} L4TM ARM64' {{
     linux (tftp){images_dir}/{hostname}.vmlinuz.gz console=ttyAMA0 acpi=force rw
@@ -119,7 +122,7 @@ dhcp-script=/bin/echo		# "add|del" MAC IP hostname
 dhcp-range={first_addr},static   # sets IPV4 mode, but only from hostsfile
 dhcp-match=TMAS-EFI,option:client-arch,11		# EFI
 dhcp-hostsfile=/var/lib/tmms/dnsmasq/{pxe_interface}.hostsfile
-addn-hosts=/var/lib/tmms/dnsmasq/{pxe_interface}.morehosts		# DNS only
+addn-hosts=/var/lib/tmms/dnsmasq/{pxe_interface}.dnslookup
 dhcp-no-override
 dhcp-boot=/grub/grubnetaa64.efi
 # 512-byte blocks.  TM SFW does ask but it's not done automatically
@@ -215,7 +218,7 @@ class TMgrub(object):
 
     @property
     def hostnames(self):
-        return ('node%02d' % n for n in range(1, 41))   # generator
+        return list([node.hostname for node in self.tmconfig.allNodes])
 
     def evaluate_TMDOMAIN(self):
         '''
@@ -246,8 +249,8 @@ class TMgrub(object):
 
         self.hostIPs = []
         if not elems:           # No extension == DNS lookup for all nodes
-            for num in range(1, _max_nodes + 1):
-                FQDN = 'node%02d.%s' % (num, self.tmdomain)
+            for node in  self.tmconfig.allNodes:
+                FQDN = '%s.%s' % (node.hostname, self.tmdomain)
                 try:    # dns.resolver is weird, even with raise_on_no_answer
                     answer = RES.query(FQDN, 'A')
                     assert len(answer) == 1, '"%s" has CNAMES' % FQDN
@@ -299,8 +302,8 @@ class TMgrub(object):
             assert self.network == kludge_network, \
                 'Networking mismatch between NIC and TMDOMAIN'
         if not self.hostIPs:    # enumerator properly skips Sun broadcast
-            self.hostIPs = [IPAddress(first_addr.value + i)
-                                for i in range(_maxnodes)]
+            self.hostIPs = [IPAddress(first_addr.value + (node.node_id - 1))
+                                for node in self.tmconfig.allNodes]
             assert all(map(lambda a: a in self.network, self.hostIPs)), \
                 'Auto-generated IP address extend beyond network'
         self.first_addr = str(self.hostIPs[0])
@@ -308,7 +311,7 @@ class TMgrub(object):
     def configure_dnsmasq(self, prepath):
         # Try to carry on in the face of errors.  dnsmasq may not start but
         # manifest_api should still run.
-        self.morehosts = '# /etc/tmms[PXE_INTERFACE] was invalid and so am I'
+        self.torms = None
         self.addr = None        # Might become a string
         self.network = None     # WILL become an IPNetwork object
         try:
@@ -325,15 +328,11 @@ class TMgrub(object):
                 # Check the __doc__ string for this class.  It's AWESOME!
                 self.network = IPNetwork(
                     self.addr + '/' + ifaceaddr['netmask'])
-                self.morehosts = '%s torms' % self.addr
+                self.torms = str(self.addr)
         except Exception as e:
             print(str(e))
 
         self.evaluate_TMDOMAIN()
-
-        assert len(self.hostIPs) == _maxnodes, \
-            'TMDOMAIN form yielded %d IP addresses, not %d' % (
-                len(self.hostIPs), _maxnodes)
 
         size = os.stat(self.tftp_grub_efi).st_size
         self.boot_file_size_512_blocks = (size // 512) + 1
@@ -343,26 +342,37 @@ class TMgrub(object):
         with open(prepath + '.conf', 'w') as f:
             f.write(conf)
 
-        # AA programs MFW with "rack prefix".  MFW appends EncNum/X/Node/Y.
-        # The rack enumerator and "Enclosure" locator are omitted.  Maybe.
-        nodefmt = '%s/EncNum/%%d/Node/%%d' % self.tmconfig.racks[1].coordinate
-        self.coords = [nodefmt % ((i // 10) + 1, (i % 10) + 1)
-                       for i in range(_maxnodes)]
+        # Build parallel lists of node coordinates and FAME MACs for DHCP.
+        # AA programs MFW with "rack/enc prefix"; MFW appends EncNum/X/Node/Y.
         # TM SFW will not run under QEMU/FAME.   Fall back to MAC-based
         # assignments (since we own the MACs in this case).
-        self.MACs = ['52:54:48:50:45:%02d' % (i + 1)
-                       for i in range(_maxnodes)]
+        self.FAMEMACs = ['52:54:48:50:45:%02d' % node.node_id
+                         for node in self.tmconfig.allNodes]
+        self.coords = [node.coordinate for node in self.tmconfig.allNodes]
         # MAC and ClientID must be on the same line or else dnsmasq bitches
         # about duplicate IPs and skips the second set.
-        zipped = zip(self.MACs, self.coords, self.hostIPs, self.hostnames)
+        assert len(self.hostIPs) == len(self.tmconfig.allNodes), \
+            'TMDOMAIN form yielded %d IP addresses, not %d' % (
+                len(self.hostIPs), len(self.tmconfig.allNodes))
+
+        zipped = zip(self.FAMEMACs,
+                     self.coords,
+                     self.hostIPs,
+                     self.hostnames)
         with open(prepath + '.hostsfile', 'w') as f:
             f.write('# FAME/QEMU MAC,ClientID,IP address, hostname\n')
             for h in zipped:
                 f.write('%s,id:%s,%s,%s\n' % h)
 
-        # Static assignments
-        with open(prepath + '.morehosts', 'w') as f:
-            f.write(self.morehosts)
+        # Static assignments.  First and foremost torms, but without the rest
+        # dnsmasq only resolves running (leased) nodes.
+        zipped = zip(self.hostIPs, self.hostnames)
+        with open(prepath + '.dnslookup', 'w') as f:
+            f.write('# Auto-generated by {user} on {timestamp}\n'.format(
+                 **vars(self)))
+            f.write('%s\ttorms\n' % self.torms)
+            for h in zipped:
+                f.write('%s\t%s\n' % h)
 
     def configure_iptables(self, prepath):
         '''Create the meat of "iptables -A" or "iptables -D".'''
