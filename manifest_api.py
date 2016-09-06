@@ -5,6 +5,8 @@
 
 import argparse
 import glob
+import logging
+import logging.config
 import netifaces as NIF
 import os
 import sys
@@ -26,6 +28,7 @@ from tm_librarian.tmconfig import TMConfig
 try:
     from tmms.setup import parse_cmdline_args
     from tmms.utils.utils import piper, create_loopback_files
+    from tmms.utils.logging import Logger
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
     from tmms.utils.daemonize3 import Daemon
@@ -77,9 +80,19 @@ mainapp.config['API_VERSION'] = 1.0
 mainapp.config['url_prefix'] = '/manifesting'
 mainapp.config['VERBOSE'] = \
     cmdline_args.verbose if sys.stdin.isatty() else 0
+mainapp.config['auto-update'] = cmdline_args.auto_update
 mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
 mainapp.config['DRYRUN'] = cmdline_args.dry_run
 mainapp.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0     # For node ESP files
+
+mainapp.config['LOGFILE'] = '/var/log/tmms.log'
+
+logging.basicConfig(filename=mainapp.config['LOGFILE'], format='%(asctime)s :: %(levelname)s <%(name)s>:: %(message)s',
+                    level=logging.INFO)
+
+#mainapp.config['logging'] = logging
+#mainapp.config['logging'] = logging.getLogger('manifest_api')
+mainapp.config['logging'] = Logger(mainapp.config['LOGFILE'], 'manifest_api')
 
 ###########################################################################
 # Must come after mainapp setup because Mobius
@@ -98,12 +111,16 @@ for p in paths:
         BP.register(mainapp)
         ngood += 1
     except ImportError as e:
+        mainapp.config['logging'].error('No blueprint at %s' % p)
         print('No blueprint at %s' % p, file=sys.stderr)
-        set_trace()
+        if mainapp.config['DEBUG']:
+            set_trace()
         pass
     except AttributeError as e:
+        mainapp.config['logging'].error('\nblueprint %s has no register()' % p)
         print('\nblueprint %s has no register()' % p, file=sys.stderr)
     except Exception as e:
+        mainapp.config['logging'].error('\nblueprint %s failed:\n%s' % (p, e))
         print('\nblueprint %s failed:\n%s' % (p, e), file=sys.stderr)
 
 if ngood != len(paths):
@@ -228,6 +245,7 @@ mainapp.config['rules'] = sorted('%s %s' % (rule.rule, rule.methods) for
 
 if __name__ == '__main__':
     for rule in mainapp.config['rules']:
+        mainapp.config['logging'].info(rule)
         print(rule)
 
     # http://flask.pocoo.org/docs/0.10/api/#application-object; options at
@@ -241,7 +259,7 @@ if __name__ == '__main__':
     dnsmasq_proc = start_dnsmasq(mainapp.config)
     mainapp.run(
         debug=mainapp.config['DEBUG'],
-        use_reloader=mainapp.config['DEBUG'],
+        use_reloader=mainapp.config['auto-update'],
         host=mainapp.config['HOST'],
         port=mainapp.config['PORT'],
         threaded=False)

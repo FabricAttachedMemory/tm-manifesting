@@ -92,7 +92,9 @@ def listall():
     status_code = 200
     if not all_manifests:
         status_code = 204
-    return make_response(msg, status_code)
+    response = make_response(msg, status_code)
+    BP.logging(response)    # utils.logging.logger will handle logging Level
+    return response
 
 
 # @BP.route('/api/%s/' % _ERS_element) MAKES DUPLICATE RULE???  unittests pass
@@ -106,15 +108,20 @@ def show_manifest_json(manname='/'):
     :return: json string with the full contents of the manifest,
             404 status code if manifest was not found.
     """
+    response = None
     if manname.endswith('/'):
-        return list_manifests_by_prefix(manname.lstrip('/'))
+        response = list_manifests_by_prefix(manname.lstrip('/'))
+    else:
+        found_manifest = _lookup(manname)
 
-    found_manifest = _lookup(manname)
+        response = None
+        if not found_manifest:
+            response = make_response('The specified manifest does not exist.', 404)
+        else:
+            response = make_response(jsonify(found_manifest.thedict), 200)
 
-    if not found_manifest:
-        return make_response('The specified manifest does not exist.', 404)
-
-    return make_response(jsonify(found_manifest.thedict), 200)
+    BP.logging(response)    # utils.logging.logger will handle logging Level
+    return response
 
 
 def list_manifests_by_prefix(prefix=None):
@@ -144,6 +151,7 @@ def list_manifests_by_prefix(prefix=None):
     else:
         response = make_response(jsonify(result), 200)
 
+    BP.logging(response)    # utils.logging.logger will handle logging Level
     return response
 
 # Must have a string greater or equal to 1. Thats the RULE for Flask's rules
@@ -172,14 +180,17 @@ def api_upload(prefix=''):
 
         if BP.config['DRYRUN']:
             _data[prefix] = 'dry-run'
+            BP.logging(response)    # utils.logging.logger will handle logging Level
             return response
         else:
             manifest = ManifestDestiny(prefix, '', contentstr)
         response = manifest.response
 
     except Exception as e:
+        BP.logging.error('Manifest upload failed: %s' % (e))
         response = make_response('Upload failed: %s' % str(e), 422)
 
+    BP.logging(response)    # utils.logging.logger will handle logging Level
     _load_data()
     return response
 
@@ -198,17 +209,18 @@ def delete_manifest(manname=None):
     response = make_response('The specified manifest has been deleted.', 204)
 
     if not found_manifest:
-        return make_response('The specified manifest does not exist.', 404)
+        response = make_response('The specified manifest does not exist.', 404)
+    else:
+        manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + manname
 
-    manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + manname
+        try:
+            if not BP.config['DRYRUN']:
+                os.remove(manifest_server_path)
+                # TODO: cleanout prefix folders of the manifests if it is empty!
+        except EnvironmentError as err:
+            response = make_response('Failed to remove requested manifest!', 500)
 
-    try:
-        if not BP.config['DRYRUN']:
-            os.remove(manifest_server_path)
-            # TODO: cleanout prefix folders of the manifests if it is empty!
-    except EnvironmentError:
-        response = make_response('Failed to remove requested manifest!', 500)
-
+    BP.logging(response)    # utils.logging.logger will handle logging Level
     _load_data()
     return response
 
@@ -356,5 +368,9 @@ def register(mainapp):  # take what you like and leave the rest
     BP.lookup = _lookup
     BP.get_all = get_all
     mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+
+    BP.logging = BP.config['logging']
+    BP.logging.name = '99-manifests_BP'
+
     BP.UPLOADS = BP.config['MANIFEST_UPLOADS']
     _load_data()

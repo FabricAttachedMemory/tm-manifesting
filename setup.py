@@ -71,6 +71,10 @@ def parse_cmdline_args(extra_args_msg):
         default=config)
 
     parser.add_argument(
+        '--auto-update',
+        help='Let flask serve auto restart on code change',
+        action='store_true')
+    parser.add_argument(
         '-D', '--daemon-start',
         help='Run as a daemon process.',
         action='store_true')
