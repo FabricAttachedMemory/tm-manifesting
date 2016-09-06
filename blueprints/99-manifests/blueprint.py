@@ -121,6 +121,7 @@ def show_manifest_json(manname='/'):
             response = make_response(jsonify(found_manifest.thedict), 200)
 
     BP.logging(response)    # utils.logging.logger will handle logging Level
+    return response
 
 
 def list_manifests_by_prefix(prefix=None):

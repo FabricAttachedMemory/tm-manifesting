@@ -75,8 +75,6 @@ class Logger(object):
         if isinstance(msg, str):
             level(msg)
 
-    def __repr__(self):
-        return 'what'
 
     # Behave like a regular logging.info, logging.error and etc
     def info(self, msg):
