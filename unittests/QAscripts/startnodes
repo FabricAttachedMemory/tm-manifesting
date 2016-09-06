@@ -44,8 +44,7 @@ for N in $NODES; do
 	sleep 2		# ...to allow for multiple containers on the SD.
 done
 echo
-echo "Attach last node from shell: screen -r $NETNAME"
-echo "Attach nodeXX from shell:    screen -r $NETNAME -p nodeXX"
+echo "Attach nodeXX from shell:    attachnode XX"
 echo "Prompt for window name:      ctl-a then '"
 echo "Navigate list of windows:    ctl-a then \""
 echo "Quit (detach):               ctl-a then d"
