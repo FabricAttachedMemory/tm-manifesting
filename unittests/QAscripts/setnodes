@@ -29,7 +29,7 @@ fi
 MANIFEST=$1
 
 # Qualify the $MANIFEST
-tm-manifest get $MANIFEST | jq -r '."200".status' | grep -v null
+tm-manifest get $MANIFEST | jq -r '."200"' >/dev/null
 [ $? -ne 0 ] && BAD="${BAD}\nNo such manifest $MANIFEST"
     
 [ "$BAD" ] && echo -e "$BAD" >&2 && exit 1
@@ -40,9 +40,22 @@ IMAGES=$MANIFESTING_ROOT/tftp/images
 [ ! -d "$IMAGES" ] && echo "Cannot find $IMAGES" >&2 && exit 1
 
 ###########################################################################
-# Start them all
+# Pretty-print the time elapsed.  Reset ELAPSED_START as needed.
 
-START=`date +%s`
+ELAPSED_START=`date +%s`
+
+function elapsed() {
+    END=`date +%s`
+    let E=$END-$ELAPSED_START
+    let H=$E/3600
+    let M=$E/60
+    let S=$E%60
+    printf "%2d:%02d:%02d" $H $M $S
+}
+
+###########################################################################
+# Main - start them all
+
 NODECOUNT=0
 for N in $NODES; do
 	echo $N
@@ -50,27 +63,15 @@ for N in $NODES; do
 	tm-manifest setnode $N $MANIFEST	# This status is ok
 	let NODECOUNT=NODECOUNT+1
 done
-let ELAPSED=`date +%s`-$START
+echo "`elapsed` all bindings started"
 
 ###########################################################################
 # Wait until they're all done
-
-function sec2ascii() {
-	let H=$1/3600
-	let M=$1/60
-	let S=$1%60
-	printf "%2d:%02d:%02d" $H $M $S
-}
-
-echo "`sec2ascii $ELAPSED` all bindings started"
-
-JQ ME!
 
 FINISHED=0
 while [ $FINISHED -lt $NODECOUNT ]; do
 	sleep 5
 	FINISHED=`find $IMAGES -name status.json | xargs cat | grep ready | grep status | wc -l`
-	let ELAPSED=`date +%s`-$START
-	echo "`sec2ascii $ELAPSED` $FINISHED/$NODECOUNT bindings finished"
+	echo "`elapsed` $FINISHED/$NODECOUNT bindings finished"
 done
 exit 0

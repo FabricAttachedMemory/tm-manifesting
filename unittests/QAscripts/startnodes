@@ -33,15 +33,22 @@ SCREEN=`screen -list | grep $NETNAME`
 # Go.  
 
 screen -S $NETNAME -dm		# Session name, detached
+echo -n Starting
 for N in $NODES; do
+	echo -n " $N"
 	TITLE=node`printf "%02d" $N`
 	screen -S $NETNAME -X screen -t $TITLE $STARTNODE $N
+	# Staggering the start helps.  0, 1, or 2 seconds, it doesn't matter:
+	# starting 40 nodes takes 4 minutes total.  All that changes is 
+	# waitnodes elapsed time.  1 second made 200 perfect runs, so...
+	sleep 2		# ...to allow for multiple containers on the SD.
 done
-
+echo
 echo "Attach last node from shell: screen -r $NETNAME"
 echo "Attach nodeXX from shell:    screen -r $NETNAME -p nodeXX"
 echo "Prompt for window name:      ctl-a then '"
 echo "Navigate list of windows:    ctl-a then \""
 echo "Quit (detach):               ctl-a then d"
+sleep 3
 
 exec waitnodes $NODES

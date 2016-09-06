@@ -1,0 +1,93 @@
+Support scripts for bulk testing TMMS on a FAME cluster.
+
+Supporting environment variables:
+---------------------------------
+
+NETNAME
+	The virtual bridge aginst which nodes are PXE booted.
+
+FAM
+	The file that acts like global NVM, set it up with fallocate.
+
+Commands (alphabetical)
+-----------------------
+
+attachnode
+	Bulk starts of FAME nodes have their consoles attached to a
+	GNU screen(1) session named <NETNAME>.  This command takes
+	a number from 1-40 and attaches to that console.
+
+lxc-fixdev
+	Used after starting an LXC container the first time to tweak a few
+	things for FAME (especially libvirt bridges and vmdebootstrap)
+
+octets2str
+	Pass the client id octet stream from dhcpdump(1M) to see the
+	ASCII string.
+
+setnodes
+	Takes a list of nodes or the word "all" and a manifest name
+	(previously uploaded via "tm-manifest put ...").   Bind the
+	specified nodes to that manifest.  Waits until all nodes
+	show a final "ready" status.
+
+startnode.arm
+	Takes a number from 1-40 and PXE boots that node into the
+	FAME setup specified by the environment variable NETNAME.
+
+startnodes
+	Takes a list of numbers 1-40 or the word "all" and gang starts
+	a PXE boot for each.  The console goes into a screen session
+	called NETNAME with a window named nodeXX.  Automatically
+	invokes waitnodes.
+
+waitnodes
+	Takes a list of numbers 1-40 or the word "all" and waits for
+	all the nodes on NETNAME to respond to sshd probes.  This
+	can be called manually but is usually automatically invoked
+	by startnodes.
+
+Helper directories
+------------------
+
+dotssh/
+	Minimal config files for a $HOME/.ssh directory to support
+	phrase-less ssh (log, direct command execution, or ansible).
+	Needs the "l4tm_pubkey" specified in the active manifest
+	of a given node.
+
+manifests/
+	Sample manifests.  The "bender.json" only specifies a single
+	extra package but that loads about eight dependent packages.
+
+
+Setting up a new FAME system or LXC container UNVERIFIED
+--------------------------------------------------------
+
+1. Install L4TM on a fresh system or clone an L4TM LXC container.
+
+2. apt-get install python3 git libvirt-bin virsh
+
+3. git clone https://github.hpe.com/hpelinux/tm-librarian.git
+
+   The repo package is stale with respect to a module needed by TMMS.
+
+   ln -s /where/ever/tm-librarian /usr/local/lib/python3.4/dist-packages/tm_librarian
+
+	yes, hypen in the first path, underscore in the second
+
+4. Obtain a copy of TMCF for your TM instance and put it at /etc/tmconfig
+
+5. git clone https://github.hpe.com/hpelinux/manifesting.git
+
+6. cd /where/ever/manifesting.  Execute that README.
+
+7. In a fresh window start TMMS "tm-manifest-server --verbose"
+
+8. tm-manifest listnodes should reflect /etc/tmconfig
+
+9. tm-manifest put manifests/something.json
+
+10. setnodes all something
+
+11. startnodes all
