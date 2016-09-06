@@ -7,14 +7,25 @@ if [ $# -eq 0 -o "$1" = "-?" ]; then
 	echo "usage: $0 all | nodenum [nodenum...]"
 	exit 0
 fi
-if [ $1 = all ]; then
-	NODES=`seq 1 40`
-else
-	NODES="$@"	# These aren't qualified in any way
-fi
 
 [ -z "$NETNAME" ] && echo "export NETNAME=something" >&1 && exit 1
 [ -z "$FAM" ] && echo "export FAM=something" >&1 && exit 1
+
+if [ $1 = all ]; then
+    # Use manifesting service to walk through all forty nodes.  Slight cheat:
+    # range 1-40.  FIXME: add node coordinate and node_id to status json,
+    # then I could do listnodes and enumerate.
+    jq --version >/dev/null 2>&1
+    [ $? -ne 0 ] && echo "You need to apt-get install jq" >&2 && exit 1
+
+    NODES=
+    for N in `seq 1 40`; do
+        STATUS=`tm-manifest getnode $N | jq -r '."200".status'`
+	[ "$STATUS" = ready ] && NODES="$NODES $N"
+    done
+else
+    NODES="$@"	# These aren't qualified in any way
+fi
 
 set -u
 
