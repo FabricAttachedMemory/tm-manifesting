@@ -133,8 +133,10 @@ if __name__ == '__main__':
         # exist yet.  I think this will break if run from configs?  Anyhow,
         # this script needs to do a few things that Debian postinstall
         # scripts will do.
-
-        from tmms.utils.file_utils import make_symlink
+        try:
+            from utils.file_utils import make_symlink
+        except ImportError:
+            raise SystemExit('Failed to import tmms.utils.file_utils module!')
 
         setup_file = os.path.realpath(__file__)
         git_repo_path = os.path.dirname(setup_file)
