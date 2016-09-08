@@ -136,7 +136,7 @@ if __name__ == '__main__':
         try:
             from utils.file_utils import make_symlink
         except ImportError:
-            raise SystemExit('Failed to import tmms.utils.file_utils module!')
+            raise SystemExit('Failed to import utils.file_utils module')
 
         setup_file = os.path.realpath(__file__)
         git_repo_path = os.path.dirname(setup_file)
