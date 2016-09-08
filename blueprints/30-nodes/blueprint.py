@@ -344,18 +344,20 @@ def build_node(manifest, node_coord):
 
     try:
         os.makedirs(build_dir, exist_ok=True)
+        os.makedirs(tftp_dir, exist_ok=True)
     except (EnvironmentError):
         return make_response('Failed to create "%s"!' % build_dir, 505)
+
+    # Before the child, to eliminate race condition if returning from
+    # here to web-based actions.
+    customize_node.update_status(
+        build_args, 'Preparing to build PXE images.', status='building')
 
     if BP.DEBUG:
         set_trace()
         customize_node.execute(build_args)      # SHOULD return
         return response
 
-    # Before the child, to eliminate race condition if returning from
-    # here to web-based actions.
-    customize_node.update_status(
-        build_args, 'Preparing to build PXE images.', status='building')
     try:
         forked = os.fork()
     except OSError as err:
