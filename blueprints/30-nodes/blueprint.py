@@ -131,39 +131,48 @@ def get_all_bindings():
     return response
 
 
-@BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('GET', ))
-@BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('GET', ))
-def get_node_bind_info(node_coord=None):
+def _resolve_node_coord(nodespec):
+    '''Discern whether the input is a number or a string, then
+       lookup the node.
+    param 'nodespec': node coordinate (usually w/o leading /) or an integer
+    return: None or a qualified full node coordinate string
+    '''
+    node_coord = None
+    try:
+        node_id = int(nodespec)
+        try:	# Sparseness holes return None which leads to AttributeError
+            # FIXME: move into TMConfig and export a "node_id" property
+            racknum = 1     # FRD/MFT
+            encnum = ((node_id - 1) // 10) + 1
+            nodenum = ((node_id - 1) % 10) + 1
+            rack = BP.config['tmconfig'].racks[racknum]
+            node_coord = rack.enclosures[encnum].nodes[nodenum].coordinate
+        except (AttributeError, IndexError) as e:
+            return None
+    except ValueError:	# assume it's a coordinate path
+        node_coord = nodespec if nodespec[0] == '/' else '/' + nodespec
+    return node_coord if node_coord in BP.node_coords else None
+
+
+@BP.route('/api/%s/<path:nodespec>' % _ERS_element, methods=('GET', ))
+@BP.route('/api/%s//<path:nodespec>' % _ERS_element, methods=('GET', ))
+def get_node_bind_info(nodespec=None):
     """
         List status json of the manifest bound to the node.
     """
     # Two rules invoke Postel's Law of liberal reception.  Either way,
-    # we need to add leading /.  Assist humans: allow an integer 1-40.
-    try:
-        nodenum = int(node_coord)
-        try:	# Range check and sparse check
-            # Numbers and assumptions true for FRD.  FIXME: move into TMConfig
-            # and export a "nodenum" property
-            assert 1 <= nodenum <= 40, 'nodenum out of range 1-40'
-            node = ((nodenum - 1) % 10) + 1
-            enc = ((nodenum - 1) // 10) + 1
-            rack1 = BP.config['tmconfig'].racks[1]
-            node_coord = rack1.enclosures[enc].nodes[node].coordinate
-            assert node_coord is not None, 'empty slot in a sparse rack'
-        except AssertionError as e:
-            return make_response('Node %d does not exist.' % nodenum, 404)
-    except ValueError:	# assume it's a coordinate path
-        node_coord = '/' + node_coord
-    if not BP.nodes[node_coord]:
-        BP.logging.error('The specified node does not exist: %s' % (node_coord))
-        response = make_response('The specified node does not exist.', 404)
+    # we need to add leading /.
+    node_coord = _resolve_node_coord(nodespec)
+    if node_coord is None:
+        response = make_response('No such node "%s"' % nodespec, 404)
+        BP.logging.error(response)
+        return response
+    result = get_node_status(node_coord)
+    if result is None:
+        response = make_response('No Content', 204)
     else:
-        result = get_node_status(node_coord)
-        if result is None:
-            response = make_response('No Content', 204)
-        else:
-            response = make_response(jsonify(result), 200)
-    BP.logging(response)    #utils.logging.logger will handle log Level
+        response = make_response(jsonify(result), 200)
+    BP.logging(response)    # utils.logging.logger will handle log Level
     return response
 
 
@@ -176,32 +185,32 @@ def node_coord2image_dir(node_coord):
     return node_image_dir
 
 
-@BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('DELETE', ))
-@BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('DELETE', ))
-def delete_node_binding(node_coord):
+@BP.route('/api/%s/<path:nodespec>' % _ERS_element, methods=('DELETE', ))
+@BP.route('/api/%s//<path:nodespec>' % _ERS_element, methods=('DELETE', ))
+def delete_node_binding(nodespec):
     """
         Remove Node to Manifest binding. Find node's folder in the TFTP
     directory by its hostname and clean out the content. Thus the next
     reboot will fail.
 
-    :param 'node_coord': full node's coordinate to unbind Manifest from.
+    :param 'nodespec': full node's coordinate to unbind Manifest from.
     """
     # Two rules invoke Postel's Law of liberal reception.  Either way,
     # we need to add leading /.
-    node_coord = '/' + node_coord
-    response = None
-    if node_coord not in BP.node_coords:
-        response = make_response('The specified node does not exist.', 404)
-    else:
-        try:
-            node_image_dir = node_coord2image_dir(node_coord)
-            for node_file in glob(node_image_dir + '/*'):
-                os.remove(node_file)
-            response = make_response('Successful cleanup.', 204)
-        except OSError as err:
-            respoonse = make_response('Failed to delete binding: %s' % err, 500)
-
-    BP.logging(response)    #utils.logging.logger will handle log Level
+    node_coord = _resolve_node_coord(nodespec)
+    if node_coord is None:
+        response = make_response('No such node "%s"' % nodespec, 404)
+        BP.logging.error(response)
+        return response
+    try:
+        node_image_dir = node_coord2image_dir(node_coord)
+        for node_file in glob(node_image_dir + '/*'):
+            os.remove(node_file)
+        response = make_response('Successful cleanup.', 204)
+        BP.logging(response)    # utils.logging.logger will handle log Level
+    except OSError as err:
+        response = make_response('Failed to delete binding: %s' % err, 500)
+        BP.logging.error(response)
     return response
 
 ####################### API (PUT) ###############################
