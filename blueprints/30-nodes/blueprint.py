@@ -202,15 +202,18 @@ def delete_node_binding(nodespec):
         response = make_response('No such node "%s"' % nodespec, 404)
         BP.logging.error(response)
         return response
+    response = make_response('Successful cleanup.', 204)
     try:
         node_image_dir = node_coord2image_dir(node_coord)
         for node_file in glob(node_image_dir + '/*'):
             os.remove(node_file)
-        response = make_response('Successful cleanup.', 204)
-        BP.logging(response)    # utils.logging.logger will handle log Level
+    except AssertionError as e:     # no such dir, no such binding
+        pass
     except OSError as err:
         response = make_response('Failed to delete binding: %s' % err, 500)
         BP.logging.error(response)
+        return response
+    BP.logging(response)    # utils.logging.logger will handle log Level
     return response
 
 ####################### API (PUT) ###############################
@@ -401,7 +404,7 @@ def get_node_status(node_coord):
         node_image_dir = node_coord2image_dir(node_coord)   # can raise
         with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
-    except FileNotFoundError as err:    # Unbound
+    except (AssertionError, FileNotFoundError) as err:    # Unbound
         BP.logging.error('No binding for node %s' % (node_coord))
         return None
     except Exception as err:       # TCNH =)
