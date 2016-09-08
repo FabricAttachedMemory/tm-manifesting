@@ -282,6 +282,7 @@ def build_node(manifest, node_coord):
 
     # Each node gets its own set of dirs.  'nodes[]' matches snippets.
     hostname = BP.nodes[node_coord][0].hostname
+    node_id = BP.nodes[node_coord][0].node_id
     sys_imgs = BP.config['FILESYSTEM_IMAGES']
     build_dir = os.path.join(sys_imgs, hostname)
     tftp_dir = BP.config['TFTP_IMAGES'] + '/' + hostname
@@ -301,6 +302,7 @@ def build_node(manifest, node_coord):
     build_args = {
         'hostname':     hostname,
         'node_coord':   node_coord,
+        'node_id':      node_id,
         'manifest':     manifest,
         'repo_mirror':  BP.config['L4TM_MIRROR'],
         'repo_release': BP.config['L4TM_RELEASE'],

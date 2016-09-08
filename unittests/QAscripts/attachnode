@@ -9,6 +9,6 @@ echo "Prompt for window name:      ctl-a then '"
 echo "Navigate list of windows:    ctl-a then \""
 echo "Quit (detach):               ctl-a then d"
 sleep 2
-screen -r $NETNAME -p $1
+screen -r $NETNAME -p $NODE
 reset
 exit 0

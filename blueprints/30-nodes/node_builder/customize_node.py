@@ -377,6 +377,8 @@ def update_status(args, message, status='building'):
     response['manifest'] = args.manifest.namespace
     response['status'] = status
     response['message'] = message
+    response['coordinate'] = args.node_coord    # Troubleshooting and QA
+    response['node_id'] = args.node_id
     # Rally DE118: make it an atomic update
     newstatus = args.status_file + '.new'
     write_to_file(newstatus, json.dumps(response, indent=4))
@@ -665,6 +667,8 @@ if __name__ == '__main__':
                         help='Hostname to use for the FS image')
     parser.add_argument('--node_coord',
                         help='Full machine coordinate of this node."')
+    parser.add_argument('--node_id',
+                        help='Node number (1-40)."')
     parser.add_argument('--manifest',
                         help='Manifest namespace.')
     parser.add_argument('--golden_tar',
