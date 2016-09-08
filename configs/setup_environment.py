@@ -14,7 +14,7 @@ from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
 from utils.utils import piper, create_loopback_files
-from utils.file_utils import make_dir
+from utils.file_utils import make_dir, remove_target
 
 
 def _create_env(manconfig, fields, ignore=None):
@@ -100,6 +100,10 @@ def main(args):
     make_dir(golden_img_dir)
 
     print(' ---- Creating TFTP environment ---- ')
+    # Need to remove the TFTP_IMAGES directory first.   We don't want
+    # leftover, stale bound nodes confusing commands if this is a re-run
+    # after a change to /etc/tmconfig with a different node list.
+    remove_target(manconfig['TFTP_IMAGES'])
     fields = manconfig.tftp_keys
     _create_env(manconfig, fields)
     print()
