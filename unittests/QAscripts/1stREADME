@@ -66,28 +66,81 @@ Setting up a new FAME system or LXC container UNVERIFIED
 
 1. Install L4TM on a fresh system or clone an L4TM LXC container.
 
-2. apt-get install python3 git libvirt-bin virsh
+2. apt-get install python3 git libvirt-bin virsh tm-librarian jq
 
-3. git clone https://github.hpe.com/hpelinux/tm-librarian.git
+3. Obtain a copy of TMCF for your TM instance and put it at /etc/tmconfig
 
-   The repo package is stale with respect to a module needed by TMMS.
+   An easy way is through the librarian.  Copy these lines to "fame40.ini":
 
-   ln -s /where/ever/tm-librarian /usr/local/lib/python3.4/dist-packages/tm_librarian
+   [global]
+   node_count = 40
+   book_size_bytes = 8M
+   nvm_size_per_node = 512B
+   
+   Then run "book_register.py -j fame40.ini > /tmp/tmconfig"
 
-	yes, hypen in the first path, underscore in the second
+   finally "sudo mv /tmp/tmconfig /etc"
 
-4. Obtain a copy of TMCF for your TM instance and put it at /etc/tmconfig
+4. Set up a virtual bridge for the nodes to share.  The easiest way is
+   through libvirt/virsh.   
+
+   a. Pick a network/bridge name.  My favorite is "fame_arm" but we'll call
+      it YOURNET.
+   b. Pick a subnet for the nodes.  It needs to be unique on your system.
+      libvirt default has already claimed 192.168.122.0/24.  I suggest you
+      use 10.10.10.0/254 or pick a different RFC 1918 network.
+   c. Put this in a file called YOURNET.xml:
+
+	<network>
+  	<name>YOURNET</name>
+  	<forward mode='nat'>
+    		<nat>
+      			<port start='1024' end='65535'/>
+    		</nat>
+  	</forward>
+  	<bridge name='YOURNET' stp='off' delay='0'/>
+  	<ip address='10.10.10.254' netmask='255.255.255.0' />
+	</network>
+
+      I recommend the last legal address of your chosen network as the
+      IP address assigned to the bridge.  From the node's point of view
+      this is the ToRMS IP address.
+
+    d. Adjust "YOURNET" in your file and name, then 
+
+       sudo virsh net-define YOURNET.xml
+       sudo virsh net-autostart YOURNET
+       sudo virsh net-start YOURNET
+
+    e. Find the running copy of dnsmasq assigned to YOURNET and kill it.
+       You'll have to do this each time YOURNET is restarted (like
+       after a reboot).
+
+    f. export NETNAME=YOURNET
 
 5. git clone https://github.hpe.com/hpelinux/manifesting.git
 
-6. cd /where/ever/manifesting.  Execute that README.
+6. cd /where/ever/manifesting.  Follow the instructions in that README.
+   As a result you should have an /etc/tmms file referencing your
+   virtual bridge.
 
-7. In a fresh window start TMMS "tm-manifest-server --verbose"
+7. In a fresh window start "sudo tm-manifest-server --verbose"
+
+   Verify there is a new dnsmasq running reference a config file whose
+   name is "YOURNET.conf".
 
 8. tm-manifest listnodes should reflect /etc/tmconfig
 
 9. tm-manifest put manifests/something.json
 
-10. setnodes all something
+10. Since this is FAME, you need a file for FAM.  If you use 8M books,
+    512 books per node, 40 nodes, that's 160G of space.  IVSHMEM has
+    to be a power of two so you need a 256G file.
 
-11. startnodes all
+    a. $ fallocate -l 256G /var/cache/FAM
+
+    b. export FAM=/var/cache/FAM
+
+11. setnodes all manname
+
+12. startnodes all
