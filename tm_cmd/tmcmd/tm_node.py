@@ -84,6 +84,8 @@ class TmNode(tm_base.TmCmd):
         """
         super().delete(target, **options)
         node_coord = self.show_name     # should be legal by now
-        api_url = '%s%s/%s' % (self.url, 'node', node_coord[1:])
+        if node_coord.startswith('/'):	# assist humans: allow an integer
+            node_coord = node_coord[1:]
+        api_url = '%s%s/%s' % (self.url, 'node/', node_coord)
         data = self.http_delete(api_url)
         return self.to_json(data)
