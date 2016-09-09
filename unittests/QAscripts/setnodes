@@ -66,7 +66,9 @@ done
 echo "`elapsed` all bindings started"
 
 ###########################################################################
-# Wait until they're all done
+# Wait until they're all done.  The IMAGES subdirs (nodeXX) are created
+# at setup.py networking time, so hopefully the most recent run actually
+# matches the current TMCF.
 
 FINISHED=0
 while [ $FINISHED -lt $NODECOUNT ]; do
