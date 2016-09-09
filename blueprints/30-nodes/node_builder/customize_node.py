@@ -145,10 +145,10 @@ def set_environment(args):
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     update_status(args, 'Create /etc/environment')
-    env_file = '%s/etc/environment' % args.new_fs_dir
+    fname = '%s/etc/environment' % args.new_fs_dir
     try:
-        if os.path.exists(env_file):
-            remove_target(env_file)
+        if os.path.exists(fname):
+            remove_target(fname)
 
         proxy = getattr(args, 'web_proxy', 'web-proxy.corp.hpecorp.net:8080')
         no_proxy = '10.0.0.0/8'     # FIXME: calculate something for real HW
@@ -158,9 +158,9 @@ def set_environment(args):
             'no_proxy=127.0.0.0/8,%s' % no_proxy
         ]
         content = '\n'.join(content)
-        write_to_file(env_file, content)
+        write_to_file(fname, content)
     except RuntimeError as err:
-        raise RuntimeError('Cannot set /etc/environment: s' % str(err))
+        raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
 
 def set_hostname(args):
@@ -190,19 +190,46 @@ def set_hosts(args):
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     update_status(args, 'Create /etc/hosts')
-    hosts_file = '%s/etc/hosts' % args.new_fs_dir
+    fname = '%s/etc/hosts' % args.new_fs_dir
     try:
-        if os.path.exists(hosts_file):
-            remove_target(hosts_file)
+        if os.path.exists(fname):
+            remove_target(fname)
 
-        content = []
-        content.append('127.0.0.1   localhost')     # visual alignment
-        content.append('127.1.0.1   %s' % args.hostname)
+        content = [
+            '127.0.0.1   localhost',
+            '127.1.0.1   %s' % args.hostname
+        ]
         content = '\n'.join(content)
 
-        write_to_file(hosts_file, content)
+        write_to_file(fname, content)
     except RuntimeError as err:
-        raise RuntimeError('Cannot set /etc/hosts: s' % str(err))
+        raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
+
+
+def set_l4tm_sudo(args):
+    """
+        Set sudoer policy of no password for user l4tm.  That user was
+    configured with sudo in the golden image via vmdebootstrap.  This
+    removes the password restriction for easier automation and has been
+    approved by Operational Security.  See also set_l4tm_pubkey().
+
+    :param 'new_fs_dir': [str] path to the file system location to customize.
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
+    update_status(args, 'Create /etc/sudoers.d/l4tm')
+    fname = '%s/etc/sudoers.d/l4tm' % args.new_fs_dir
+    try:
+        if os.path.exists(fname):
+            remove_target(fname)
+
+        content = [                             # Speed up subsequent sudos
+            'l4tm\t ALL = NOPASSWD: ALL',       # No passwd
+            'Defaults timestamp_timeout=120',   # Don't ask again for 2 hours..
+            'Defaults !tty_tickets',            # On any terminal
+        ]
+        write_to_file(fname, '\n'.join(content))
+    except RuntimeError as err:
+        raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
 #==============================================================================
 
@@ -598,11 +625,12 @@ def execute(args):
         update_status(args, 'Found golden kernel %s' %
                       os.path.basename(vmlinuz_golden))
 
-        # Global config files
+        # Global and account config files
         set_environment(args)
         set_hostname(args)
         set_hosts(args)
         set_client_id(args)
+        set_l4tm_sudo(args)
         set_l4tm_pubkey(args)
 
         persist_initrd(args)
