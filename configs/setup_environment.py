@@ -73,6 +73,8 @@ def install_base_packages():
                     print(
                         '%s not loaded, symlink it into Python from git' % pkg,
                         file=sys.stderr)
+            elif pkg in ('qemu-efi', ):     # might be on plain-old Debian
+                print('Need manual installation of %s !!!!!!!!!!!!!!!!!', pkg)
             else:
                 errors.append('[%s] %s' % (pkg, stderr))
     if errors:
