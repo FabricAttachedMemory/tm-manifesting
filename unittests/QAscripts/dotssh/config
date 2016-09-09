@@ -4,11 +4,6 @@
 ConnectTimeout 10
 StrictHostKeyChecking no
 
-# Rocky
-Host github.hpe.com
-	User rocky
-	IdentityFile ~/.ssh/rocky_rsa
-
 # Use nophrase_rsa.pub as manifest "l4tm_pubkey" value
 Host node*
 	User l4tm
