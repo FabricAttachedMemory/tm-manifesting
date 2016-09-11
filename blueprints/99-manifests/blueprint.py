@@ -362,15 +362,9 @@ def _load_data():
             pass
 
 
-def register(mainapp):  # take what you like and leave the rest
-    BP.mainapp = mainapp
-    BP.config = mainapp.config
+def register(url_prefix):
     BP.lookup = _lookup
     BP.get_all = get_all
-    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-
-    BP.logging = BP.config['logging']
-    BP.logging.name = '99-manifests_BP'
-
     BP.UPLOADS = BP.config['MANIFEST_UPLOADS']
+    BP.mainapp.register_blueprint(BP, url_prefix=url_prefix)
     _load_data()

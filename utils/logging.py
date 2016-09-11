@@ -1,38 +1,39 @@
 #!/usr/bin/python3
 """
-    A helper script to wrap logging module that will simplify its usage around the
-blueprint scirpts and other similar behaviour.
+    A helper script to wrap logging module that will simplify its usage
+around the blueprint scirpts and other similar behaviour.
 """
 import os
 import logging
-import flask
 
+from flask.wrappers import Response as flaskResponse  # type checking
 from pdb import set_trace
 
-class Logger(object):
+
+class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
     """
-        Wrapper around logging module to allow a simplier Log handling.
+        Wrapper around logging module to allow a simpler Log handling.
     """
 
-    def __init__(self, filename, app_name, formatter=None, level=None, disabled=False):
-        self.filename = filename
-        self.name = app_name
-        self.disabled = disabled
+    def __init__(self, filename, loggername,
+         formatter=None, level=logging.INFO):
+        if not formatter:
+            formatter = '%(asctime)s :: %(levelname)s <%(name)s>:: %(message)s'
 
-        self.formatter = formatter
-        if not self.formatter:
-            self.formatter = '%(asctime)s :: %(levelname)s <%(name)s>:: %(message)s'
+        # Idempotent reconfiguration of root logger.  This chooses a simple
+        # file handler FIXME remove/add a rotating file handler, process
+        # VERBOSE and DEBUG from cmdline.
+        logging.basicConfig(
+            filename=filename,
+            format=formatter,
+            level=level)
 
-        self.level = level
-        if not self.level:
-            self.level = logging.INFO
-
-        logging.basicConfig(filename=filename, format=self.formatter,
-                            level=self.level)
-
-        self.logger = logging.getLogger(app_name)
-        self.logging = logging
-
+        # Create a logger with no handlers.   Because there is no "dot"
+        # hierarchy in the namespace, its parent is the (default) root logger
+        # and its handler, currently set by logging.basicConfig.  Since this
+        # new logger has no handlers, it will roll over to its parent based
+        # on its propagate flag.
+        self.logger = logging.getLogger(loggername) # propagate default: True
 
     def level_func(self, lvl):
         """
@@ -40,22 +41,22 @@ class Logger(object):
         logging function.
         If invalid lvl string was passed - return logging.info
         """
-        if not isinstance(lvl, str):
-            return logging.info
+        if lvl is None or not isinstance(lvl, str):
+            return self.logger.info
+        lvl = lvl.lower()
 
-        if lvl is None:
-            lvl = 'info'
-
-        if lvl.lower() == 'debug':
-            if self.logger.level == logging.DEBUG:  # can't logging.debug unless
-                return logging.debug                # logging.level is set to Debug
+        # Suppress logging.debug unless logging.level is set to Debug: WHY?
+        if lvl == 'debug':
+            if self.logger.level == logging.DEBUG:
+                return self.logger.debug
 
         types = {
-                'info' : logging.info,
-                'error' : logging.error,
-                'warning' : logging.warning
+                'critical' : self.logger.critical,
+                'error' : self.logger.error,
+                'warning' : self.logger.warning,
+                'info' : self.logger.info,
                 }
-        return types.get(lvl.lower(), logging.info)
+        return types.get(lvl, self.logger.info)
 
 
     def shutdown(self):
@@ -63,25 +64,27 @@ class Logger(object):
 
 
     def __call__(self, msg, level=None):
-        if isinstance(msg, flask.wrappers.Response):
+        if isinstance(msg, flaskResponse):
             if msg.status_code >= 400:
-                logging.error(msg.response[0].decode())
+                level = self.logger.error
             else:
-                logging.info(msg.response[0].decode())
-            return
+                level = self.logger.info
+            msg = msg.response[0].decode()
+        else:
+            level = self.level_func(level)
+            msg = str(msg)
 
-        level = self.level_func(level)
-
-        if isinstance(msg, str):
-            level(msg)
+        level(msg)
 
 
     # Behave like a regular logging.info, logging.error and etc
-    def info(self, msg):
-        self.__call__(msg, 'info')
+    def critical(self, msg):
+        self.__call__(msg, 'critical')
     def error(self, msg):
         self.__call__(msg, 'error')
-    def warnig(self, msg):
+    def warning(self, msg):
         self.__call__(msg, 'warning')
+    def info(self, msg):
+        self.__call__(msg, 'info')
     def debug(self, msg):
         self.__call__(msg, 'debug')

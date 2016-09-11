@@ -1,17 +1,14 @@
 #!/usr/bin/python3
 '''System images'''
 
+# This is NOT in the ERS but would be useful if we ever deliver multiple
+# golden images.
+
 from collections import defaultdict
-import gzip
 import os
-import glob
 import fnmatch
-import requests as HTTP_REQUESTS
-import warnings
 import sys
 
-from debian.deb822 import Packages
-from io import BytesIO, StringIO
 from pdb import set_trace
 
 from flask import Blueprint, render_template, request, jsonify, send_file
@@ -77,12 +74,12 @@ def data_to_json():
 _data = None
 
 
-def _load_data(mainapp):
+def _load_data():
     # https://github.com/raumkraut/python-debian/blob/master/README.deb822
 
     global _data
     _data = {}
-    sys_img_dir = mainapp.config['FILESYSTEM_IMAGES']
+    sys_img_dir = BP.mainapp.config['FILESYSTEM_IMAGES']
 
     for abs_path, dirname, files in os.walk(sys_img_dir):
         for filename in fnmatch.filter(files, '*.tar'):
@@ -90,10 +87,10 @@ def _load_data(mainapp):
 
 
 def _filter(imgs):    # Maybe it's time for a class
-    return [ sysimg for sysimg in imgs if sysimg not in _data ]
+    return [sysimg for sysimg in imgs if sysimg not in _data]
 
-def register(mainapp):  # take what you like and leave the rest
-    BP.UPLOADS = os.path.join(mainapp.root_path, 'blueprints/nodes/uploads/')
+
+def register(url_prefix):
     BP.filter = _filter
-    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    _load_data(mainapp)
+    BP.mainapp.register_blueprint(BP, url_prefix=url_prefix)
+    _load_data()

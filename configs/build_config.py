@@ -99,6 +99,16 @@ class ManifestingConfiguration(object):
             'TFTP_GRUB':            tftp + '/grub',     # grub EFI "prefix"
         })
 
+        # Final updates based on previous contents.  PID file is needed by
+        # manifest_api, log file is referenced at startup but not "needed".
+        # setup_networing should follow lead of using PREFPATH for file names.
+        self._settings['DNSMASQ_PREPATH'] = '%s/%s' % (
+            self._settings['DNSMASQ_CONFIGS'], self._settings['PXE_INTERFACE'])
+        self._settings['DNSMASQ_PIDFILE'] = '%s.pid' % (
+            self._settings['DNSMASQ_PREPATH'])
+        self._settings['DNSMASQ_LOGFILE'] = '%s.log' % (
+            self._settings['DNSMASQ_PREPATH'])
+
         if autoratify:
             errors = self.ratify()
             if errors:

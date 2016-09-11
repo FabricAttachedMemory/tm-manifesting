@@ -86,7 +86,7 @@ def _load_data():
     release = BP.config['L4TM_RELEASE']
     repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (mirror, release)
 
-    _data = { }
+    _data = {}
     for area in BP.config['L4TM_AREAS']:
         for arch in ('binary-all', 'binary-arm64'):
             print('---------- %s/%s/Packages.gz...' % (area, arch), end='')
@@ -114,8 +114,9 @@ def _filter(packages):    # Maybe it's time for a class
     return [ pkg for pkg in packages if pkg not in _data ]
 
 
-def register(mainapp):  # take what you like and leave the rest
-    BP.config = mainapp.config
+def register(url_prefix):
+    set_trace()
+    BP.logger('here I am')
     BP.filter = _filter     # So manifest can see it
-    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    BP.mainapp.register_blueprint(BP, url_prefix=url_prefix)
     _load_data()
