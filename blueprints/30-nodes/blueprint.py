@@ -16,6 +16,7 @@ from flask import make_response, send_from_directory, redirect
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
+from tmms.utils.logging import tmmsLogger
 from .node_builder import customize_node
 
 _ERS_element = 'node'
@@ -309,7 +310,8 @@ def build_node(manifest, node_coord):
         'tftp_dir':     tftp_dir,
         'status_file':  tftp_dir + '/status.json',
         'verbose':      BP.VERBOSE,
-        'debug':        BP.DEBUG
+        'debug':        BP.DEBUG,
+        'logger':       tmmsLogger(hostname)
     }
     # Legacy technique called this as a subprocess.  Construct the command
     # for verbose output and manual invocation for development.

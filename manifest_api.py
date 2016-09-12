@@ -107,6 +107,7 @@ def register_blueprints(mainapp):
     for p in paths:
         try:
             modspec = p.replace('/', '.') + '.blueprint'
+            mainapp.logger.info('Importing %s' % modspec)
             imported = import_module(modspec)
 
             # Set commonly used globals or convenience attributes.  Each
@@ -118,7 +119,7 @@ def register_blueprints(mainapp):
             imported.BP.VERBOSE = mainapp.config['VERBOSE']
             imported.BP.DEBUG = mainapp.config['DEBUG']
             name = imported.BP.name
-            imported.BP.logger = tmmsLogger(mainapp.config['LOGFILE'], name)
+            imported.BP.logger = tmmsLogger(name)
 
             # Let each blueprint add its local attributes, then register
             # itself against the flask framework using its "BP.mainapp".
@@ -126,18 +127,14 @@ def register_blueprints(mainapp):
             imported.BP.logger.info('blueprint registration complete')
             ngood += 1
         except ImportError as e:
-            mainapp.logger.critical('No blueprint at %s' % p)
-            print('No blueprint at %s' % p, file=sys.stderr)
+            mainapp.logger.critical('import(%s) failed: %s' % (p, str(e)))
             if mainapp.config['DEBUG']:
                 set_trace()
             pass
         except AttributeError as e:
-            mainapp.logger.critical('\nblueprint %s has no register()' % p)
-            print('\nblueprint %s has no register(): %s' % (p, str(e)),
-                file=sys.stderr) # until critical fixed
+            mainapp.logger.critical('register(%s) failed: %s' % (p, str(e)))
         except Exception as e:
-            mainapp.logger.critical('\nblueprint %s failed:\n%s' % (p, str(e)))
-            print('\nblueprint %s failed:\n%s' % (p, str(e)), file=sys.stderr)
+            mainapp.logger.critical('blueprint %s failed: %s' % (p, str(e)))
 
     if ngood != len(paths):
         msg = 'Not all blueprints finished registration'

@@ -16,29 +16,41 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         Wrapper around logging module to allow a simpler Log handling.
     """
 
-    def __init__(self, filename, loggername, format=None, level=logging.INFO):
-        if not format:
-            format = '%(asctime)s :: %(levelname)s <%(name)s>:: %(message)s'
-            format = '%(asctime)s %(levelname)-5s %(name)s: %(message)s'
+    _rootlogger = None
 
-        # Idempotent reconfiguration of root logger.  This chooses a simple
-        # file handler FIXME remove/add a rotating file handler, process
-        # VERBOSE and DEBUG from cmdline.
-        # logging.basicConfig(
-            # filename=filename,
-            # format=format,
-            # level=level)
-        logging.basicConfig(
-            stream=sys.stderr,
-            format=format,
-            datefmt='%Y-%m-%d %H:%M:%S',
-            level=logging.DEBUG)
+    @classmethod
+    def reconfigure_rootlogger(cls,
+            rootlogger=None, use_stderr=True, use_file='',
+        level=logging.INFO):
 
+        if cls._rootlogger is not None:     # locking built into logging
+            return
+
+        assert bool(use_stderr) ^ bool(use_file), \
+            'Exactly one of use_stderr or use_file must be set'
+        if rootlogger is None:
+            rootlogger = logging.root
+            assert rootlogger is not None, 'No root logger configured yet'
+
+        if use_stderr:                  # That was easy
+            logging.basicConfig(        # Idempotent, first call wins
+                stream=sys.stderr,
+                format='%(asctime)s %(levelname)-5s %(name)s: %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S',
+                level=level)
+        else:
+            raise NotImplementedError('Rotating file is not implemented yet')
+
+        cls._rootlogger = rootlogger
+
+    def __init__(self, loggername, level=logging.INFO):
         # Create a logger with no handlers.   Because there is no "dot"
         # hierarchy in the namespace, its parent is the (default) root logger
         # and its handler, currently set by logging.basicConfig.  Since this
         # new logger has no handlers, it may fall up to its parent based
         # on its propagate flag (default True).
+        # Insure there is a root logger, default to stderr and INFO.
+        self.reconfigure_rootlogger()
         self.logger = logging.getLogger(loggername)
         self.logger.setLevel(level)
 

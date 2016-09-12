@@ -93,7 +93,7 @@ def listall():
     if not all_manifests:
         status_code = 204
     response = make_response(msg, status_code)
-    BP.logging(response)    # utils.logging.logger will handle logging Level
+    BP.logger(response)    # level based on response status code
     return response
 
 
@@ -120,7 +120,7 @@ def show_manifest_json(manname='/'):
         else:
             response = make_response(jsonify(found_manifest.thedict), 200)
 
-    BP.logging(response)    # utils.logging.logger will handle logging Level
+    BP.logger(response)    # level based on response status code
     return response
 
 
@@ -151,7 +151,7 @@ def list_manifests_by_prefix(prefix=None):
     else:
         response = make_response(jsonify(result), 200)
 
-    BP.logging(response)    # utils.logging.logger will handle logging Level
+    BP.logger(response)    # level based on status code
     return response
 
 # Must have a string greater or equal to 1. Thats the RULE for Flask's rules
@@ -180,17 +180,16 @@ def api_upload(prefix=''):
 
         if BP.config['DRYRUN']:
             _data[prefix] = 'dry-run'
-            BP.logging(response)    # utils.logging.logger will handle logging Level
+            BP.logger(response)    # level based on status cod3
             return response
         else:
             manifest = ManifestDestiny(prefix, '', contentstr)
         response = manifest.response
 
     except Exception as e:
-        BP.logging.error('Manifest upload failed: %s' % (e))
-        response = make_response('Upload failed: %s' % str(e), 422)
+        response = make_response('Manifest upload failed: %s' % str(e), 422)
 
-    BP.logging(response)    # utils.logging.logger will handle logging Level
+    BP.logger(response)    # level based on status code
     _load_data()
     return response
 
@@ -218,9 +217,9 @@ def delete_manifest(manname=None):
                 os.remove(manifest_server_path)
                 # TODO: cleanout prefix folders of the manifests if it is empty!
         except EnvironmentError as err:
-            response = make_response('Failed to remove requested manifest!', 500)
+            response = make_response('Failed to remove manifest', 500)
 
-    BP.logging(response)    # utils.logging.logger will handle logging Level
+    BP.logger(response)    # level based on status code
     _load_data()
     return response
 
