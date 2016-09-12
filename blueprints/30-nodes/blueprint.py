@@ -284,7 +284,7 @@ def build_node(manifest, node_coord):
 
     packages = manifest.thedict['packages']
     if packages:
-        packages = ','.join(packages)
+        packages = ', '.join(packages)
     else:
         packages = None     # sentinel for following loop
     tasks = manifest.thedict['tasks']
