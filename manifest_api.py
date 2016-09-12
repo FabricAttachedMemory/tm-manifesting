@@ -60,13 +60,12 @@ except RuntimeError as err:
 
 try:
     manconfig = ManifestingConfiguration(cmdline_args.config)
+    tmconfig = TMConfig(manconfig['TMCONFIG'])
 except Exception as e:
-    raise SystemExit(str(e))
+    raise SystemExit('Bad config file(s): %s' % str(e))
 
-tmconfig = TMConfig(manconfig['TMCONFIG'])
 if tmconfig.errors:
     msg = 'Bad %s:\n' % manconfig['TMCONFIG'] + '\n'.join(tmconfig.errors)
-    mainapp.logger.critical(msg)
     raise SystemExit(msg)
 
 # mainapp is needed as decorator base so it comes early.
