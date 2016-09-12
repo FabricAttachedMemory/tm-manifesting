@@ -62,7 +62,7 @@ try:
     manconfig = ManifestingConfiguration(cmdline_args.config)
     tmconfig = TMConfig(manconfig['TMCONFIG'])
 except Exception as e:
-    raise SystemExit('Bad config file(s): %s' % str(e)))
+    raise SystemExit('Bad config file(s): %s' % str(e))
 
 if tmconfig.errors:
     msg = 'Bad %s:\n' % manconfig['TMCONFIG'] + '\n'.join(tmconfig.errors)
