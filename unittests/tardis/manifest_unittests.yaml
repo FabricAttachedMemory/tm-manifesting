@@ -18,6 +18,8 @@ defaults:
         passaction: continue
         rcpass: rc==0
 
+#TODO: THIS IS NOT A VALID TEST, YET
+
 blocks:
     test_install:
          - shell: env
@@ -29,7 +31,7 @@ blocks:
          - shell: apt-cache show tm-manifesting
 
     test_setup_golden:
-        - shell: tm-manifest-golden
+        - shell: tm-manifest-setup all
         - shell: ls -l /var/lib/tmms/sys-images/golden/golden.arm.tar
         - shell: cat /lib/systemd/system/tm-manifest-server.service
 
