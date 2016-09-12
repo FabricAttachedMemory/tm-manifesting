@@ -8,7 +8,7 @@ infrastructure:
     - host:
         name: bm-test
         deploy-from: tardis
-        deploy-options: mem:8192,cpu:2,disk:8,isoName:qa-l4tm-testing-tot-amd64.iso,dev:sda
+        deploy-options: mem:8192,cpu:2,disk:8,isoName:qa-l4tm-tot-amd64.iso,dev:sda
         deploy-type: vm
         name: tm-vm
 
@@ -17,15 +17,47 @@ defaults:
         failaction: fail, continue
         passaction: continue
         rcpass: rc==0
+    execute:
+        failaction: fail, continue
+        passaction: continue
+        rcpass: rc==1
 
 blocks:
-    install:
-        - shell: apt-get -y install gdebi
-        - shell: wget https://hlinux-jenkins.us.rdlabs.hpecorp.net/job/manifesting-sources-l4tm/ws/manifesting-orig/tm-manifesting_1.0-0+l4tm1_all.deb
-        - shell: gdebi --non-interactive tm-manifesting_1.0-0+l4tm1_all.deb
+    test_install:
+         - shell: echo $REPO
+         - shell: env
+         - shell: echo "${REPO}" >> /etc/apt/sources.list
+         - shell: cat /etc/apt/sources.list
+         - shell: apt -y update
+         - shell: apt -y upgrade
+         - shell: apt --assume-yes --force-yes install -t manifesting-catapult tm-manifesting
+         - shell: apt-cache show tm-manifesting
+
+    test_symlinks:
+        - shell: ls -l /usr/bin/tm-manifest-server
+        - shell: ls -l /usr/bin/tm-manifest
+        - shell: ls -l /usr/bin/tm-manifest-setup
+        - shell: ls -l /lib/systemd/system/tm-manifest-server.service
+
+    test_python_env:
+        - shell: ls -l /usr/lib/python3/dist-packages/tmms/
+        - shell: ls -l /usr/lib/python3/dist-packages/tmms/blueprints/
+        - shell: ls -l /usr/lib/python3/dist-packages/tmms/tm_cmd/
+        - shell: ls -l /usr/lib/python3/dist-packages/tmms/unittests/
+
+    test_postrm:
+        - execute: ls -l /usr/bin/tm-manifest-server
+        - execute: ls -l /usr/bin/tm-manifest
+        - execute: ls -l /usr/bin/tm-manifest-setup
+        - execute: ls -l /lib/systemd/system/tm-manifest-server.service
+        - execute: ls -l /usr/lib/python3/dist-packages/tmms/
 
 test:
 - step:
     tm-vm:
         - deploy: tm-vm
-        - install
+        - test_install
+        - test_symlinks
+        - test_python_env
+        - shell: apt purge --yes --force-yes --assume-yes tm-manifesting
+          #        - test_postrm
