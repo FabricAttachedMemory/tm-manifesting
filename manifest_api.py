@@ -65,7 +65,7 @@ except Exception as e:
 
 tmconfig = TMConfig(manconfig['TMCONFIG'])
 if tmconfig.errors:
-    msg = 'Bad %s:\n' + '\n'.join(tmconfig.errors) % manconfig['TMCONFIG']
+    msg = 'Bad %s:\n' % manconfig['TMCONFIG'] + '\n'.join(tmconfig.errors)
     mainapp.logger.critical(msg)
     raise SystemExit(msg)
 
