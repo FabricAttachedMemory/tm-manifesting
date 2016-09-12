@@ -31,9 +31,10 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         # Create a logger with no handlers.   Because there is no "dot"
         # hierarchy in the namespace, its parent is the (default) root logger
         # and its handler, currently set by logging.basicConfig.  Since this
-        # new logger has no handlers, it will roll over to its parent based
-        # on its propagate flag.
-        self.logger = logging.getLogger(loggername) # propagate default: True
+        # new logger has no handlers, it may fall up to its parent based
+        # on its propagate flag (default True).
+        self.logger = logging.getLogger(loggername)
+        self.logger.setLevel(level)
 
     def level_func(self, lvl):
         """
@@ -45,16 +46,12 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
             return self.logger.info
         lvl = lvl.lower()
 
-        # Suppress logging.debug unless logging.level is set to Debug: WHY?
-        if lvl == 'debug':
-            if self.logger.level == logging.DEBUG:
-                return self.logger.debug
-
         types = {
                 'critical' : self.logger.critical,
                 'error' : self.logger.error,
                 'warning' : self.logger.warning,
                 'info' : self.logger.info,
+                'debug' : self.logger.debug,
                 }
         return types.get(lvl, self.logger.info)
 

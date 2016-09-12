@@ -89,22 +89,17 @@ def _load_data():
     _data = {}
     for area in BP.config['L4TM_AREAS']:
         for arch in ('binary-all', 'binary-arm64'):
-            print('---------- %s/%s/Packages.gz...' % (area, arch), end='')
-            sys.stdout.flush()
+            BP.logger.info('Loading/processing %s/%s/Packages.gz...' % (
+                area, arch))
             pkgarea = repo % (area, arch)
             pkgresp = HTTP_REQUESTS.get(pkgarea)
             if pkgresp.status_code != 200:
-                print('not found')
+                BP.logger.error('%s not found' % arch)
                 continue
-            print('%s bytes' % pkgresp.headers['content-length'])
+            BP.logger.debug('Uncompressing %s bytes' % pkgresp.headers['content-length'])
 
-            print('Uncompressing...', end='')
-            sys.stdout.flush()
             unzipped = gzip.decompress(pkgresp.content) # bytes all around
-            print('%s bytes' % len(unzipped))
-
-            print('Parsing packages data...', end='')
-            sys.stdout.flush()
+            BP.logger.debug('Parsing %d bytes of package data' % len(unzipped))
             unzipped = BytesIO(unzipped)    # the next step needs read()
             tmp = [ src for src in Packages.iter_paragraphs(unzipped) ]
             _data.update(dict((pkg['Package'], pkg) for pkg in tmp))
@@ -115,8 +110,6 @@ def _filter(packages):    # Maybe it's time for a class
 
 
 def register(url_prefix):
-    set_trace()
-    BP.logger('here I am')
     BP.filter = _filter     # So manifest can see it
     BP.mainapp.register_blueprint(BP, url_prefix=url_prefix)
     _load_data()

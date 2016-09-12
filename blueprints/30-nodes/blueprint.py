@@ -200,7 +200,7 @@ def delete_node_binding(nodespec):
     node_coord = _resolve_node_coord(nodespec)
     if node_coord is None:
         response = make_response('No such node "%s"' % nodespec, 404)
-        BP.logger.error(response)
+        BP.logger(response)    # chooses log level based on status code
         return response
     response = make_response('Successful cleanup.', 204)
     try:
@@ -211,9 +211,7 @@ def delete_node_binding(nodespec):
         pass
     except OSError as err:
         response = make_response('Failed to delete binding: %s' % err, 500)
-        BP.logger.error(response)
-        return response
-    BP.logger(response)
+    BP.logger(response)    # chooses log level based on status code
     return response
 
 ####################### API (PUT) ###############################
@@ -405,7 +403,7 @@ def get_node_status(node_coord):
         with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
     except (FileNotFoundError) as err:    # Unbound
-        BP.logger.info('<get_node_status> for %s: unbound' % (node_coord))
+        BP.logger.debug('<get_node_status> for %s: unbound' % (node_coord))
         return None
     except (AssertionError) as err:
         BP.logger.error('%s: %s' % (node_coord, str(err)))
@@ -416,7 +414,7 @@ def get_node_status(node_coord):
             'manifest': 'unknown',
             'status':   'error'
         }
-    BP.logger.info('<get_node_status> for %s: %s' % (node_coord, json.dumps(status, indent=4)))
+    BP.logger.debug('<get_node_status> for %s: %s' % (node_coord, json.dumps(status, indent=4)))
     return status
 
 

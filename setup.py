@@ -115,9 +115,6 @@ def parse_cmdline_args(extra_args_msg):
         default=())
     args = parser.parse_args()
 
-    if not args.daemon_stop:
-        print('Using config file %s' % config)
-
     assert os.geteuid() == 0, 'You must be root'    # after parse check
     return args
 

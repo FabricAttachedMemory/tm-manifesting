@@ -59,7 +59,8 @@ def install_base_packages():
     pkg_list = ['apt-utils', 'cpio', 'dnsmasq',
                 'dosfstools', 'grub-efi-arm64-bin',
                 'python3-debian', 'python3-dnspython', 'python3-flask',
-                'python3-netaddr', 'python3-netifaces', 'python3-requests',
+                'python3-netaddr', 'python3-netifaces', 'python3-psutil',
+                'python3-requests',
                 'qemu-efi', 'tm-librarian', 'vmdebootstrap']
     errors = []
     for pkg in pkg_list:

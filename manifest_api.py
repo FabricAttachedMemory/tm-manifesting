@@ -97,50 +97,52 @@ mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' % (
 # Must come after mainapp setup because there's an almost circular (more
 # like Mobius) relationship between importing and registering a blueprint.
 
-paths = sorted([p for p in glob.glob('blueprints/*')])
-if not paths:
-    raise SystemExit('Cannot find any blueprints')
-ngood = 0
 
-for p in paths:
-    try:
-        modspec = p.replace('/', '.') + '.blueprint'
-        imported = import_module(modspec)
+def register_blueprints(mainapp):
+    paths = sorted([p for p in glob.glob('blueprints/*')])
+    if not paths:
+        raise SystemExit('Cannot find any blueprints')
+    ngood = 0
 
-        # Set commonly used globals or convenience attributes.  Each
-        # imported BP has its own BP global, used as the route decorator
-        # within the module.  Flask is weird that way.
-        imported.BP.mainapp = mainapp
-        imported.BP.blueprints = mainapp.blueprints   # for cross-BP references
-        imported.BP.config = mainapp.config
-        imported.BP.VERBOSE = mainapp.config['VERBOSE']
-        imported.BP.DEBUG = mainapp.config['DEBUG']
-        name = imported.BP.name
-        imported.BP.logger = tmmsLogger(mainapp.config['LOGFILE'], name)
+    for p in paths:
+        try:
+            modspec = p.replace('/', '.') + '.blueprint'
+            imported = import_module(modspec)
 
-        # Let each blueprint add its local attributes, then register itself
-        # against the flask framework.
-        imported.register(mainapp.config['url_prefix'])
-        imported.BP.logger.info('"%s" blueprint egistration complete' % name)
-        ngood += 1
-    except ImportError as e:
-        mainapp.logger.critical('No blueprint at %s' % p)
-        print('No blueprint at %s' % p, file=sys.stderr) # until critical fixed
-        if mainapp.config['DEBUG']:
-            set_trace()
-        pass
-    except AttributeError as e:
-        mainapp.logger.critical('\nblueprint %s has no register()' % p)
-        print('\nblueprint %s has no register(): %s' % (p, str(e)),
-             file=sys.stderr) # until critical fixed
-    except Exception as e:
-        mainapp.logger.critical('\nblueprint %s failed:\n%s' % (p, str(e)))
-        print('\nblueprint %s failed:\n%s' % (p, str(e)), file=sys.stderr)
+            # Set commonly used globals or convenience attributes.  Each
+            # imported BP has its own BP global, used as the route decorator
+            # within the module.  Flask is weird that way.
+            imported.BP.mainapp = mainapp
+            imported.BP.blueprints = mainapp.blueprints   # inter-BP use
+            imported.BP.config = mainapp.config
+            imported.BP.VERBOSE = mainapp.config['VERBOSE']
+            imported.BP.DEBUG = mainapp.config['DEBUG']
+            name = imported.BP.name
+            imported.BP.logger = tmmsLogger(mainapp.config['LOGFILE'], name)
 
-if ngood != len(paths):
-    msg = 'Not all blueprints finished registration'
-    mainapp.logger.critical(msg)
-    raise SystemExit(msg)
+            # Let each blueprint add its local attributes, then register
+            # itself against the flask framework using its "BP.mainapp".
+            imported.register(mainapp.config['url_prefix'])
+            imported.BP.logger.info('blueprint registration complete')
+            ngood += 1
+        except ImportError as e:
+            mainapp.logger.critical('No blueprint at %s' % p)
+            print('No blueprint at %s' % p, file=sys.stderr)
+            if mainapp.config['DEBUG']:
+                set_trace()
+            pass
+        except AttributeError as e:
+            mainapp.logger.critical('\nblueprint %s has no register()' % p)
+            print('\nblueprint %s has no register(): %s' % (p, str(e)),
+                file=sys.stderr) # until critical fixed
+        except Exception as e:
+            mainapp.logger.critical('\nblueprint %s failed:\n%s' % (p, str(e)))
+            print('\nblueprint %s failed:\n%s' % (p, str(e)), file=sys.stderr)
+
+    if ngood != len(paths):
+        msg = 'Not all blueprints finished registration'
+        mainapp.logger.critical(msg)
+        raise SystemExit(msg)
 
 ###########################################################################
 # Global header handling
@@ -305,15 +307,15 @@ def start_dnsmasq(config):
     return True
 
 ###########################################################################
-# Must come after all route declarations, including blueprint registrations
-
-mainapp.config['rules'] = sorted('%s %s' % (rule.rule, rule.methods) for
-                                 rule in mainapp.url_map.iter_rules())
-
+# Must come after all route declarations, including blueprint registrations.
+# Used here for debug and in landing page (see route above).
 
 if __name__ == '__main__':
+    mainapp.config['rules'] = sorted(
+        '%s %s' % (rule.rule, rule.methods) for
+            rule in mainapp.url_map.iter_rules())
     for rule in mainapp.config['rules']:
-        mainapp.logger.info(rule)
+        mainapp.logger.debug(rule)
 
     # http://flask.pocoo.org/docs/0.10/api/#application-object; options at
     # http://werkzeug.pocoo.org/docs/0.11/serving/#werkzeug.serving.run_simple
@@ -321,15 +323,20 @@ if __name__ == '__main__':
     if mainapp.config['DEBUG']:
         mainapp.jinja_env.cache = create_cache(0)
 
-    # FIXME: move this to utils so setup can use it
-    create_loopback_files()         # they disappear after LXC restart
+    register_blueprints(mainapp)
+    create_loopback_files() # they disappear after LXC restart FIXME utils?
     set_iptables(mainapp.config)
     kill_dnsmasq(mainapp.config)
     if not start_dnsmasq(mainapp.config):   # It's okay to leave it running
         raise SystemExit('Cannot start dnsmasq')
+
+    # NOW daemonize
+
+    mainapp.logger.info('Starting web server')
     mainapp.run(
         debug=mainapp.config['DEBUG'],
         use_reloader=mainapp.config['auto-update'],
         host=mainapp.config['HOST'],
         port=mainapp.config['PORT'],
         threaded=False)
+    mainapp.logger.warning('Built-in server terminated')

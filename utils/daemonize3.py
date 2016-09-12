@@ -33,7 +33,7 @@ class Daemon(object):
 
     def start(self):
         """
-            Start damonization. First, check if there is a PID file for the
+            Start daemonization. First, check if there is a PID file for the
         server already and if it is still running. Do not allow overrides,
         unless PID is already dead. Clean up and run the daemon.
         """
@@ -47,7 +47,11 @@ class Daemon(object):
 
         # I am child1
         self.detach()
-        child1pid = self.spawn_a_child()
+        child2pid = self.spawn_a_child()
+        if child2pid:
+            sys._exit(0)    # child1 has left the building
+
+        # I am child2
         self.delete_pidfile()
         self.create_pidfile(os.getpid())
 
