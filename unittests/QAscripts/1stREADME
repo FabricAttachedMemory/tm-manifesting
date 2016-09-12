@@ -112,9 +112,8 @@ Setting up a new FAME system or LXC container UNVERIFIED
        sudo virsh net-autostart YOURNET
        sudo virsh net-start YOURNET
 
-    e. Find the running copy of dnsmasq assigned to YOURNET and kill it.
-       You'll have to do this each time YOURNET is restarted (like
-       after a reboot).
+    e. The manifest_api will clean up dnsmasq, you don't need to worry
+       about it any more.
 
     f. export NETNAME=YOURNET
 
@@ -125,9 +124,6 @@ Setting up a new FAME system or LXC container UNVERIFIED
    virtual bridge.
 
 7. In a fresh window start "sudo tm-manifest-server --verbose"
-
-   Verify there is a new dnsmasq running reference a config file whose
-   name is "YOURNET.conf".
 
 8. tm-manifest listnodes should reflect /etc/tmconfig
 
