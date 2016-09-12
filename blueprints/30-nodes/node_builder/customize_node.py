@@ -15,8 +15,6 @@ from glob import glob
 import gzip
 import json
 import os
-import logging
-import logging.config
 import tarfile
 import shutil   # explicit namespace differentiates from our custom FS routines
 import sys
@@ -398,8 +396,7 @@ def update_status(args, message, status='building'):
     """
     if getattr(args, 'dryrun', False):
         return
-    if args.verbose:    # sometimes it's for stdout, sometimes the file
-        print(' - %s: %s' % (args.hostname, message))
+    args.logger(message)
     response = {}
     response['manifest'] = args.manifest.namespace
     response['status'] = status
@@ -527,11 +524,11 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
         do_copy = create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip)
 
     except AssertionError as e:
-        print('%s failed: errno = %d: %s' % (str(e), ret, stderr))
+        args.logger.error('%s failed: errno = %d: %s' % (str(e), ret, stderr))
     except RuntimeError as e:
-        print('%s: errno = %d: %s' % (str(e), ret, stderr))
+        args.logger.error('%s: errno = %d: %s' % (str(e), ret, stderr))
     except Exception as e:
-        print('%s: errno = %d: %s' % (str(e), ret, stderr))
+        args.logger.critical('%s: errno = %d: %s' % (str(e), ret, stderr))
 
     if undo_kpartx:
         cmd = 'kpartx -d %s' % ESP_img
@@ -583,8 +580,10 @@ def execute(args):
         Not 200 - failure. 'message' - is a message string that briefly
             explains the error\success status.
     """
-    logging.basicConfig(filename=args.build_dir + '/build.log', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        level=logging.INFO)
+    # You can't call this twice
+    # logging.basicConfig(filename=args.build_dir + '/build.log',
+    #   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    #   level=logging.INFO)
 
     if args.debug:
         args.verbose = True
@@ -594,15 +593,15 @@ def execute(args):
             os.chdir('/tmp')
             os.setsid()
             forked = os.fork()
-            logging.debug('Spawning parent PID=%s' % (forked))
+            args.logger.debug('Spawning parent PID=%s' % (forked))
             # Release the wait that should be done by original parent
             if forked > 0:
-                logging.debug('Closing parent PID=%s.' % (forked))
+                args.logger.debug('Closing parent PID=%s.' % (forked))
                 os._exit(0)  # RTFM: this is the preferred exit after fork()
             update_status(args,
                           'Rocky\'s rookie spawned a rookie %s...' % forked)
         except OSError as err:
-            logging.debug('Faild to spawn a child: %s ' % err)
+            args.logger.debug('Faild to spawn a child: %s ' % err)
             raise RuntimeError(
                 'Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % str(err))
 
@@ -611,7 +610,7 @@ def execute(args):
         'message': 'System image was created.'
     }
 
-    logging.info(' --- Starting building process ---')
+    args.logger(' --- Starting node image build ---')
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
@@ -664,11 +663,11 @@ def execute(args):
                          args.tftp_dir + '/' + manifest_tftp_file)
 
     except RuntimeError as err:     # Caught earlier and re-thrown as this
-        logging.error('Failed to customize image! RuntimeError: %s' % err)
+        args.logger.error('Failed to customize image! RuntimeError: %s' % err)
         response['status'] = 505
         response['message'] = 'Filesystem image build failed: %s' % str(err)
     except Exception as err:        # Suppress Flask traceback
-        logging.error('Failed to customize image! Exception: %s' % err)
+        args.logger.error('Failed to customize image! Exception: %s' % err)
         response['status'] = 505
         response['message'] = 'Unexpected error: %d: %s' % (
             sys.exc_info()[2].tb_lineno, str(err))
@@ -676,9 +675,9 @@ def execute(args):
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
 
-    logging.info('Node is finished building with thre response: %s' % (response))
+    args.logger('finished: %s' % (response))
     if not args.debug:  # I am the grandhild; release the wait() by init()
-        logging.debug('Closing the build child.')
+        args.logger.debug('Closing the build child.')
         os._exit(0)     # RTFM: this is the preferred exit after fork()
 
     return response

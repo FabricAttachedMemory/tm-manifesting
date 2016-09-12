@@ -17,10 +17,11 @@ class Daemon(object):
      Daemonization controller
      Script based of this: https://gist.github.com/marazmiki/3618191
 
-     This class keeps track of the PID of the daemon by creating a pid_file in the
-    specified location. It allows to check the status, start and stop the daemon.
-    If the process was interupted and the PID file was not cleaned up - the next
-    daemon start will check if PID is alive and override it if it is dead.
+     This class keeps track of the PID of the daemon by creating a pid_file
+     in the specified location. It allows to check the status, start and stop
+     the daemon.  If the process was interupted and the PID file was not
+     cleaned up - the next daemon start will check if PID is alive and 
+     override it if it is dead.
     """
 
     def __init__(self, pid_file=None, chdir=None, no_share_stream=False):
@@ -29,22 +30,28 @@ class Daemon(object):
 
         if pid_file is None:
             self.pid_file = '/var/lib/tmms/server.pid'
-        else:
-            self.pid_file = pid_file
-
 
     def start(self):
         """
-            Start damonization. First, check if there is a PID file for the server
-        already exists and if it is still running. Do not allow overrides, unless
-        PID is already dead. Clean up and run the daemon.
+            Start daemonization. First, check if there is a PID file for the
+        server already and if it is still running. Do not allow overrides,
+        unless PID is already dead. Clean up and run the daemon.
         """
         pid = self.isAlive
         if pid:
             raise RuntimeError('Process already running... PID: %s' % pid)
-        pid = self.spawn_a_child()
+        child1pid = self.spawn_a_child()
+        if child1pid:   # I am the original parent
+            os.wait(child1pid);
+            return
+
+        # I am child1
         self.detach()
-        pid = self.spawn_a_child()
+        child2pid = self.spawn_a_child()
+        if child2pid:
+            sys._exit(0)    # child1 has left the building
+
+        # I am child2
         self.delete_pidfile()
         self.create_pidfile(os.getpid())
 
@@ -53,7 +60,6 @@ class Daemon(object):
             os.dup2(dev_null.fileno(), sys.stdin.fileno())  # yes, error on read
             os.dup2(dev_null.fileno(), sys.stdout.fileno())
             os.dup2(dev_null.fileno(), sys.stderr.fileno())
-
 
     def stop(self):
         """
@@ -73,7 +79,6 @@ class Daemon(object):
                 self.delete_pidfile()
             else:
                 raise RuntimeError('Failed to stop process %s!' % pid)
-
 
     def status(self):
         """ Get status string of the daemon. """
@@ -95,26 +100,20 @@ class Daemon(object):
         os.setsid()
         os.umask(0o022)
 
-
     def spawn_a_child(self):
         """ Spawn the child process """
         forked = None
         try:
-            forked = os.fork()
-            if forked != 0:
-                os._exit(0)
-            # FIXME: LOGGER here
+            return os.fork()
         except OSError as err:
-            raise RuntimeError('Fork from PID %s faild: "%s"' % (os.getpid(), err))
-        return forked
-
+            raise RuntimeError('PID %d fork() failed: %s' % (
+                os.getpid(), str(err)))
 
     def create_pidfile(self, pid):
         """ Create pid file """
-        atexit.register(self.delete_pidfile)
+        atexit.register(self.delete_pidfile)    # FIXME: review this danger
         with open(self.pid_file, 'w') as file_obj:
             file_obj.write(str(pid).strip())
-
 
     def delete_pidfile(self):
         """ Delete pid file """
@@ -124,7 +123,6 @@ class Daemon(object):
             os.remove(self.pid_file)
         except OSError:
             raise RuntimeError('Failed to delete pid_file at %s!' % self.pid_file)
-
 
     def get_pid(self):
         """ Get PID of the process by looking at pid_file contents. """
@@ -137,7 +135,6 @@ class Daemon(object):
         except TypeError as err:
             pid = None
         return pid
-
 
     @property
     def isAlive(self):

@@ -94,10 +94,10 @@ def _filter(tasks):    # Maybe it's time for a class
     return [ task for task in tasks if task not in _data ]
 
 
-def register(mainapp):  # take what you like and leave the rest
-    BP.filter = _filter     # So manifest can see it
+def register(url_prefix):
+    BP.filter = _filter     # So 99_manifest can see it
     BP.lookup = _lookup
     BP.get_packages = _packages
-    BP.tasks_file = mainapp.root_path + '/configs/L4TM.desc'
-    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
+    BP.tasks_file = BP.mainapp.root_path + '/configs/L4TM.desc'
+    BP.mainapp.register_blueprint(BP, url_prefix=url_prefix)
     _load_data()

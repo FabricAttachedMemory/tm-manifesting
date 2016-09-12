@@ -115,9 +115,6 @@ def parse_cmdline_args(extra_args_msg):
         default=())
     args = parser.parse_args()
 
-    if not args.daemon_stop:
-        print('Using config file %s' % config)
-
     assert os.geteuid() == 0, 'You must be root'    # after parse check
     return args
 
@@ -162,7 +159,7 @@ if __name__ == '__main__':
                 setup_golden_image.main(args)
         raise SystemExit(0)
     except ImportError as err:
-        errmsg = 'First run "setup.py all" or "setup.py environment"'
+        errmsg = 'import failed: %s\nTry "setup.py all" or "setup.py environment"' % str(e)
     except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
     except NameError as err:

@@ -16,6 +16,7 @@ from flask import make_response, send_from_directory, redirect
 from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
+from tmms.utils.logging import tmmsLogger
 from .node_builder import customize_node
 
 _ERS_element = 'node'
@@ -109,7 +110,7 @@ def get_all_nodes():
     response = jsonify({'nodes': list(BP.node_coords)})	# already sorted
     response.status_code = 200
 
-    BP.logging(response)    #utils.logging.logger will handle log Level
+    BP.logger(response)
     return response
 
 
@@ -127,7 +128,7 @@ def get_all_bindings():
     else:
         response = jsonify({'mappings': nodes_info})
         response.status_code = 200
-    BP.logging(response)    #utils.logging.logger will handle log Level
+    BP.logger(response)
     return response
 
 
@@ -165,14 +166,14 @@ def get_node_bind_info(nodespec=None):
     node_coord = _resolve_node_coord(nodespec)
     if node_coord is None:
         response = make_response('No such node "%s"' % nodespec, 404)
-        BP.logging.error(response)
+        BP.logger.error(response)
         return response
     result = get_node_status(node_coord)
     if result is None:
         response = make_response('No Content', 204)
     else:
         response = make_response(jsonify(result), 200)
-    BP.logging(response)    # utils.logging.logger will handle log Level
+    BP.logger(response)
     return response
 
 
@@ -200,7 +201,7 @@ def delete_node_binding(nodespec):
     node_coord = _resolve_node_coord(nodespec)
     if node_coord is None:
         response = make_response('No such node "%s"' % nodespec, 404)
-        BP.logging.error(response)
+        BP.logger(response)    # chooses log level based on status code
         return response
     response = make_response('Successful cleanup.', 204)
     try:
@@ -211,9 +212,7 @@ def delete_node_binding(nodespec):
         pass
     except OSError as err:
         response = make_response('Failed to delete binding: %s' % err, 500)
-        BP.logging.error(response)
-        return response
-    BP.logging(response)    # utils.logging.logger will handle log Level
+    BP.logger(response)    # chooses log level based on status code
     return response
 
 ####################### API (PUT) ###############################
@@ -232,7 +231,7 @@ def bind_node_to_manifest(node_coord=None):
     """
     node_coord = '/' + node_coord   # Postel's Law, node_coord is naked.
     try:
-        BP.logging.info('Binding manifest to a node [%s].' % (node_coord))
+        BP.logger.info('Binding manifest to a node [%s].' % (node_coord))
 
         resp_status = 409   # Conflict
         assert get_node_status(node_coord) is None, 'Node is already bound.'
@@ -258,11 +257,7 @@ def bind_node_to_manifest(node_coord=None):
     except (AssertionError, ValueError) as err:
         response = make_response(str(err), resp_status)
 
-    if response.status_code >= 400:
-        BP.logging.error(response.response[0].decode())
-    else:
-        BP.logging.info(response.response[0].decode())
-
+    BP.logger(response)
     return response
 
 ###########################################################################
@@ -315,7 +310,8 @@ def build_node(manifest, node_coord):
         'tftp_dir':     tftp_dir,
         'status_file':  tftp_dir + '/status.json',
         'verbose':      BP.VERBOSE,
-        'debug':        BP.DEBUG
+        'debug':        BP.DEBUG,
+        'logger':       tmmsLogger(hostname)
     }
     # Legacy technique called this as a subprocess.  Construct the command
     # for verbose output and manual invocation for development.
@@ -408,8 +404,11 @@ def get_node_status(node_coord):
         node_image_dir = node_coord2image_dir(node_coord)   # can raise
         with open(node_image_dir + '/status.json', 'r') as file_obj:
             status = json.loads(file_obj.read())
-    except (AssertionError, FileNotFoundError) as err:    # Unbound
-        BP.logging.error('No binding for node %s' % (node_coord))
+    except (FileNotFoundError) as err:    # Unbound
+        BP.logger.debug('<get_node_status> for %s: unbound' % (node_coord))
+        return None
+    except (AssertionError) as err:
+        BP.logger.error('%s: %s' % (node_coord, str(err)))
         return None
     except Exception as err:       # TCNH =)
         status = {
@@ -417,7 +416,7 @@ def get_node_status(node_coord):
             'manifest': 'unknown',
             'status':   'error'
         }
-    BP.logging.info('<get_node_status> for %s: %s' % (node_coord, json.dumps(status, indent=4)))
+    BP.logger.debug('<get_node_status> for %s: %s' % (node_coord, json.dumps(status, indent=4)))
     return status
 
 
@@ -429,12 +428,13 @@ def _load_data():
     :return: [dict] node_coordinate - node_status key value pair of the
         current status of the nodes.
     """
-    result = {}
+    global _data
+    _data = {}
     for node in BP.nodes:
         node_status = get_node_status(node.coordinate)
         if node_status:
-            result[node.coordinate] = node_status
-    return result
+            _data[node.coordinate] = node_status
+    return _data
 
 
 def _manifest_lookup(name):
@@ -446,18 +446,9 @@ def _manifest_lookup(name):
 ###########################################################################
 
 
-def register(mainapp):  # take what you like and leave the rest
-    # Do some shortcuts
-    global _data
-    BP.config = mainapp.config
-    try:
-        BP.nodes = BP.config['tmconfig'].allNodes
-    except Exception:
-        BP.nodes = BP.config['tmconfig'].nodes
+def register(url_prefix):
+    BP.nodes = BP.config['tmconfig'].allNodes
     BP.node_coords = list([node.coordinate for node in BP.nodes])  # ordered
-    BP.blueprints = mainapp.blueprints
     BP.manifest_lookup = _manifest_lookup
-    BP.logging = mainapp.config['logging']
-    BP.logging.name = '30-node_BP'
-    mainapp.register_blueprint(BP, url_prefix=mainapp.config['url_prefix'])
-    _data = _load_data()
+    BP.mainapp.register_blueprint(BP, url_prefix=url_prefix)
+    _load_data()
