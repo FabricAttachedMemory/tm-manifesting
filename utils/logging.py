@@ -3,8 +3,9 @@
     A helper script to wrap logging module that will simplify its usage
 around the blueprint scirpts and other similar behaviour.
 """
-import os
 import logging
+import sys
+import os
 
 from flask.wrappers import Response as flaskResponse  # type checking
 from pdb import set_trace
@@ -15,18 +16,23 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         Wrapper around logging module to allow a simpler Log handling.
     """
 
-    def __init__(self, filename, loggername,
-         formatter=None, level=logging.INFO):
-        if not formatter:
-            formatter = '%(asctime)s :: %(levelname)s <%(name)s>:: %(message)s'
+    def __init__(self, filename, loggername, format=None, level=logging.INFO):
+        if not format:
+            format = '%(asctime)s :: %(levelname)s <%(name)s>:: %(message)s'
+            format = '%(asctime)s %(levelname)-5s %(name)s: %(message)s'
 
         # Idempotent reconfiguration of root logger.  This chooses a simple
         # file handler FIXME remove/add a rotating file handler, process
         # VERBOSE and DEBUG from cmdline.
+        # logging.basicConfig(
+            # filename=filename,
+            # format=format,
+            # level=level)
         logging.basicConfig(
-            filename=filename,
-            format=formatter,
-            level=level)
+            stream=sys.stderr,
+            format=format,
+            datefmt='%Y-%m-%d %H:%M:%S',
+            level=logging.DEBUG)
 
         # Create a logger with no handlers.   Because there is no "dot"
         # hierarchy in the namespace, its parent is the (default) root logger
@@ -40,7 +46,7 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         """
             Convert logging level types passed as a string into an actual
         logging function.
-        If invalid lvl string was passed - return logging.info
+        If invalid lvl string was passed - return logging.INFO
         """
         if lvl is None or not isinstance(lvl, str):
             return self.logger.info
