@@ -45,7 +45,7 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         while rootlogger.hasHandlers():
             rootlogger.removeHandler(rootlogger.handlers[-1])
         h = logging.handlers.RotatingFileHandler(use_file,
-            maxBytes=1024, backupCount=3)
+            maxBytes=50*1024, backupCount=3)
         h.setFormatter(logging.Formatter(format, datefmt=datefmt))
         rootlogger.addHandler(h)
         rootlogger.setLevel(level)
