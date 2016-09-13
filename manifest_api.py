@@ -284,7 +284,7 @@ def kill_dnsmasq(config):
             )]
     pids = set(c[1] for c in openconns)
     if pids:
-        mainapp.logger.info('Killing %d copies of dnsmasq')
+        mainapp.logger.info('Killing %d copies of dnsmasq' % len(pids))
     while len(pids):
         pid = pids.pop()
         kill_pid(pid, 'dnsmasq')    # Until someone starts using bind9...
