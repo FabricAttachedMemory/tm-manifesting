@@ -79,10 +79,3 @@ PXE_FIREWALL = 'DHCP'
 #    will get x.y.z.1, node02 gets x.y.z.2, etc.
 
 TMDOMAIN = 'have.it.your.way,10.11.10.0/24'
-
-# For testing purposes, use at your own risk.  This is for the single normal
-# "l4tm" account configured in the stock golden image, which also comes with
-# sudo.  The key should be all on one line, no spaces, no embedded linefeed.
-# It will be put in ~l4tm/.ssh/authorized_keys.
-
-# L4TM_PUBKEY = 'allonelinenoLineFeedsNOSPACESitwilloverrunyourterminalwidth'
