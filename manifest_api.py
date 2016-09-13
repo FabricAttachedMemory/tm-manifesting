@@ -41,23 +41,6 @@ except ImportError as e:
 
 cmdline_args = parse_cmdline_args('n/a')
 
-daemon = Daemon()  # FIXME: changedir to an appropriate location
-try:
-    if cmdline_args.daemon_start:
-        mainapp.logger.info('Daemonining the server.')
-        daemon.start()
-
-    if cmdline_args.daemon_stop:
-        print('Shutting down the daemon...')
-        daemon.stop()
-        raise SystemExit(0)
-
-    if cmdline_args.daemon_status:
-        print(daemon.status())
-        raise SystemExit(0)
-except RuntimeError as err:
-    raise SystemExit(str(err))
-
 try:
     manconfig = ManifestingConfiguration(cmdline_args.config)
     tmconfig = TMConfig(manconfig['TMCONFIG'])
@@ -93,6 +76,18 @@ mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' % (
     mainapp.config['PXE_INTERFACE'])
 
 ###########################################################################
+# mainapp was given a logger by Flask.  Modify it based on cmdline arguments.
+
+def configure_logging(mainapp, cmdline_args):
+    # Can this just run to stderr?
+    if cmdline_args.daemon_start:
+        tmmsLogger.reconfigure_rootlogger(
+            use_file=mainapp.config['LOGFILE'], verbose=cmdline_args.verbose)
+    else:
+        tmmsLogger.reconfigure_rootlogger(
+            use_stderr=True, verbose=cmdline_args.verbose)
+
+###########################################################################
 # Must come after mainapp setup because there's an almost circular (more
 # like Mobius) relationship between importing and registering a blueprint.
 
@@ -106,7 +101,7 @@ def register_blueprints(mainapp):
     for p in paths:
         try:
             modspec = p.replace('/', '.') + '.blueprint'
-            mainapp.logger.info('Importing %s' % modspec)
+            mainapp.logger.info('importing %s' % modspec.split('.')[1])
             imported = import_module(modspec)
 
             # Set commonly used globals or convenience attributes.  Each
@@ -274,18 +269,25 @@ def kill_dnsmasq(config):
     if tmp is None:         # ASS-U-MES "torms" address bound here
         return
     pxe_addr = tmp[0]['addr']
-    openconns = [(c.laddr[1], c.pid)    # port, pid
-        for c in psutil.net_connections(kind='inet4')
-            if c.laddr[0] == pxe_addr]
-    ports = set(c[0] for c in openconns)
-    pids = set(c[1] for c in openconns)
+
     # libvirt bridge will always have DNS (53).  A truly simple net definition
     # won't have TFTP (69) but others might.  Obviously one started from here
-    # will have TFTP.
-    if ports.issubset(set((53, 69))):
-        while len(pids):
-            pid = pids.pop()
-            kill_pid(pid, 'dnsmasq')
+    # will have TFTP.  And /etc/init.d/dnsmasq starts a *.* DNS listener
+    # which picks up PXE_INTERFACE when explicitly bound processes are killed.
+    # net_connections returns an object with a laddr field that's a tuple
+    # of (listenaddress, port).   Filter on that.
+
+    openconns = [(c.laddr[1], c.pid)    # port, pid
+        for c in psutil.net_connections(kind='inet4')
+            if c.laddr[1] in (53, 69) and (
+                c.laddr[0] == pxe_addr or c.laddr[0] == '0.0.0.0'
+            )]
+    pids = set(c[1] for c in openconns)
+    if pids:
+        mainapp.logger.info('Killing %d copies of dnsmasq')
+    while len(pids):
+        pid = pids.pop()
+        kill_pid(pid, 'dnsmasq')    # Until someone starts using bind9...
 
 
 def start_dnsmasq(config):
@@ -296,17 +298,59 @@ def start_dnsmasq(config):
 
     conf_file = '%(DNSMASQ_CONFIGS)s/%(PXE_INTERFACE)s.conf' % config
 
-    # This is configured to daemonize so a p.poll() will not show it as active.
-    p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
-    time.sleep(0.5)
-    p.poll()    # Does a wait() on a daemonizing process to release it
-    return True
+    # This is configured to daemonize so a p.poll() should be zero (RTFM
+    # dnsmasq, section EXIT CODES).
+    p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True,
+        stdout='/dev/null', stderr='/dev/null')
+    while True:
+        time.sleep(1.0)     # Chance to daemonize on busy system
+        tmp = p.poll()      # Exit code if it finished.
+        if tmp is not None:
+            break
+    if tmp == 0:
+        mainapp.logger.info('dnsmasq started successfully')
+        return True
+    if tmp == 1:
+        msg = 'Bad dnsmasq configuration'
+    elif tmp == 2:
+        msg = 'dnsmasq failed to start: address in use'
+    else:
+        msg = 'dnsmasq failure, return code = %d' % tmp
+    mainapp.logger.critical(msg)
+    print(msg, file=sys.stderr)     # until logging is more mature
+    return False
+
+###########################################################################
+
+def daemonize(mainapp, cmdline_args):
+    pid_file = mainapp.config['MANIFESTING_ROOT'] + '/tmms.pid'
+    daemon = Daemon(pid_file, chdir=None)  # FIXME: chdir needs a value
+    try:
+        if cmdline_args.daemon_start:
+            mainapp.logger.info('Daemonizing the server.')
+            daemon.start()
+            return
+
+        if cmdline_args.daemon_stop:
+            print('Shutting down the daemon...')
+            daemon.stop()
+            raise SystemExit(0)
+
+        if cmdline_args.daemon_status:
+            print(daemon.status())
+            raise SystemExit(0)
+    except RuntimeError as err:
+        raise SystemExit(str(err))
 
 ###########################################################################
 # Must come after all route declarations, including blueprint registrations.
 # Used here for debug and in landing page (see route above).
 
+
 if __name__ == '__main__':
+    configure_logging(mainapp, cmdline_args)
+    mainapp.logger.info('starting new invocation of API server')
+
     mainapp.config['rules'] = sorted(
         '%s %s' % (rule.rule, rule.methods) for
             rule in mainapp.url_map.iter_rules())
@@ -319,14 +363,14 @@ if __name__ == '__main__':
     if mainapp.config['DEBUG']:
         mainapp.jinja_env.cache = create_cache(0)
 
-    register_blueprints(mainapp)
     create_loopback_files() # they disappear after LXC restart FIXME utils?
     set_iptables(mainapp.config)
     kill_dnsmasq(mainapp.config)
     if not start_dnsmasq(mainapp.config):   # It's okay to leave it running
         raise SystemExit('Cannot start dnsmasq')
 
-    # NOW daemonize
+    daemonize(mainapp, cmdline_args)    # If it's a daemon, do it now...
+    register_blueprints(mainapp)        # ...to stick this in the background.
 
     mainapp.logger.info('Starting web server')
     mainapp.run(

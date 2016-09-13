@@ -4,6 +4,7 @@
 around the blueprint scirpts and other similar behaviour.
 """
 import logging
+import logging.handlers
 import sys
 import os
 
@@ -16,32 +17,38 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         Wrapper around logging module to allow a simpler Log handling.
     """
 
-    _rootlogger = None
+    _configured = False
 
     @classmethod
     def reconfigure_rootlogger(cls,
-            rootlogger=None, use_stderr=True, use_file='',
-        level=logging.INFO):
+            use_stderr=False, use_file='', verbose=False):
 
-        if cls._rootlogger is not None:     # locking built into logging
+        if cls._configured:     # locking built into logging
             return
 
         assert bool(use_stderr) ^ bool(use_file), \
             'Exactly one of use_stderr or use_file must be set'
-        if rootlogger is None:
-            rootlogger = logging.root
-            assert rootlogger is not None, 'No root logger configured yet'
+        cls._configured = True
+        level = logging.DEBUG if verbose else logging.INFO
+        format='%(asctime)s %(levelname)-5s %(name)s: %(message)s'
+        datefmt='%Y-%m-%d %H:%M:%S'
 
-        if use_stderr:                  # That was easy
-            logging.basicConfig(        # Idempotent, first call wins
+        if use_stderr:                  # does logging.RootLogger.addHandler()
+            logging.basicConfig(        # only the first call matters
                 stream=sys.stderr,
-                format='%(asctime)s %(levelname)-5s %(name)s: %(message)s',
-                datefmt='%Y-%m-%d %H:%M:%S',
+                format=format,
+                datefmt=datefmt,
                 level=level)
-        else:
-            raise NotImplementedError('Rotating file is not implemented yet')
+            return
 
-        cls._rootlogger = rootlogger
+        rootlogger = logging.root       # old school: logging.getLogger('')
+        while rootlogger.hasHandlers():
+            rootlogger.removeHandler(rootlogger.handlers[-1])
+        h = logging.handlers.RotatingFileHandler(use_file,
+            maxBytes=50*1024, backupCount=3)
+        h.setFormatter(logging.Formatter(format, datefmt=datefmt))
+        rootlogger.addHandler(h)
+        rootlogger.setLevel(level)
 
     def __init__(self, loggername, level=logging.INFO):
         # Create a logger with no handlers.   Because there is no "dot"
@@ -50,7 +57,7 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         # new logger has no handlers, it may fall up to its parent based
         # on its propagate flag (default True).
         # Insure there is a root logger, default to stderr and INFO.
-        self.reconfigure_rootlogger()
+        self.reconfigure_rootlogger(use_stderr=True)
         self.logger = logging.getLogger(loggername)
         self.logger.setLevel(level)
 
