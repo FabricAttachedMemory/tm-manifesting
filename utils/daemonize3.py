@@ -20,16 +20,19 @@ class Daemon(object):
      This class keeps track of the PID of the daemon by creating a pid_file
      in the specified location. It allows to check the status, start and stop
      the daemon.  If the process was interupted and the PID file was not
-     cleaned up - the next daemon start will check if PID is alive and 
+     cleaned up - the next daemon start will check if PID is alive and
      override it if it is dead.
     """
 
-    def __init__(self, pid_file=None, chdir=None, no_share_stream=False):
+    def __init__(self, pid_file, chdir=None, no_share_stream=False):
+        assert pid_file[0] == '/', '%s is not an absolute path'
+        assert os.path.isdir(os.path.dirname(pid_file)), \
+            'No directory for %s' % pid_file
+        self.pid_file = pid_file
+        if chdir is not None:
+            assert os.path.isdir(chdir), '%s does not exist' % chdir
         self.chdir = chdir
         self.no_share_stream = no_share_stream
-
-        if pid_file is None:
-            self.pid_file = '/var/lib/tmms/server.pid'
 
     def start(self):
         """
@@ -42,18 +45,20 @@ class Daemon(object):
             raise RuntimeError('Process already running... PID: %s' % pid)
         child1pid = self.spawn_a_child()
         if child1pid:   # I am the original parent
-            os.wait(child1pid);
-            return
+            os._exit(0)
 
         # I am child1
         self.detach()
         child2pid = self.spawn_a_child()
-        if child2pid:
-            sys._exit(0)    # child1 has left the building
+        if child2pid:       # I am still child1...
+            os._exit(0)     # ...and I am leaving the building
 
         # I am child2
         self.delete_pidfile()
         self.create_pidfile(os.getpid())
+
+        if self.chdir:
+            os.chdir(self.chdir)
 
         if not self.no_share_stream:
             dev_null = open('/dev/null', 'w')

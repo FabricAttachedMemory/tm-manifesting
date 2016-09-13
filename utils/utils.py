@@ -8,7 +8,7 @@ import shutil
 import sys
 import tarfile
 
-from subprocess import call, Popen, PIPE
+from subprocess import call, Popen, PIPE, DEVNULL
 from tmms.utils.file_utils import remove_target, workdir, mknod, chgrp
 
 
@@ -63,12 +63,16 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
 def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
           use_call=False, return_process_obj=False):
     """Pipe a command, maybe retrieve stdout/stderr, hides ugly output"""
+    if stdout == '/dev/null':
+        stdout = DEVNULL
+    if stderr == '/dev/null':
+        stderr = DEVNULL
     try:
         cmd = shlex.split(cmdstr)
         assert not (use_call and return_process_obj), \
             'Flags are mutually exclusive'
         if return_process_obj:
-            return Popen(cmd)
+            return Popen(cmd, stdout=stdout, stderr=stderr)
         if use_call:
             return call(cmd), None, None
 
