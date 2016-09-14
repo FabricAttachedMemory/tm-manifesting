@@ -382,20 +382,25 @@ apt-get dist-upgrade -q --assume-yes
                 cmd = 'tasksel install %s\n' % task
                 install.write(cmd)
 
-        install.write('\n# Show me the Debians! (%d)\n' % len(downloads))
-        for pkg in downloads:
-            deb = pkg.split('/')[-1]
-            install.write('# %s\n' % pkg)
-            pkgresp = HTTP_REQUESTS.get(pkg, verify=False)
-            if pkgresp.status_code != 200:
-                msg = 'Status %d: could not download "%s"' % (
-                    pkgresp.status_code, pkg)
-                args.logger.error(msg)
-                install.write('# %s\n\n' % msg)
-                continue
-            with open(args.new_fs_dir + '/root/' + deb, 'wb') as debian:
-                debian.write(pkgresp.content)
-            install.write('dpkg -i %s\n# rm %s\n\n' % (deb, deb))
+        if downloads is not None:
+            install.write('\n# Show me the Debians! (%d)\n' % len(downloads))
+            for pkg in downloads:
+                deb = pkg.split('/')[-1]
+                install.write('# %s\n' % pkg)
+                pkgresp = HTTP_REQUESTS.get(pkg, verify=False)
+                if pkgresp.status_code != 200:
+                    msg = 'Status %d: could not download "%s"' % (
+                        pkgresp.status_code, pkg)
+                    args.logger.error(msg)
+                    install.write('# %s\n\n' % msg)
+                    continue
+                with open(args.new_fs_dir + '/root/' + deb, 'wb') as debian:
+                    debian.write(pkgresp.content)
+                install.write('dpkg -i %s\nrm %s\n\n' % (deb, deb))
+
+        # Release cache space (megabytes).  DON'T use autoclean, it increases
+        # the used space (new indices?)
+        install.write('apt-get clean\n')
 
     os.chmod(script_file, 0o744)
 
