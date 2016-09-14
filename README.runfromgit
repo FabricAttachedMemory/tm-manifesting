@@ -11,7 +11,6 @@ Install L4TM on your target server (probably a ToRMS).
 
 Insure the system's packages are updated and include the following packages:
 
-$ sudo dpkg --add-architecture arm64
 $ sudo apt-get update
 $ sudo apt-get install python3 git
 
@@ -143,8 +142,7 @@ If you run:
 
 $ sudo tm-manifest-server
 
-A manifesting API server should start and print out the API endpoints
-it serves.
+A manifesting API server should start.
 
 If you run:
 

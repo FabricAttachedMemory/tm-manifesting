@@ -11,15 +11,16 @@
 """
 
 import argparse
-from glob import glob
 import gzip
 import json
 import os
-import tarfile
+import requests as HTTP_REQUESTS
 import shutil   # explicit namespace differentiates from our custom FS routines
 import sys
+import tarfile
 import time
 
+from glob import glob
 from pdb import set_trace
 
 from tmms.utils.utils import find, piper, untar
@@ -335,55 +336,88 @@ def install_packages(args):
     :param 'args.tasks': [list] of tasks for 'tasksel'.
     :return [boolean] True if it worked, False otherwise with updated status.
     """
-    msg = 'Installing ' + str(args.packages) if args.packages else \
-        'Updating/upgrading base packages'
+    # Separate the space-delimited list of packages into URLs and package names
+    if args.packages is None:
+        downloads = None
+        packages = None
+        msg = 'Updating/upgrading packages from golden image'
+    else:
+        pkglist = args.packages.split(' ')
+        downloads = [p for p in pkglist if
+            (p.startswith('http://') or p.startswith('https://'))]
+        packages = [p for p in pkglist if p not in downloads]
+        msg = 'Installing %d packages and %d URL downloads' % (
+            len(packages), len(downloads))
     update_status(args, msg)
 
+    # Fill out the install script.  Everything goes at root $HOME.
+    installsh = '/root/install.sh'
+    installog = '/root/install.log'
+    script_file = args.new_fs_dir + installsh
     script_header = """#!/bin/bash
 # Created %s
 set -ue
-exec > /install.log 2>&1  # /tmp/ is cleaned out of boot
+cd /root
+exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -q --assume-yes
 apt-get dist-upgrade -q --assume-yes
-""" % time.ctime()
-    script_file = args.new_fs_dir + '/install.sh'
-    downloads = []
-    with open(script_file, 'w') as file_obj:
-        file_obj.write(script_header)
+""" % (time.ctime(), installog)
 
-        file_obj.write('\n# Packages: %s\n' % args.packages)
-        if args.packages is not None:
-            for pkg in args.packages.split(','):
-                if pkg.startswith('http://'):
-                    downloads.append(pkg)
+    with open(script_file, 'w') as install:
+        install.write(script_header)
+
+        install.write('\n# Packages: %s\n' % packages)
+        if packages is not None:
+            for pkg in packages:
                 cmd = 'apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
-                file_obj.write(cmd)
+                install.write(cmd)
 
-        file_obj.write('\n# Tasks: %s\n' % args.tasks)
+            # FIXME: zero out the apt cache, save some space?
+
+        install.write('\n# Tasks: %s\n' % args.tasks)
         if args.tasks is not None:
             for task in args.tasks.split(','):
                 cmd = 'tasksel install %s\n' % task
-                file_obj.write(cmd)
+                install.write(cmd)
 
-        for pkg in downloads:
-            pkgresp = HTTP_REQUESTS.get(pkg)
-            if pkresp.status_code != 200:
-                raise RuntimeError('Could not download "%s"' % pkg)
+        if downloads is not None:
+            install.write('\n# Show me the Debians! (%d)\n' % len(downloads))
+            for pkg in downloads:
+                deb = pkg.split('/')[-1]
+                install.write('# %s\n' % pkg)
+                pkgresp = HTTP_REQUESTS.get(pkg, verify=False)
+                if pkgresp.status_code != 200:
+                    msg = 'Status %d: could not download "%s"' % (
+                        pkgresp.status_code, pkg)
+                    args.logger.error(msg)
+                    install.write('# %s\n\n' % msg)
+                    continue
+                with open(args.new_fs_dir + '/root/' + deb, 'wb') as debian:
+                    debian.write(pkgresp.content)
+                install.write('dpkg -i %s\nrm %s\n\n' % (deb, deb))
+
+        # Release cache space (megabytes).  DON'T use autoclean, it increases
+        # the used space (new indices?)
+        install.write('apt-get clean\n')
 
     os.chmod(script_file, 0o744)
 
     try:
-        cmd = '/usr/sbin/chroot %s %s ' % (args.new_fs_dir, '/install.sh')
+        cmd = '/usr/sbin/chroot %s %s ' % (args.new_fs_dir, installsh)
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
-        # While running, sys_image/install.log is updated.  That could be
-        # tail followed and status updated, MFT' time.
+        # While running, sys_image/root/install.log is updated.  That could be
+        # tailed and status updated, MFT' time.
         ret, stdout, stderr = piper(cmd, use_call=True)
         assert not ret, 'chroot failed: errno %d' % (ret)
         return True
     except Exception as err:
+        args.logger.error('%s: %s' % (str(err), stderr))
+        with open(args.new_fs_dir + installog, 'r') as log:
+            args.logger.debug(log.read())
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
+    return False
 
 #==============================================================================
 

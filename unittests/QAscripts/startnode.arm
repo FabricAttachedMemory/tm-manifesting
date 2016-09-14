@@ -49,7 +49,8 @@ NETACCESS=/etc/qemu/bridge.conf
 grep -Eq "^allow\s+$NETNAME" $NETACCESS                                         
 [ $? -ne 0 ] && echo "Missing 'allow' in $NETACCESS" >&2 && exit 1
 
-MAC="52:54:48:50:45:$DECIMAL"
+# This pattern triggers lfs_fuse to pick up its node ID from the MAC address.
+MAC="52:54:42:$DECIMAL:$DECIMAL:$DECIMAL"
 ps -ef | grep qemu-system-aarch64 | grep -q $MAC | grep -q $NETNAME
 [ $? -eq 0 ] && echo "Node $NODE (MAC $MAC) already running" >&2 && exit 1
 

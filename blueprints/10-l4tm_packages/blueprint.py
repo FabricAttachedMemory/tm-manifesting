@@ -106,7 +106,10 @@ def _load_data():
 
 
 def _filter(packages):    # Maybe it's time for a class
-    return [ pkg for pkg in packages if pkg not in _data ]
+    return [ pkg for pkg in packages if (
+        not pkg.startswith('http://') and
+        not pkg.startswith('https://') and
+        pkg not in _data)]
 
 
 def register(url_prefix):
