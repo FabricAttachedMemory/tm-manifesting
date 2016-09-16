@@ -293,7 +293,8 @@ def kill_dnsmasq(config):
 def start_dnsmasq(config):
     pxe_interface = config['PXE_INTERFACE']
     if pxe_interface not in NIF.interfaces():
-        mainapp.logger.critical('%s does not exist; cannot start dnsmasq.')
+        mainapp.logger.warning('%s does not exist; cannot start dnsmasq.' %
+            pxe_interface)
         return False
 
     conf_file = '%(DNSMASQ_CONFIGS)s/%(PXE_INTERFACE)s.conf' % config
@@ -349,6 +350,11 @@ def daemonize(mainapp, cmdline_args):
 
 if __name__ == '__main__':
     configure_logging(mainapp, cmdline_args)
+    if cmdline_args.start_dnsmasq:
+        kill_dnsmasq(mainapp.config)
+        ret = start_dnsmasq(mainapp.config)
+        raise SystemExit(0 if ret else 'Could not start dnsmasq')
+
     mainapp.logger.info('starting new invocation of API server')
 
     mainapp.config['rules'] = sorted(
@@ -366,8 +372,7 @@ if __name__ == '__main__':
     create_loopback_files() # they disappear after LXC restart FIXME utils?
     set_iptables(mainapp.config)
     kill_dnsmasq(mainapp.config)
-    if not start_dnsmasq(mainapp.config):   # It's okay to leave it running
-        raise SystemExit('Cannot start dnsmasq')
+    start_dnsmasq(mainapp.config)
 
     daemonize(mainapp, cmdline_args)    # If it's a daemon, do it now...
     register_blueprints(mainapp)        # ...to stick this in the background.
@@ -380,3 +385,5 @@ if __name__ == '__main__':
         port=mainapp.config['PORT'],
         threaded=False)
     mainapp.logger.warning('Built-in server terminated')
+    kill_dnsmasq(mainapp.config)
+    raise SystemExit(0)
