@@ -66,9 +66,10 @@ class TmNode(tm_base.TmCmd):
         assert len(target) >= 2, \
             'Missing argument: setnode <node coordinate> <manifest>'
         node_coord, manifest = target[:2]
-        assert node_coord.startswith('/'), 'Illegal node coordinate'
+        if node_coord.startswith('/'):	# assist humans: allow an integer
+            node_coord = node_coord[1:]
         payload = '{ "manifest" :  "%s" }' % manifest
-        api_url = '%s/%s/%s' % (self.url, 'node/', node_coord[1:])
+        api_url = '%s/%s/%s' % (self.url, 'node/', node_coord)
         clean_url = os.path.normpath(api_url.split('http://')[-1])
         api_url = 'http://' + clean_url
         data = self.http_request(api_url, payload=payload)
