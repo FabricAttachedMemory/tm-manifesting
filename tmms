@@ -4,8 +4,8 @@
 # this file and edit the copy as appropriate.  Then move the custom copy to
 # 1) /etc/tmms, where it will be used by default by all the commands.  This
 #    is the system default location expected by the systems service startup.
-# 2) /some/where/else/mytmms.  All five commands listed above must be started
-#    with "--config /some/where/else/mytmms".  This allows you to run
+# 2) /some/where/else/mytmms.  All five commands listed above must then be
+#    started with "--config /some/where/else/mytmms".  This allows you to run
 #    multiple TMMS environments on a single system although you must setup
 #    and start them by hand.
 
@@ -28,11 +28,9 @@ MANIFESTING_ROOT = '/var/lib/tmms'
 TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
 
 # L4TM repo information needed to build file system images for nodes.
-# If you run your own local mirror, use that.
-L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm'
-
-# 'alpha' is a testing branch updated on every source update.  Change
-# to 'catapult' for well-tested, stable (weekly) builds.  
+# If you run your own local mirror, use that.  This address SHOULD be
+# valid throughout the rest of 2016; if in doubt, contact the repo team.
+L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm-pushed.'
 L4TM_RELEASE = 'catapult'
 
 # Remove 'main' for a much faster start (seconds vs tens of seconds), however
@@ -44,11 +42,12 @@ L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
 # the PXE server (dnsmasq) will NOT be started.  The manifesting API will
 # still work, you just can't boot any images.  After changing this value
 # you need to (re)-run "setup.py networking".
-PXE_INTERFACE = 'NoSuchInterfaceUnlessYouAreBOFH'
+PXE_INTERFACE = 'None'
 
 # Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
 # in their place.  Values are "None" (user has powerful iptables fu),
 # "DHCP" (provides DHCP firewall) and "DHCPNAT" (DHCP firewall plus NAT).
+# DHCP is your best choice.
 PXE_FIREWALL = 'DHCP'
 
 # Domain name for nodes in this instance.  Forty nodes are configured
@@ -71,11 +70,12 @@ PXE_FIREWALL = 'DHCP'
 #    node01 is assigned the given IP address, node02 the next, etc.
 #    A 24-bit network / 8-bit host netmask of 255.255.255.0 is assumed.
 #
-# 3. Domain name,CIDR bits. Example:
+# 3. Domain name,CIDR network. Example:
 #    TMDOMAIN = 'have.it.your.way,10.11.12.64/26'
 #    Assign sequential addresses as per format 2, but use the explicit
 #    subnet mask (in this case, 26 bits).  If the "base" address matches
 #    the legacy Sun broadcast address (host bits all zero), then node01
-#    will get x.y.z.1, node02 gets x.y.z.2, etc.
+#    will get x.y.z.1, node02 gets x.y.z.2, etc.  A FAME network will
+#    probably be a /24 network like 10.11.12.0/24
 
-TMDOMAIN = 'have.it.your.way,10.11.10.0/24'
+TMDOMAIN = 'have.it.your.way'

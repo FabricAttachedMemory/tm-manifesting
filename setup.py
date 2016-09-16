@@ -90,6 +90,10 @@ def parse_cmdline_args(extra_args_msg):
         '--daemon-restart',
         help='Restart the daemon',
         action='store_true')
+    parser.add_argument(
+        '--start-dnsmasq',
+        help='Only (re)start dnsmasq and exit',
+        action='store_true')
 
     parser.add_argument(
         '--debug',
