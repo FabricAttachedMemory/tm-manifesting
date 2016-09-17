@@ -120,6 +120,8 @@ def parse_cmdline_args(extra_args_msg):
     args = parser.parse_args()
 
     assert os.geteuid() == 0, 'You must be root'    # after parse check
+    if args.debug:
+        args.verbose = True     # this is what forces logging at DEBUG level
     return args
 
 
