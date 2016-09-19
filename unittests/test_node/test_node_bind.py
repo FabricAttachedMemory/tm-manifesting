@@ -116,9 +116,8 @@ class BindNodeTest(unittest.TestCase):
 
             self.assertTrue(self.node_status_fields(status),
                 'Illegal status while building: %s' % status['status'])
-            time.sleep(3)
+            time.sleep(10)
 
-        time.sleep(5)   # chroot failed: ENETDOWN == 100 WTF???
         msg = '%s: expected status == ready, got %s' % (node, str(status))
         self.assertTrue(status['status'] == 'ready', msg)
 

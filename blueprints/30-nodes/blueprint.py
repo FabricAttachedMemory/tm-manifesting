@@ -111,7 +111,7 @@ def get_all_nodes():
     response = jsonify({'nodes': list(BP.node_coords)})	# already sorted
     response.status_code = 200
 
-    BP.logger(response)
+    BP.logger.debug(response)
     return response
 
 
@@ -314,7 +314,7 @@ def build_node(manifest, node_coord):
         'status_file':  tftp_dir + '/status.json',
         'verbose':      BP.VERBOSE,
         'debug':        BP.DEBUG,
-        'logger':       tmmsLogger(hostname)
+        'logger':       BP.logger   # will get replaced in execute()
     }
     # Legacy technique called this as a subprocess.  Construct the command
     # for verbose output and manual invocation for development.
@@ -326,7 +326,7 @@ def build_node(manifest, node_coord):
         '/node_builder/customize_node.py ' + ' '.join(cmd_args)
 
     response = make_response(
-        'Manifest set; image build initiated.', 201)
+        '%s manifest set; image build initiated.' % hostname, 201)
 
     if glob(tftp_dir + '/*.cpio'):
         response = make_response(
@@ -362,7 +362,8 @@ def build_node(manifest, node_coord):
     try:
         forked = os.fork()
     except OSError as err:
-        return make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
+        return make_response(
+            'AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
 
     if forked > 0: # wait for the child1 to exit.
         try:
@@ -382,9 +383,10 @@ def build_node(manifest, node_coord):
         except OSError as err:
             if err.errno != errno.EBADF:
                 BP.logger.warning('Could not close(%d): %s' % (i, str(err)))
+
     customize_node.execute(build_args)      # should NOT return
     BP.logger.critical('Unexpected return to child1')
-    raise SystemExit('Unexpected return TO child1')
+    raise SystemExit('Unexpected return to child1')
 
 ###########################################################################
 
