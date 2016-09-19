@@ -165,7 +165,7 @@ if __name__ == '__main__':
                 setup_golden_image.main(args)
         raise SystemExit(0)
     except ImportError as err:
-        errmsg = 'import failed: %s\nTry "setup.py all" or "setup.py environment"' % str(e)
+        errmsg = 'import failed: %s\nTry "setup.py all" or "setup.py environment"' % str(err)
     except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
     except NameError as err:
