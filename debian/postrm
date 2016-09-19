@@ -9,7 +9,27 @@ if [ -d "$TMMS_DIR" ]; then
     rm -r $TMMS_DIR
 fi
 
+
+TMMS_DIR=/var/lib/tmms/
+if [ -d "$TMMS_DIR" ]; then
+    echo "Removing $TMMS_DIR with a postrm script..."
+    rm -r $TMMS_DIR
+fi
+
+
 if [ -e "/etc/tmms" ]; then
     echo "Removing /etc/tmms"
     rm /etc/tmms
+fi
+
+# --------- UNLINK /usr/bin/ stuff ---------
+
+if [ -e "/usr/bin/tm-manifest" ]; then
+    unlink /usr/bin/tm-manifest
+fi
+if [ -e "/usr/bin/tm-manifest-server" ]; then
+    unlink /usr/bin/tm-manifest-server
+fi
+if [ -e "/usr/bin/tm-manifest-setup" ]; then
+    unlink /usr/bin/tm-manifest-setup
 fi
