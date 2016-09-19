@@ -15,6 +15,7 @@ from pdb import set_trace
 # Python path "tmms" may not exist yet.
 
 from configs.build_config import ManifestingConfiguration
+from utils.file_utils import remove_target
 from utils.utils import piper, create_loopback_files
 
 
@@ -38,7 +39,7 @@ def main(args):
     assert statvfs.f_bsize * statvfs.f_bavail > (10 * (1 << 30)), \
         'Need at least 10G on "%s"' % (destdir)
 
-    vmdlog = destdir + '/golden.arm.log'
+    vmdlog = destdir + '/vmdebootstrap.log'
     vmdimage = destdir + '/golden.arm.img'
     cmd = '''%s --no-default-configs
              --config=%s
@@ -56,6 +57,9 @@ def main(args):
         manconfig['L4TM_MIRROR'],
         manconfig['L4TM_RELEASE'])
 
+    os.chdir(destdir)   # The embedded debootstrap drogs a log file here.
+    remove_target(destdir + '/debootstrap.log')
+    remove_target(vmdlog)
     ret, _, _ = piper(cmd, use_call=True)     # Watch it all go by
     assert not ret, 'vmdebootstrap failed: %s:' % (errno.errorcode[ret])
 

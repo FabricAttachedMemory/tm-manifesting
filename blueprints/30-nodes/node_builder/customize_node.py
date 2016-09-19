@@ -364,6 +364,11 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -q --assume-yes
 apt-get dist-upgrade -q --assume-yes
+
+echo "en_US UTF-8" > /etc/locale.gen
+/usr/sbin/locale-gen
+# I can't get the previous steps to accomplish this...something is missing?
+echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
 """ % (time.ctime(), installog)
 
     with open(script_file, 'w') as install:
@@ -566,9 +571,14 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
         args.logger.critical('%s: errno = %d: %s' % (str(e), ret, stderr))
 
     if undo_kpartx:
+        # Sometimes this fails, especially with overloaded/underpowered
+        # server and "setnodes all".   Early in diagnosis, not sure what
+        # to do about it.   Just move along for now and see what happens
         cmd = 'kpartx -d %s' % ESP_img
         ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
+        # assert not ret, cmd
+        if ret or stderr:
+            args.logger.warning('kpartx -d returned %d: %s' % (ret, stderr))
 
     if do_copy:
         shutil.copy(ESP_img, args.tftp_dir)
