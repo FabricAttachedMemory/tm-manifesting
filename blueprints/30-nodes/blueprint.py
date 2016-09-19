@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 '''TM Nodes'''
 
+import errno
 import json
 import os
 import sys
@@ -110,7 +111,7 @@ def get_all_nodes():
     response = jsonify({'nodes': list(BP.node_coords)})	# already sorted
     response.status_code = 200
 
-    BP.logger(response)
+    BP.logger.debug(response)
     return response
 
 
@@ -151,6 +152,8 @@ def _resolve_node_coord(nodespec):
         except (AttributeError, IndexError) as e:
             return None
     except ValueError:	# assume it's a coordinate path
+        # Two rules invoke Postel's Law of liberal reception.  Either way,
+        # we MAY need to add leading /.
         node_coord = nodespec if nodespec[0] == '/' else '/' + nodespec
     return node_coord if node_coord in BP.node_coords else None
 
@@ -218,9 +221,9 @@ def delete_node_binding(nodespec):
 ####################### API (PUT) ###############################
 
 
-@BP.route('/api/%s/<path:node_coord>' % _ERS_element, methods=('PUT', ))
-@BP.route('/api/%s//<path:node_coord>' % _ERS_element, methods=('PUT', ))
-def bind_node_to_manifest(node_coord=None):
+@BP.route('/api/%s/<path:nodespec>' % _ERS_element, methods=('PUT', ))
+@BP.route('/api/%s//<path:nodespec>' % _ERS_element, methods=('PUT', ))
+def bind_node_to_manifest(nodespec=None):
     """
         Generate a custom filesystem image for a provided node coordinate
     using a manifest specified in the request's body. The resulting FS image
@@ -229,7 +232,7 @@ def bind_node_to_manifest(node_coord=None):
 
     :param 'node_coord': absolute machine coordinate of the node
     """
-    node_coord = '/' + node_coord   # Postel's Law, node_coord is naked.
+    node_coord = _resolve_node_coord(nodespec)
     try:
         BP.logger.info('Binding manifest to a node [%s].' % (node_coord))
 
@@ -311,7 +314,7 @@ def build_node(manifest, node_coord):
         'status_file':  tftp_dir + '/status.json',
         'verbose':      BP.VERBOSE,
         'debug':        BP.DEBUG,
-        'logger':       tmmsLogger(hostname)
+        'logger':       BP.logger   # will get replaced in execute()
     }
     # Legacy technique called this as a subprocess.  Construct the command
     # for verbose output and manual invocation for development.
@@ -323,7 +326,7 @@ def build_node(manifest, node_coord):
         '/node_builder/customize_node.py ' + ' '.join(cmd_args)
 
     response = make_response(
-        'Manifest set; image build initiated.', 201)
+        '%s manifest set; image build initiated.' % hostname, 201)
 
     if glob(tftp_dir + '/*.cpio'):
         response = make_response(
@@ -359,7 +362,8 @@ def build_node(manifest, node_coord):
     try:
         forked = os.fork()
     except OSError as err:
-        return make_response('AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
+        return make_response(
+            'AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
 
     if forked > 0: # wait for the child1 to exit.
         try:
@@ -375,12 +379,14 @@ def build_node(manifest, node_coord):
     # eventlets yet.
     for i in range(3, 20):
         try:
-            print(i)
             os.close(i)
-        except Exception as e:
-            print(i, str(e))
-        customize_node.execute(build_args)      # should NOT return
-        raise SystemExit('Unexpected return TO child1')
+        except OSError as err:
+            if err.errno != errno.EBADF:
+                BP.logger.warning('Could not close(%d): %s' % (i, str(err)))
+
+    customize_node.execute(build_args)      # should NOT return
+    BP.logger.critical('Unexpected return to child1')
+    raise SystemExit('Unexpected return to child1')
 
 ###########################################################################
 
