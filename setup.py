@@ -120,6 +120,8 @@ def parse_cmdline_args(extra_args_msg):
     args = parser.parse_args()
 
     assert os.geteuid() == 0, 'You must be root'    # after parse check
+    if args.debug:
+        args.verbose = True     # this is what forces logging at DEBUG level
     return args
 
 
@@ -163,7 +165,7 @@ if __name__ == '__main__':
                 setup_golden_image.main(args)
         raise SystemExit(0)
     except ImportError as err:
-        errmsg = 'import failed: %s\nTry "setup.py all" or "setup.py environment"' % str(e)
+        errmsg = 'import failed: %s\nTry "setup.py all" or "setup.py environment"' % str(err)
     except (AssertionError, RuntimeError, ValueError) as err:
         errmsg = str(err)
     except NameError as err:

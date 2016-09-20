@@ -23,9 +23,10 @@ import time
 from glob import glob
 from pdb import set_trace
 
-from tmms.utils.utils import find, piper, untar
+from tmms.utils.logging import tmmsLogger
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
 from tmms.utils.file_utils import write_to_file, workdir
+from tmms.utils.utils import find, piper, untar
 
 #==============================================================================
 
@@ -619,10 +620,8 @@ def execute(args):
     #   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     #   level=logging.INFO)
 
-    if args.debug:
-        args.verbose = True
-    else:
-        # Ass-u-me this is the first child in a fork-setsid-fork daemon chain
+    if not args.debug:
+        # Ass-u-me I am the first child in a fork-setsid-fork daemon chain
         try:
             os.chdir('/tmp')
             os.setsid()
@@ -632,10 +631,9 @@ def execute(args):
             if forked > 0:
                 args.logger.debug('Closing parent PID=%s.' % (forked))
                 os._exit(0)  # RTFM: this is the preferred exit after fork()
-            update_status(args,
-                          'Rocky\'s rookie spawned a rookie %s...' % forked)
+            args.logger.debug('Rocky\'s rookie spawned a rookie')
         except OSError as err:
-            args.logger.debug('Faild to spawn a child: %s ' % err)
+            args.logger.critical('Failed to spawn a child: %s ' % str(err))
             raise RuntimeError(
                 'Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % str(err))
 
@@ -644,7 +642,14 @@ def execute(args):
         'message': 'System image was created.'
     }
 
-    args.logger(' --- Starting node image build ---')
+    # Replace the logger after parent may have closed extra fds
+    fname='%s/build.log' % args.build_dir
+    args.logger.info('Build details in %s' % fname)
+    logger = tmmsLogger(args.hostname, use_file=fname)
+    logger.propagate = args.verbose     # always gets forced True at end
+    args.logger = logger
+
+    args.logger('---------------- Starting image build for %s' % args.hostname)
 
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
@@ -689,27 +694,27 @@ def execute(args):
         # Free up space someday, but not during active development
         # remove_target(args.build_dir)
 
-        update_status(args, 'PXE files ready to boot', 'ready')
-
         # Leave a copy of the controlling manifest for post-mortems
         manifest_tftp_file = args.manifest.namespace.replace('/', '.')
         copy_target_into(args.manifest.fullpath,
                          args.tftp_dir + '/' + manifest_tftp_file)
 
+        response['message'] = 'PXE files ready to boot'
+        update_status(args, response['message'], 'ready')
+
     except RuntimeError as err:     # Caught earlier and re-thrown as this
-        args.logger.error('Failed to customize image! RuntimeError: %s' % err)
         response['status'] = 505
         response['message'] = 'Filesystem image build failed: %s' % str(err)
     except Exception as err:        # Suppress Flask traceback
-        args.logger.error('Failed to customize image! Exception: %s' % err)
         response['status'] = 505
         response['message'] = 'Unexpected error: %d: %s' % (
             sys.exc_info()[2].tb_lineno, str(err))
 
+    args.logger.propagate = True   # push final messages to root logger
     if response['status'] != 200:
         update_status(args, response['message'], 'error')
 
-    args.logger('finished: %s' % (response))
+    args.logger(response)   # level based on status code
     if not args.debug:  # I am the grandhild; release the wait() by init()
         args.logger.debug('Closing the build child.')
         os._exit(0)     # RTFM: this is the preferred exit after fork()

@@ -19,6 +19,10 @@ set -u
 
 # Idiot checks
 
+QEMU=qemu-system-aarch64
+set -- `$QEMU --version`
+[ "$4" != '2.6.0' ] && echo "$4 is wrong version of QEMU" >&2 && exit 1
+
 [ $NODE -lt 1 -o $NODE -gt 40 ] && echo "nodenum must be 1-40" >&2 && exit 1
 
 ip link show $NETNAME >/dev/null 2>&1
@@ -51,8 +55,8 @@ grep -Eq "^allow\s+$NETNAME" $NETACCESS
 
 # This pattern triggers lfs_fuse to pick up its node ID from the MAC address.
 MAC="52:54:42:$DECIMAL:$DECIMAL:$DECIMAL"
-ps -ef | grep qemu-system-aarch64 | grep -q $MAC | grep -q $NETNAME
-[ $? -eq 0 ] && echo "Node $NODE (MAC $MAC) already running" >&2 && exit 1
+ps -ef | grep $QEMU | grep -q $MAC | grep -q $NETNAME
+[ $? -eq 0 ] && echo "Node $NODE MAC $MAC already running" >&2 && exit 1
 
 NETDEV="-netdev bridge,br=$NETNAME,id=thisbridge"
 NIC="-device virtio-net-device,mac=$MAC,netdev=thisbridge"                      
@@ -64,6 +68,7 @@ NIC="-device virtio-net-device,mac=$MAC,netdev=thisbridge"
 BOOTTYPE='QEMU_EFI'	# maybe a cmdline arg some day
 
 MACHTYPE="-M virt"
+CPU="-cpu cortex-a57"
 case "$BOOTTYPE" in
     SFW)
     	BOOTROM=$HOME/rom.bin.1.13		# Needs Vulcan model for reset
@@ -104,9 +109,17 @@ CONSOLE="-serial stdio -nographic"
 CONSOLE="-serial stdio"
 CONSOLE="-nographic"
 
-QEMU="qemu-system-aarch64 -m 16384 $MACHTYPE -cpu cortex-a57 -machine accel=tcg"
+QEMU="$QEMU -m 16384 $MACHTYPE $CPU"
 
 # -d in_asm
+
+function memparms2stanza() {
+    MEMPATH=$1
+    MEMSIZE=$2
+    SHARE=$3
+    MEMID=`basename $MEMPATH`
+    echo "-object memory-backend-file,mem-path=$MEMPATH,size=$MEMSIZE,id=$MEMID,share=$SHARE -device ivshmem-plain,memdev=$MEMID"
+}
 
 FAME=
 ZBRIDGE=
@@ -114,18 +127,29 @@ if [ "$FAM" ]; then
 
     FAME="-object \
           memory-backend-file,size=$FAMSIZE,mem-path=$FAM,id=FAM,share=on \
-          -device ivshmem,x-memdev=FAM"
+          -device ivshmem-plain,memdev=FAM"
 
-    ZBRIDGE="-device ivshmem,shm=z${DECIMAL}csr,size=1 \
-	     -device ivshmem,shm=z${DECIMAL}desbk,size=1 \
-	     -device ivshmem,shm=z${DECIMAL}desbl,size=1 \
-	     -device ivshmem,shm=z${DECIMAL}frwl,size=32 \
-	     -device ivshmem,shm=z${DECIMAL}inlv,size=1 \
-	     -device ivshmem,shm=z${DECIMAL}commit,size=8"
+    FAME=`memparms2stanza $FAM $FAMSIZE on`
+
+    # Preserve this order as librarian/zbridge driver count on it when
+    # enumerating IVSHMEM devices.
+    ZREGS=("z${DECIMAL}csr 1M"
+	   "z${DECIMAL}desbk 1M"
+	   "z${DECIMAL}desbl 1M"
+	   "z${DECIMAL}frwl 32M"
+	   "z${DECIMAL}inlv 1M"
+	   "z${DECIMAL}commit 8M")
+    ZBRIDGE=
+    for Z in "${ZREGS[@]}"; do
+	set -- $Z
+    	STANZA=`memparms2stanza /dev/shm/$1 $2 off`
+	ZBRIDGE="$ZBRIDGE $STANZA"	# Order matters!
+    done
 fi
 
+STDERR=$ROMDIR/qemu.$DECIMAL.stderr
 stty intr ''	# So this running shell will ingore ctrl-C, passing it to qemu
-$SUDO $QEMU $PFLASH $NETDEV $NIC $CONSOLE $FAME $ZBRIDGE
+$SUDO $QEMU $PFLASH $NETDEV $NIC $CONSOLE $FAME $ZBRIDGE 2>$STDERR
 RET=$?
 stty sane && stty intr 
 [ $RET -eq 0 ] && reset
