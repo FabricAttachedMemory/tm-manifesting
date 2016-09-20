@@ -61,12 +61,12 @@ manifests/
 	extra package but that loads about eight dependent packages.
 
 
-Setting up a new FAME system or LXC container UNVERIFIED
---------------------------------------------------------
+Setting up a new FAME system or LXC container
+---------------------------------------------
 
 1. Install L4TM on a fresh system or clone an L4TM LXC container.
 
-2. apt-get install python3 git libvirt-bin virsh tm-librarian jq
+2. apt-get install python3 git libvirt-bin virsh tm-librarian jq screen
 
 3. Obtain a copy of TMCF for your TM instance and put it at /etc/tmconfig
 
@@ -117,26 +117,110 @@ Setting up a new FAME system or LXC container UNVERIFIED
 
     f. export NETNAME=YOURNET
 
+    g. mkdir /etc/qemu
+
+    h edit /etc/qemu/bridge.conf and add a single line:
+
+      allow YOURNET
+
 5. git clone https://github.hpe.com/hpelinux/manifesting.git
 
 6. cd /where/ever/manifesting.  Follow the instructions in that README.
    As a result you should have an /etc/tmms file referencing your
    virtual bridge.
 
-7. In a fresh window start "sudo tm-manifest-server --verbose"
+   The remaining instructions ass-u-me you use the suggest location
+   /var/lib/tmms as MANIFESTING_ROOT in /etc/tmms.
+
+7. a. In a fresh window start "sudo tm-manifest-server --verbose".  It will
+      show a live access log.
+
+   b. In another window, search for running dnsmasq processes.  You should
+      see one using the config file /var/lib/tmms/dnsmasq/YOURNET.conf
+
+      If you don't see that, your /etc/tmms PXE_INTERFACE does not match
+      your host's network configuration.
 
 8. tm-manifest listnodes should reflect /etc/tmconfig
 
-9. tm-manifest put manifests/something.json
+EXERCISING THE MANIFESTING SERVICE AND BOOTING FAME NODES
+=========================================================
 
-10. Since this is FAME, you need a file for FAM.  If you use 8M books,
-    512 books per node, 40 nodes, that's 160G of space.  IVSHMEM has
-    to be a power of two so you need a 256G file.
+1. On your host, as root, etc /etc/resolv.conf to add a new line:
 
-    a. $ fallocate -l 256G /var/cache/FAM
+   nameserver w.x.y.z
 
-    b. export FAM=/var/cache/FAM
+   There can be up to three "nameserver" lines.  This one must be first.
 
-11. setnodes all manname
+   w.x.y.z needs to be the last legal IP address of the subnet you 
+   specified in the TM_DOMAIN value of /etc/tmms.   If you used something
+   like 10.10.10.0/24, the address you want is 10.10.10.254.   If you
+   don't understand that, read about CIDR broadcast address and legal
+   ranges.  Or apt-get install ipcalc and use it.
 
-12. startnodes all
+   If your host gets its address from DHCP, /etc/resolv.conf will get
+   overwritten when it renews its lease.  You can prevent that with chattr
+   and the immutable bit.  FYI.
+
+2. tm-manifest put manifests/something.json
+
+   There are sample manifest JSON files in 
+   
+   	manifesting/unittests/QAscripts/manifests
+
+   "empty.json" is a nice safe place to boot your first set of nodes.
+
+   Verify with "tm-manifest list"
+
+3. Using FAM and LFS (Librarian File System)
+
+   If you don't want to use /lfs (Librarian File System) then 
+   
+   	export FAM=NONE
+   
+   and go to the next step.
+
+   To use FAME and LFS you need a file on your host for FAM.  If you use 8M
+   books, 512 books per node, 40 nodes, that's 160G of space.  IVSHMEM has
+   to be a power of two so you need a 256G file.
+
+   a. $ fallocate -l 256G /var/cache/FAM
+
+   b. export FAM=/var/cache/FAM
+
+4. setnodes all manname
+
+    This will bind all nodes to the manifest named "manname".   
+
+5. startnode.arm 1
+
+   The number is an arbitrary node.  This will take over the terminal window
+   with the boot console.   Approximate elapsed sub-times:
+
+   0 seconds		startnode.arm X
+
+   15 more seconds	boot menu with default selected and countdown running
+
+   30 more seconds	first output from downloaded kernel, ending with
+   			message "Trying to unpack root file system"
+
+   30 more seconds	More output as kernel boots up to networking
+
+   10 more seconds	DHCP performed for kernel
+
+   10 more seconds	Login prompt
+
+   The only ways to release the terminal window:
+
+   a. Log in as root/iforgot to the "node" at the prompt, then shutdown -h 0
+   b. Open a new term window on the host and kill the qemu-system-aarch64
+
+6. startnodes all
+
+   Will start a "screen" session to hide all the consoles.   It will also
+   enter "waitnodes" to let you know when they're ready.
+
+   Once they're up you should be able to "ssh l4tm@nodeXX" as the l4tm
+   user.  Password is iforgot, sudo is enabled.
+
+   Or attach to the console (screen window) with "attachnode XX".
