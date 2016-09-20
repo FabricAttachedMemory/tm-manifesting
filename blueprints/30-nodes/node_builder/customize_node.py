@@ -309,7 +309,6 @@ def create_cpio(args):
         raise RuntimeError('Couldn\'t create "%s" from "%s": %s' % (
             cpio_file, args.new_fs_dir, str(err)))
 
-
 #==============================================================================
 # Automatically answering yes is harder than it looks.
 # --assume-yes and -y might not be forceful enough to overwrite a confg file.
@@ -361,9 +360,9 @@ set -ue
 cd /root
 exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get upgrade -q --assume-yes
-apt-get dist-upgrade -q --assume-yes
+# apt-get update
+# apt-get upgrade -q --assume-yes
+# apt-get dist-upgrade -q --assume-yes
 
 echo "en_US UTF-8" > /etc/locale.gen
 /usr/sbin/locale-gen
@@ -687,7 +686,8 @@ def execute(args):
         cleanup_sources_list(args)
         install_packages(args)
 
-        # Was there a custom kernel?
+        # Was there a custom kernel?  Note that it will probably only
+        # boot itself and not load any modules.
         tmp = extract_bootfiles(args)
         if tmp:
             assert len(tmp) < 2, 'Too many custom kernels'
