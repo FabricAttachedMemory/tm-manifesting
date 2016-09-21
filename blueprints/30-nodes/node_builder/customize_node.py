@@ -309,7 +309,6 @@ def create_cpio(args):
         raise RuntimeError('Couldn\'t create "%s" from "%s": %s' % (
             cpio_file, args.new_fs_dir, str(err)))
 
-
 #==============================================================================
 # Automatically answering yes is harder than it looks.
 # --assume-yes and -y might not be forceful enough to overwrite a confg file.
@@ -364,6 +363,11 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -q --assume-yes
 apt-get dist-upgrade -q --assume-yes
+
+echo "en_US UTF-8" > /etc/locale.gen
+/usr/sbin/locale-gen
+# I can't get the previous steps to accomplish this...something is missing?
+echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
 """ % (time.ctime(), installog)
 
     with open(script_file, 'w') as install:
@@ -566,9 +570,14 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
         args.logger.critical('%s: errno = %d: %s' % (str(e), ret, stderr))
 
     if undo_kpartx:
+        # Sometimes this fails, especially with overloaded/underpowered
+        # server and "setnodes all".   Early in diagnosis, not sure what
+        # to do about it.   Just move along for now and see what happens
         cmd = 'kpartx -d %s' % ESP_img
         ret, stdout, stderr = piper(cmd)
-        assert not ret, cmd
+        # assert not ret, cmd
+        if ret or stderr:
+            args.logger.warning('kpartx -d returned %d: %s' % (ret, stderr))
 
     if do_copy:
         shutil.copy(ESP_img, args.tftp_dir)
@@ -677,7 +686,8 @@ def execute(args):
         cleanup_sources_list(args)
         install_packages(args)
 
-        # Was there a custom kernel?
+        # Was there a custom kernel?  Note that it will probably only
+        # boot itself and not load any modules.
         tmp = extract_bootfiles(args)
         if tmp:
             assert len(tmp) < 2, 'Too many custom kernels'

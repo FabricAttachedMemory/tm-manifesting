@@ -16,6 +16,7 @@ NODE=$1
 set -u
 
 [ `whoami` != root ] && SUDO=sudo || SUDO=
+$SUDO echo	# establish hysteresis
 
 # Idiot checks
 
@@ -34,10 +35,11 @@ if [ "$FAM" = NONE ]; then
 else
     [ ! -f "$FAM" ] && echo "$FAM not found" >&2 && exit 1
     T=`stat -c %s "$FAM"`
-    let FAMSIZE=$T/1024/1024/1024
-    [ $FAMSIZE -eq 0 ] && echo "$FAM is less than 1G" >&2 && exit 1
-    FAMSIZE=${FAMSIZE}G
+    let TMP=$T/1024/1024/1024
+    FAMSIZE=${TMP}G
     echo "$FAM = $FAMSIZE"
+    [ $TMP -lt 1 ] && echo "$FAM is less than 1G" >&2 && exit 1
+    [ $TMP -gt 256 ] && echo "$FAM is greater than 256G" >&2 && exit 1
 fi
 
 ###########################################################################
@@ -142,7 +144,7 @@ if [ "$FAM" ]; then
     ZBRIDGE=
     for Z in "${ZREGS[@]}"; do
 	set -- $Z
-    	STANZA=`memparms2stanza /dev/shm/$1 $2 off`
+    	STANZA=`memparms2stanza /dev/shm/$1 $2 on`
 	ZBRIDGE="$ZBRIDGE $STANZA"	# Order matters!
     done
 fi
