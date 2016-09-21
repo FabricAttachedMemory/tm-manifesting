@@ -35,7 +35,7 @@ owner =
 
 # minbase only does "Required", keyrings are only "Important".
 # debian-archive-keyring is handled manually by debootstrap.
-package = l4tm-archive-keyring,linux-image-arm64-l4tm-tmas,apt-utils,ca-certificates,dialog,ifupdown,iputils-ping,isc-dhcp-client,locales,pciutils,psmisc,psutils,ssh,tm-librarian,vim
+package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,ca-certificates,dialog,ifupdown,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,pciutils,psmisc,psutils,ssh,tm-zbridge,tm-flush,fam-atomic-driver,tm-fuse-4.7.2,tm-libfuse,tm-librarian,vim
 custom-package =
 
 # L4TM doesn't follow simple name generation, must do this manually (above)
