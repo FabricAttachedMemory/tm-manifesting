@@ -123,13 +123,35 @@ Setting up a new FAME system or LXC container
 
       allow YOURNET
 
-5. git clone https://github.hpe.com/hpelinux/manifesting.git
+5. Obtain a copy of the manifesting service:
 
-6. cd /where/ever/manifesting.  Follow the instructions in that README.
-   As a result you should have an /etc/tmms file referencing your
-   virtual bridge.
+   a. As of 21 September I believe the repo is refreshed frequently
+      enough to install from there.  If your designated host is L4TM,
+      
+      apt-get install tm-manifesting
 
-   The remaining instructions ass-u-me you use the suggest location
+   b. As an alternative, take it from the git repo:
+
+      cd $HOME
+      git clone https://github.hpe.com/hpelinux/manifesting.git
+
+6. cd /where/ever/manifesting.  
+
+   a. for apt-get install (step 5a) that's
+   
+      /usr/lib/python3/dist-packages/tm-manfesting
+
+   b. for git clone (step 5b) that's wherever you put it, ie,
+
+      $HOME/manifesting
+   
+   Follow the instructions in that README.  NOTE: as of 21 September that
+   advice has not yet been verified against an apt-get install.
+   
+   As a result you should have an /etc/tmms file referencing your virtual
+   bridge.
+
+   The remaining instructions ass-u-me you use the suggested location
    /var/lib/tmms as MANIFESTING_ROOT in /etc/tmms.
 
 7. a. In a fresh window start "sudo tm-manifest-server --verbose".  It will
@@ -139,14 +161,15 @@ Setting up a new FAME system or LXC container
       see one using the config file /var/lib/tmms/dnsmasq/YOURNET.conf
 
       If you don't see that, your /etc/tmms PXE_INTERFACE does not match
-      your host's network configuration.
+      your host's network configuration.  Or something worse :-)
 
 8. tm-manifest listnodes should reflect /etc/tmconfig
+
 
 EXERCISING THE MANIFESTING SERVICE AND BOOTING FAME NODES
 =========================================================
 
-1. On your host, as root, etc /etc/resolv.conf to add a new line:
+1. On your host, as root, edit /etc/resolv.conf to add a new line:
 
    nameserver w.x.y.z
 
@@ -155,7 +178,7 @@ EXERCISING THE MANIFESTING SERVICE AND BOOTING FAME NODES
    w.x.y.z needs to be the last legal IP address of the subnet you 
    specified in the TM_DOMAIN value of /etc/tmms.   If you used something
    like 10.10.10.0/24, the address you want is 10.10.10.254.   If you
-   don't understand that, read about CIDR broadcast address and legal
+   don't understand why, read about CIDR broadcast address and legal
    ranges.  Or apt-get install ipcalc and use it.
 
    If your host gets its address from DHCP, /etc/resolv.conf will get

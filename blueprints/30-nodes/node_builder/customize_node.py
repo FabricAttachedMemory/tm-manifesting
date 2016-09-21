@@ -360,9 +360,9 @@ set -ue
 cd /root
 exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
-# apt-get update
-# apt-get upgrade -q --assume-yes
-# apt-get dist-upgrade -q --assume-yes
+apt-get update
+apt-get upgrade -q --assume-yes
+apt-get dist-upgrade -q --assume-yes
 
 echo "en_US UTF-8" > /etc/locale.gen
 /usr/sbin/locale-gen

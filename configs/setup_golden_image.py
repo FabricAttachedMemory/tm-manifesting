@@ -57,7 +57,8 @@ def main(args):
         manconfig['L4TM_MIRROR'],
         manconfig['L4TM_RELEASE'])
 
-    os.chdir(destdir)   # The embedded debootstrap drogs a log file here.
+    os.chdir(destdir)           # location of embedded debootstrap log file
+    os.unsetenv('LS_COLORS')    # this value is big, pointless and distracting
     remove_target(destdir + '/debootstrap.log')
     remove_target(vmdlog)
     ret, _, _ = piper(cmd, use_call=True)     # Watch it all go by
