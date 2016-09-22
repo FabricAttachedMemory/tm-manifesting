@@ -47,10 +47,6 @@ try:
 except Exception as e:
     raise SystemExit('Bad config file(s): %s' % str(e))
 
-if tmconfig.errors:
-    msg = 'Bad %s:\n' % manconfig['TMCONFIG'] + '\n'.join(tmconfig.errors)
-    raise SystemExit(msg)
-
 # mainapp is needed as decorator base so it comes early.
 # Flask sets mainapp.root_path to cwd.  Set that now; it's also needed
 # during blueprint scanning.
@@ -318,7 +314,6 @@ def start_dnsmasq(config):
     else:
         msg = 'dnsmasq failure, return code = %d' % tmp
     mainapp.logger.critical(msg)
-    print(msg, file=sys.stderr)     # until logging is more mature
     return False
 
 ###########################################################################
@@ -349,11 +344,24 @@ def daemonize(mainapp, cmdline_args):
 
 
 if __name__ == '__main__':
-    configure_logging(mainapp, cmdline_args)
     if cmdline_args.start_dnsmasq:
         kill_dnsmasq(mainapp.config)
         ret = start_dnsmasq(mainapp.config)
         raise SystemExit(0 if ret else 'Could not start dnsmasq')
+
+    configure_logging(mainapp, cmdline_args)
+
+    if tmconfig.errors:
+        msg = 'Bad %s:\n%s' % (
+            manconfig['TMCONFIG'], '\n'.join(tmconfig.errors))
+        mainapp.logger.critical(msg)
+        raise SystemExit(msg)
+
+    if tmconfig.FTFY:
+        msg = 'Defaults applied in %s:\n%s' % (
+            manconfig['TMCONFIG'], '\n'.join(tmconfig.FTFY))
+        mainapp.logger.warning(msg)
+        # keep going
 
     mainapp.logger.info('starting new invocation of API server')
 
