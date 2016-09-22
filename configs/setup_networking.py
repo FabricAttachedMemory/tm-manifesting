@@ -178,11 +178,17 @@ class TMgrub(object):
         self.timestamp = '# Auto-generated on %s; DO NOT MODIFY!' % (
             time.ctime())
         self.tmconfig = TMConfig(manconfig['TMCONFIG'])
+        if self.tmconfig.errors:
+            raise SystemExit('%s has errors:\n%s' % (
+                manconfig['TMCONFIG'], '\n'.join(self.tmconfig.errors)))
+        if self.tmconfig.FTFY:
+            print('!!! %s has these annoyances (defaults were used):\n%s' % (
+                manconfig['TMCONFIG'], '\n'.join(self.tmconfig.FTFY)))
 
         # Absolute paths are for writing files.  tftp_xxxx are file contents.
-        # Dirs keyed from manconfig were already created.
+        #  manconfig dirs were already created by "setup.py environment".
         self.tftp_images_dir = manconfig['TFTP_IMAGES']
-        self.tftp_grub_dir = manconfig['TFTP_GRUB']     # already created
+        self.tftp_grub_dir = manconfig['TFTP_GRUB']
         self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
         make_dir(self.tftp_grub_menus_dir)
         make_symlink(   # Present all EFI modules to grub for "insmod"
@@ -258,14 +264,16 @@ class TMgrub(object):
         self.tmdomain = elems.pop(0)
 
         self.hostIPs = []
+        noDNS = []
         if not elems:           # No extension == DNS lookup for all nodes
             for node in self.tmconfig.allNodes:
                 FQDN = '%s.%s' % (node.hostname, self.tmdomain)
                 try:    # dns.resolver is weird, even with raise_on_no_answer
                     answer = RES.query(FQDN, 'A')
                     assert len(answer) == 1, '"%s" has CNAMES' % FQDN
-                except Exception as e:
-                    raise RuntimeError('TMDOMAIN: cannot resolve "%s"' % FQDN)
+                except (RES.NXDOMAIN, AssertionError) as e:
+                    noDNS.append(FQDN)
+                    continue
                 A = next(iter(answer))
                 self.hostIPs.append(A.address)
             # Oh yeah...
@@ -274,13 +282,16 @@ class TMgrub(object):
                 answer = RES.query(FQDN, 'A')
                 assert len(answer) == 1
                 self.torms = str(next(iter(answer)).address)
-            except Exception as e:
-                raise RuntimeError('TMDOMAIN: cannot resolve "%s"' % FQDN)
+            except (RES.NXDOMAIN, AssertionError) as e:
+                noDNS.append(FQDN)
+
+            if noDNS:
+                raise SystemExit(
+                    'FQDN(s) from TMCF that failed DNS lookup:\n%s' %
+                    '\n'.join(noDNS))
 
             # Since this is Corporate IT, assume the position.
-            # Any of the address above will do.
-            kludge_network = IPNetwork(
-                str(self.hostIPs[0]) + '/255.255.240.0').cidr
+            kludge_network = IPNetwork(str(self.torms) + '/255.255.240.0').cidr
 
         else:   # Extended element(s) are available
             assert len(elems) == 1, 'Too many CSV fields in TMDOMAIN'
