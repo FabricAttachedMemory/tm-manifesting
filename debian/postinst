@@ -1,9 +1,16 @@
-#!/bin/sh
+#!/bin/bash
 #DEBHELPER#
 set -e
 
-systemctl daemon-reload
+. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
 
-if [ ! -e "/etc/tmms" ]; then
-    cp /usr/lib/python3/dist-packages/tmms/tmms /etc/tmms
+if [ "$IsConfigure" == true ]; then
+    systemctl daemon-reload
+
+    if [ ! -e "/etc/tmms" ]; then
+        echo " !!! Warning!!! Using default tmms config file! (/etc/tmms)"
+        cp /usr/lib/python3/dist-packages/tmms/tmms /etc/tmms
+    fi
 fi
+
+exit 0

@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+IsInstall=false
+IsAbortInstall=false
+IsConfigure=false
+
+IsRemove=false
+IsPurge=false
+IsAbortRemove=false
+
+for arg in "$@"
+do
+case $arg in
+    install)
+        IsInstall=true
+        shift
+    ;;
+    abort-install)
+        IsAbortInstall=true
+        shift
+    ;;
+    configure)
+        IsConfigure=true
+        shift
+    ;;
+    remove)
+        IsRemove=true
+        shift
+    ;;
+    purge)
+        IsPurge=true
+        shift
+    ;;
+    abort-remove)
+        IsAbortRemove=true
+        shift
+    ;;
+    *)
+    ;;
+esac
+done

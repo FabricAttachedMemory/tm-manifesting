@@ -1,3 +1,13 @@
+tm-manifesting (1.4-0+l4tm3) catapult; urgency=low
+
+    * first steps on getting apt upgrade working
+        - post-args-parser script to parse command line
+    * Bugfix:
+        - tmms config file fixing repo url ends on dot
+        - warning on non existing .iptables file
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 22 September 2016 16:02:07 -0600
+
 tm-manifesting (1.4-0+l4tm2) catapult; urgency=low
 
     * Fine tune some setup behavior to support real ToRMS with real DNS
