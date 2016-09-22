@@ -1,3 +1,9 @@
+tm-manifesting (1.4-0+l4tm2) catapult; urgency=low
+
+    * Fine tune some setup behavior to support real ToRMS with real DNS
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 22 September 2016 11:25:07 -0600
+
 tm-manifesting (1.4-0+l4tm1) catapult; urgency=low
 
   * Generation of golden image with full librarian/LFS and drivers is now
