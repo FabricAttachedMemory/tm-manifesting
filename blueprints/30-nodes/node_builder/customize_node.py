@@ -410,15 +410,29 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
     os.chmod(script_file, 0o744)
 
     try:
+        procmount = args.new_fs_dir + '/proc'
+        ret, stdout, sterr = piper('mount -obind /proc ' + procmount)
+        assert not ret, 'Cannot bind mount /proc'
+
+        ptsmount = args.new_fs_dir + '/dev/pts'
+        os.makedirs(ptsmount, exist_ok=True)
+        ret, stdout, sterr = piper('mount -obind /dev/pts ' + ptsmount)
+        assert not ret, 'Cannot bind mount /dev/pts'
+
+        umount = 'umount -fl %s %s' %(procmount, ptsmount)
+
         cmd = '/usr/sbin/chroot %s %s ' % (args.new_fs_dir, installsh)
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys_image/root/install.log is updated.  That could be
         # tailed and status updated, MFT' time.
         ret, stdout, stderr = piper(cmd, use_call=True)
-        assert not ret, 'chroot failed: errno %d' % (ret)
+        umountret, _, _ = piper(umount)
+        assert not ret, \
+            'chroot failed: errno %d: %s' % (ret, str(stdout) + str(stderr))
         return True
     except Exception as err:
-        args.logger.error('%s: %s' % (str(err), stderr))
+        umountret, _, _ = piper(umount)
+        args.logger.error(str(err))
         with open(args.new_fs_dir + installog, 'r') as log:
             args.logger.debug(log.read())
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
