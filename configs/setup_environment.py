@@ -44,16 +44,17 @@ def install_base_packages():
         Install packages required by manifesting service.  It only needs
         files from tm-librarian, it won't actually get run from here.
     """
-    print(' ---- Adding ARM64 architecture via apt-get update ---- ')
-    for cmd in (
-        'dpkg --add-architecture arm64',
-        'apt-get update',
-        'apt-get -y --force-yes upgrade',
-        'apt-get -y --force-yes dist-upgrade'
-    ):
-        ret, stdout, stderr = piper(cmd)
-        assert not (bool(ret) or bool(stderr)), \
-            '"%s" failed: %s' % (cmd, stderr)
+    ret, stdout, stderr = piper('dpkg --print-foreign-architectures')
+    if stdout and 'arm64' not in stdout.decode():
+        print(' ---- Adding ARM64 architecture via apt-get update ---- ')
+        for cmd in (
+            'dpkg --add-architecture arm64',
+            'apt-get update',
+            'apt-get -y --force-yes upgrade'
+        ):
+            ret, stdout, stderr = piper(cmd)
+            assert not (bool(ret) or bool(stderr)), \
+                '"%s" failed: %s' % (cmd, stderr)
 
     print(' ---- Installing base packages ---- ')
     pkg_list = ['apt-utils', 'cpio', 'dnsmasq',
