@@ -192,8 +192,13 @@ def root():
 
 def _read_iptables_config(config):
     format_path = '%(DNSMASQ_CONFIGS)s/%(PXE_INTERFACE)s.iptables' % config
-    with open(format_path, 'r') as f:
-        action_format = f.read()
+    try:
+        with open(format_path, 'r') as f:
+            action_format = f.read()
+    except FileNotFoundError as err:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        mainapp.logger.warning('[lineno %s]: %s not found!' % (exc_tb.tb_lineno, format_path))
+        action_format = ''
     return action_format
 
 
@@ -343,7 +348,7 @@ def daemonize(mainapp, cmdline_args):
 # Used here for debug and in landing page (see route above).
 
 
-if __name__ == '__main__':
+def main():
     if cmdline_args.start_dnsmasq:
         kill_dnsmasq(mainapp.config)
         ret = start_dnsmasq(mainapp.config)
@@ -394,4 +399,12 @@ if __name__ == '__main__':
         threaded=False)
     mainapp.logger.warning('Built-in server terminated')
     kill_dnsmasq(mainapp.config)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except RuntimeError as err: # Don't catch generic exception - hard to debug.
+        raise SystemExit(err)   # Instead, throw runtime with line number in the
+                                # meaningful error message.
     raise SystemExit(0)
