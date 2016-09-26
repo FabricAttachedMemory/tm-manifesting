@@ -14,5 +14,3 @@ systemd/            usr/lib/python3/dist-packages/tmms/
 docs/*              usr/share/man/man8/
 systemd/systemd_tmms-server            => usr/default/tm-manifest-server
 systemd/systemd_tmms-server.service    => lib/systemd/system/tm-manifest-server.service
-
-debian/post-args-parser var/lib/dpkg/info/tm-manifest.post-args-parser

@@ -45,7 +45,7 @@ def install_base_packages():
         files from tm-librarian, it won't actually get run from here.
     """
     ret, stdout, stderr = piper('dpkg --print-foreign-architectures')
-    if stdout and 'arm64' not in stdout.decode():
+    if 'arm64' not in stdout.decode():
         print(' ---- Adding ARM64 architecture via apt-get update ---- ')
         for cmd in (
             'dpkg --add-architecture arm64',
