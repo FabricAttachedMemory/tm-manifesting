@@ -195,7 +195,7 @@ class TMgrub(object):
         assert 'TMDOMAIN' in manconfig, 'Missing DNS domain'
 
         # Absolute paths are for writing files.  tftp_xxxx are file contents.
-        #  manconfig dirs were already created by "setup.py environment".
+        # manconfig dirs were already created by "setup.py environment".
         self.tftp_images_dir = manconfig['TFTP_IMAGES']
         self.tftp_grub_dir = manconfig['TFTP_GRUB']
         self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
@@ -214,6 +214,13 @@ class TMgrub(object):
         self.dnsmasq_dnslookupfile = self.dnsmasq_prepath + '.dnslookup'
         self.pxe_interface = manconfig['PXE_INTERFACE']
         self.tmdomain = manconfig['TMDOMAIN']
+
+        if 'PXE_SUBNET' not in manconfig:
+            self.pxe_subnet = None
+        else:
+            self.pxe_subnet = manconfig['PXE_SUBNET']
+            if self.pxe_subnet.lower == 'none':
+                self.pxe_subnet = None
 
         # Relative to TFTP, these supply content to the files.
         self.tftp_root = manconfig['TFTP_ROOT']
@@ -254,12 +261,10 @@ class TMgrub(object):
         HPE site LAN.  Thus given the domain name, each host IP can be
         resolved by DNS.  40 nodes plus "torms" must be available in DNS.
 
-        In case DNS is not prepped properly :-), one extended element is
-        available in the TMDOMAIN data as a CSV.  It has two variants:
-        1) Domain,ipaddr : TMDOMAIN = 'have.it.your.way,192.168.122.111'
-           grab 40 IP addresses starting at ipaddr
-           assumes class C netmask
-        2) Domain,ipaddr/bits: TMDOMAIN = 'have.it.your.way,10.11.10.42/24'
+        In case DNS is not prepped properly :-) or a FAME environment there's
+        one more variable of interest: PXE_SUBNET.  It has two variants:
+        1) None: it's all in DNS through TMDOMAIN (came from TMCF)
+        2) ipaddr/bits: PXE_SUBNET = '10.11.10.42/24'
            grab 40 IPs @ ipaddr
            netmask from bits
            if ipaddr is the network zero address, first address is x.y.z.1
@@ -269,12 +274,9 @@ class TMgrub(object):
            a class C network).
         '''
 
-        elems = self.tmdomain.split(',')    # elems may have leftovers
-        self.tmdomain = elems.pop(0)
-
         self.hostIPs = []
         noDNS = []
-        if not elems:           # No extension == DNS lookup for all nodes
+        if self.pxe_subnet is None:         # DNS lookup for all nodes
             for node in self.tmconfig.allNodes:
                 FQDN = '%s.%s' % (node.hostname, self.tmdomain)
                 try:    # dns.resolver is weird, even with raise_on_no_answer
@@ -302,29 +304,18 @@ class TMgrub(object):
             # Since this is Corporate IT, assume the position.
             kludge_network = IPNetwork(str(self.torms) + '/255.255.240.0').cidr
 
-        else:   # Extended element(s) are available
-            assert len(elems) == 1, 'Too many CSV fields in TMDOMAIN'
-            tmp = elems[0]
-
-            if '/' in tmp:      # CIDR network, load and check
-                try:
-                    kludge_network = IPNetwork(tmp).cidr
-                    tmp = tmp.split('/')[0]
-                    if tmp != str(IPAddress(kludge_network.first)):
-                        first_addr = IPAddress(tmp)
-                    else:
-                        first_addr = IPAddress(kludge_network.first + 1)
-                except Exception as e:
-                    raise RuntimeError(
-                        'TMDOMAIN: bad CIDR notation: %s' % str(e))
-
-            else:   # Single IP address, assume class C
-                try:
+        else:   # Synthesize host names and IP addresses
+            try:
+                assert '/' in self.pxe_subnet, 'CIDR address missing slash'
+                kludge_network = IPNetwork(self.pxe_subnet).cidr
+                tmp = self.pxe_subnet.split('/')[0]
+                if tmp != str(IPAddress(kludge_network.first)):
                     first_addr = IPAddress(tmp)
-                except Exception as e:
-                    raise RuntimeError(
-                        'TMDOMAIN: illegal IP address notation: %s' % str(e))
-                kludge_network = IPNetwork(tmp + '/255.255.255.0').cidr
+                else:
+                    first_addr = IPAddress(kludge_network.first + 1)
+            except Exception as e:
+                raise RuntimeError(
+                    'PXE_SUBNET: bad CIDR notation: %s' % str(e))
 
         if self.network is None:
             self.network = kludge_network

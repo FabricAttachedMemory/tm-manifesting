@@ -180,6 +180,12 @@ class ManifestingConfiguration(object):
                 missing.append(key)
         if missing:
             raise ValueError('Config file missing "%s"' % ', '.join(missing))
+
+        # New variable(s) not ready for auto/forced inclusion.
+
+        for key in ('PXE_SUBNET', ):
+            self._settings[key] = flask_obj.config.get(key, 'None')
+
         flask_obj = None
 
     @staticmethod
