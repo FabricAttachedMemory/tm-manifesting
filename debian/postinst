@@ -12,5 +12,3 @@ if [ "$IsConfigure" == true ]; then
         cp /usr/lib/python3/dist-packages/tmms/tmms /etc/tmms
     fi
 fi
-
-exit 0

@@ -1,5 +1,12 @@
 #!/bin/bash
+# During the package install, post,pre scripts can and will be called with
+# different arguments for different packaging state: install, update, purge...
+# Reference for the call flow: https://wiki.debian.org/MaintainerScripts
+
 set -e
+
+TMMS_SRC=/usr/lib/python3/dist-packages/tmms
+TMMS_CFG_DIR=/etc/tmms
 
 IsInstall=false
 IsAbortInstall=false

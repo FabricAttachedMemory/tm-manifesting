@@ -2,12 +2,20 @@
 #DEBHELPER#
 set -e
 
-bin/systemctl stop tm-manifest-server
-bin/systemctl disable tm-manifest-server
+. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
 
-rm /lib/systemd/system/tm-manifest-server.service
-rm /usr/default/tm-manifest-server
+if [ "$IsRemove" ]; then
 
-systemctl daemon-reload
+    bin/systemctl stop tm-manifest-server
+    bin/systemctl disable tm-manifest-server
 
-exit 0
+    rm /lib/systemd/system/tm-manifest-server.service
+    rm /usr/default/tm-manifest-server
+
+    systemctl daemon-reload
+fi
+
+
+if [ "$IsUpgrade" ]; then
+    mv $TMMS_SRC $TMMS_SRC.backup   # Backup the original tmms dir (to restore on fail)
+fi

@@ -2,34 +2,32 @@
 #DEBHELPER#
 set -e
 
-TMMS_DIR=/usr/lib/python3/dist-packages/tmms/
+. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
 
-if [ -d "$TMMS_DIR" ]; then
-    echo "Removing dist-packages/tmms/ with a postrm script..."
-    rm -r $TMMS_DIR
-fi
+if [ "$IsRemove" ]; then
+    if [ -d "$TMMS_SRC" ]; then
+        echo "Removing dist-packages/tmms/ with a postrm script..."
+        rm -r $TMMS_SRC
+    fi
+
+    # --------- UNLINK /usr/bin/ stuff ---------
+
+    if [ -e "/usr/bin/tm-manifest" ]; then
+        unlink /usr/bin/tm-manifest
+    fi
+    if [ -e "/usr/bin/tm-manifest-server" ]; then
+        unlink /usr/bin/tm-manifest-server
+    fi
+    if [ -e "/usr/bin/tm-manifest-setup" ]; then
+        unlink /usr/bin/tm-manifest-setup
+    fi
+
+fi # if IsRemove
 
 
-TMMS_DIR=/var/lib/tmms/
-if [ -d "$TMMS_DIR" ]; then
-    echo "Removing $TMMS_DIR with a postrm script..."
-    rm -r $TMMS_DIR
-fi
-
-
-if [ -e "/etc/tmms" ]; then
-    echo "Removing /etc/tmms"
-    rm /etc/tmms
-fi
-
-# --------- UNLINK /usr/bin/ stuff ---------
-
-if [ -e "/usr/bin/tm-manifest" ]; then
-    unlink /usr/bin/tm-manifest
-fi
-if [ -e "/usr/bin/tm-manifest-server" ]; then
-    unlink /usr/bin/tm-manifest-server
-fi
-if [ -e "/usr/bin/tm-manifest-setup" ]; then
-    unlink /usr/bin/tm-manifest-setup
-fi
+if [ "$IsPurge" ]; then
+    if [ -d "$TMMS_CFG" ]; then
+        echo "Moving $TMMS_CFG to /tmp/tmms with a postrm script..."
+        mv $TMMS_CFG /tmp/tmms
+    fi
+fi # if IsRemove
