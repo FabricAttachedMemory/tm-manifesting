@@ -185,6 +185,15 @@ class TMgrub(object):
             print('!!! %s has these annoyances (defaults were used):\n%s' % (
                 manconfig['TMCONFIG'], '\n'.join(self.tmconfig.FTFY)))
 
+        # Begin movement of /etc/tmms values to /etc/tmconfig.
+        TMDOMAIN = None
+        tmcfDomains = getattr(self.tmconfig, 'domains', None)
+        if tmcfDomains:
+            TMDOMAIN = getattr(tmcfDomains, 'publicData', None)
+            if TMDOMAIN:
+                manconfig['TMDOMAIN'] = TMDOMAIN
+        assert 'TMDOMAIN' in manconfig, 'Missing DNS domain'
+
         # Absolute paths are for writing files.  tftp_xxxx are file contents.
         #  manconfig dirs were already created by "setup.py environment".
         self.tftp_images_dir = manconfig['TFTP_IMAGES']

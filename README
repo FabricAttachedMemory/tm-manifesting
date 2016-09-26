@@ -1,9 +1,45 @@
-= Prepping the ToRMS to build ARM FS images during node-manifest binding
+= Specifying the DNS Domain
 
-  sudo dpkg --add-architecture arm64
-  sudo apt-get update
+  This used to be done with the TMDOMAIN variable in /etc/tmms.  Now use the
+  "domains { publicData: ....}" field in TMCF.   Formats:
+
+# Domain name for nodes in this instance.  Forty nodes are configured
+# meaning TMMS must generate a list of 40 IP addresses.  Three formats
+# exist for this variable:
+# 1. Domain name only.  Example:
+#    TMDOMAIN = 'have.it.your.way'
+#    TMMS performs a DNS lookup on node01.<domain> through node40.<domain>
+#    and configures DHCP appropriately.  The netmask is discerned from the
+#    PXE_INTERFACE.  This is the "official" method but requires site IT
+#    support to configure your DNS.  No DNS, no TMMS.
+#
+#    The remaining formats support static assignment (ie, DNS per format 1
+#    is not available).  YOU are responsible for insuring these addresses
+#    are legal in your environemnt.
+#
+# 2. Domain name,ipaddr.  Example:
+#    TMDOMAIN = 'have.it.your.way,10.11.12.42'
+#    TMMS will generate 40 IP addresses starting at the given address.
+#    node01 is assigned the given IP address, node02 the next, etc.
+#    A 24-bit network / 8-bit host netmask of 255.255.255.0 is assumed.
+#
+# 3. Domain name,CIDR network. Example:
+#    TMDOMAIN = 'have.it.your.way,10.11.12.64/26'
+#    Assign sequential addresses as per format 2, but use the explicit
+#    subnet mask (in this case, 26 bits).  If the "base" address matches
+#    the legacy Sun broadcast address (host bits all zero), then node01
+#    will get x.y.z.1, node02 gets x.y.z.2, etc.  A FAME network will
+#    probably be a /24 network like 10.11.12.0/24
+
+# DECLARATION OF THIS VARIABLE IS DEPRECATED!
+# Use the "domains{}" section of TMCF.
+
+# TMDOMAIN = 'have.it.your.way'
 
 = Prepping the ToRMS to serve ARM PXE
+
+  DEPRECATED: should be done by "setup environment".  There's other useful
+  information here so keep reading.
 
   sudo apt-get install grub-efi-arm64-bin
 
