@@ -2,7 +2,39 @@
 #DEBHELPER#
 set -e
 
-. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
+#. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
+
+TMMS_SRC=/usr/lib/python3/dist-packages/tmms
+TMMS_CFG_DIR=/etc/tmms
+
+IsInstall=false
+IsAbortInstall=false
+IsConfigure=false
+
+IsRemove=false
+IsPurge=false
+IsAbortRemove=false
+
+for arg in "$@"
+do
+case $arg in
+    install)
+        IsInstall=true
+        shift
+    ;;
+    abort-install)
+        IsAbortInstall=true
+        shift
+    ;;
+    configure)
+        IsConfigure=true
+        shift
+    ;;
+    *)
+    ;;
+esac
+done
+
 
 if [ "$IsConfigure" == true ]; then
     systemctl daemon-reload

@@ -2,7 +2,39 @@
 #DEBHELPER#
 set -e
 
-. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
+#. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
+
+TMMS_SRC=/usr/lib/python3/dist-packages/tmms
+TMMS_CFG_DIR=/etc/tmms
+
+IsInstall=false
+IsAbortInstall=false
+IsConfigure=false
+
+IsRemove=false
+IsPurge=false
+IsAbortRemove=false
+
+for arg in "$@"
+do
+case $arg in
+    remove)
+        IsRemove=true
+        shift
+    ;;
+    purge)
+        IsPurge=true
+        shift
+    ;;
+    abort-remove)
+        IsAbortRemove=true
+        shift
+    ;;
+    *)
+    ;;
+esac
+done
+
 
 if [ "$IsRemove" ]; then
     if [ -d "$TMMS_SRC" ]; then
@@ -27,7 +59,7 @@ fi # if IsRemove
 
 if [ "$IsPurge" ]; then
     if [ -d "$TMMS_CFG" ]; then
-        echo "Moving $TMMS_CFG to /tmp/tmms with a postrm script..."
-        mv $TMMS_CFG /tmp/tmms
+        echo "Moving $TMMS_CFG to /etc/tmms.purge with a postrm script..."
+        mv $TMMS_CFG /tmp/tmms.purge
     fi
 fi # if IsRemove
