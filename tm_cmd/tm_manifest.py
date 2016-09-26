@@ -27,6 +27,8 @@ def main(args):
     _cleanup_sysarg(sys.argv, args)
     try:
         print(cmdlookup[sys.argv[1]](sys.argv[2:], **args))
+    except KeyError as e:
+        raise SystemExit('No such directive %s' % str(e))
     except Exception as e:              # Show me the stack trace NOT!
         if args['debug']:
             set_trace()
@@ -44,7 +46,8 @@ if __name__ == '__main__':
     PARSER.add_argument('--debug',
                         help='Turn on debugging tool.',
                         action='store_true')
-    ARGS, _ = PARSER.parse_known_args()
+    ARGS, leftover = PARSER.parse_known_args()
+    ARGS.leftover = leftover
     main(vars(ARGS))
 
     raise SystemExit(0)

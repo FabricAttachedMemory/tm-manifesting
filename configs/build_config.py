@@ -32,7 +32,10 @@ class ManifestingConfiguration(object):
     # An "environment" is a collection of keys for values that may be
     # directory paths, file names, or just data.  _configfile_env must
     # be found in the Flask configuration file.  The other _envs build
-    # on that and are hardcoded in this module.  FIXME: type tags.
+    # on that and are hardcoded in this module.
+
+    # TMDOMAIN removed from "required" fields as it's deprecated in
+    # favor of "domains{}" in TMCF.  More to follow.
 
     _configfile_env = (
         'MANIFESTING_ROOT',
@@ -43,7 +46,6 @@ class ManifestingConfiguration(object):
         'L4TM_MIRROR',
         'L4TM_RELEASE',
         'L4TM_AREAS',
-        'TMDOMAIN',
         'PXE_INTERFACE',
         'PXE_FIREWALL'
     )
@@ -114,9 +116,15 @@ class ManifestingConfiguration(object):
             if errors:
                 raise ValueError('\n'.join(errors))
 
-    # Duck-type a read-only dict.  It's empty before extract_flask_config()
+    # Duck-type a dict.  It's empty before extract_flask_config()
     def __getitem__(self, key):
         return self._settings.get(key, None)
+
+    def __setitem__(self, key, value):
+        self._settings[key] = value
+
+    def __contains__(self, key):
+        return key in self._settings
 
     def keys(self):
         return sorted(self._settings.keys())
