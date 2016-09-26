@@ -1,3 +1,10 @@
+tm-manifesting (1.5-0+l4tm3) catapult; urgency=low
+
+   * Add new tmms variable PXE_SUBNET to leave simplified TMCF domain name
+   * packaging to start handling upgrade routine (in progress)
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 26 September 2016 16:52:07 -0600
+
 tm-manifesting (1.4-0+l4tm3) catapult; urgency=low
 
     * first steps on getting apt upgrade working
