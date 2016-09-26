@@ -49,3 +49,17 @@ PXE_INTERFACE = 'None'
 # "DHCP" (provides DHCP firewall) and "DHCPNAT" (DHCP firewall plus NAT).
 # DHCP is your best choice.
 PXE_FIREWALL = 'DHCP'
+
+# TMDOMAIN is deprecated; use TMCF "domains{publicData}" per the software ERS.
+# In the corporate bringup environments, site IT has created one subdomain
+# per instance.   Each subdomain also has hostnames "torms" and "nodeXX".
+# Thus the IP addresses for local DHCP are available.  This is not true for
+# FAME, hence FAME_SUBNET = <CIDR>. Example:
+# PXE_SUBNET = '10.11.12.64/26'
+# Assign sequential addresses starting at the indicated IP base address.
+# Honor the subnet mask (in this case, 26 bits).  If the base address matches
+# the legacy Sun broadcast address (host bits all zero), then node01 gets
+# x.y.z.1, etc.   A FAME network created via libvirt will # probably be a
+# /24 network like 10.11.12.0/24
+
+PXE_SUBNET = 'None'     # 'None' falls back to external DNS for nodeXX
