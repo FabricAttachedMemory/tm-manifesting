@@ -423,13 +423,13 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     debian.write(pkgresp.content)
                 install.write('dpkg -i %s\nrm %s\n\n' % (deb, deb))
 
-        # Release cache space (megabytes).  DON'T use autoclean, it increases
-        # the used space (new indices?)
-        install.write('\napt-get clean\n')
-
         if args.postinst is not None:
             install.write('\n# "postinst" scriptlet from manifest\n\n')
             install.write(args.postinst)
+
+        # Release cache space (megabytes).  DON'T use autoclean, it increases
+        # the used space (new indices?)
+        install.write('\nexec apt-get clean\n')
 
     os.chmod(script_file, 0o744)
 
