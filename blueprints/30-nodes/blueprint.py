@@ -295,7 +295,11 @@ def build_node(manifest, node_coord):
         tasks = ','.join(tasks)
     else:
         tasks = None     # sentinel for following loop
+
+    # Optional manifest fields not in the ERS but useful during bringup
     l4tm_pubkey = manifest.thedict.get('l4tm_pubkey', None)
+    postinst = manifest.thedict.get('postinst', None)
+    rclocal = manifest.thedict.get('rclocal', None)
 
     build_args = {
         'hostname':     hostname,
@@ -308,6 +312,8 @@ def build_node(manifest, node_coord):
         'packages':     packages,
         'tasks':        tasks,
         'l4tm_pubkey':  l4tm_pubkey,
+        'postinst':     postinst,
+        'rclocal':      rclocal,
         'golden_tar':   golden_tar,
         'build_dir':    build_dir,
         'tftp_dir':     tftp_dir,
