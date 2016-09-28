@@ -267,6 +267,26 @@ def set_l4tm_pubkey(args):
 
 #==============================================================================
 
+def rewrite_rclocal(args):
+    """
+        Completely rewrite the /etc/rc.local noop script.
+
+    :param 'rclocal': Full script to add, #!/bin/bash is done for you
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
+    if args.rclocal is None:
+        return
+    update_status(args, 'Rewriting /etc/rc.local')
+
+    rclocal = '%s/etc/rc.local' % (args.new_fs_dir)
+    with open(rclocal, 'w') as f:
+        f.write('#!/bin/bash\n\n# Rewritten via manifest %s\n\n' %
+            args.manifest.namespace)
+        f.write('\n%s\n' % args.rclocal)
+        f.write('\nexit 0')
+
+#==============================================================================
+
 
 def create_cpio(args):
     """
@@ -403,9 +423,13 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     debian.write(pkgresp.content)
                 install.write('dpkg -i %s\nrm %s\n\n' % (deb, deb))
 
+        if args.postinst is not None:
+            install.write('\n# "postinst" scriptlet from manifest\n\n')
+            install.write(args.postinst)
+
         # Release cache space (megabytes).  DON'T use autoclean, it increases
         # the used space (new indices?)
-        install.write('apt-get clean\n')
+        install.write('\nexec apt-get clean\n')
 
     os.chmod(script_file, 0o744)
 
@@ -696,9 +720,10 @@ def execute(args):
 
         persist_initrd(args)
 
-        # FINALLY! Add packages and tasks from manifest.
+        # FINALLY! Add packages, tasks, and script(let)s from manifest.
         cleanup_sources_list(args)
         install_packages(args)
+        rewrite_rclocal(args)
 
         # Was there a custom kernel?  Note that it will probably only
         # boot itself and not load any modules.
