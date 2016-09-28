@@ -473,13 +473,23 @@ def update_status(args, message, status='building'):
     """
     if getattr(args, 'dryrun', False):
         return
-    args.logger(message)
+    # Message is either a dict or a string
+    level = 'info'
+    try:
+        if message['status'] >= 300:
+            level = status = 'error'
+        message = message['message']
+    except Exception as e:
+        pass
+    args.logger(message, level=level)
+
     response = {}
     response['manifest'] = args.manifest.namespace
     response['status'] = status
     response['message'] = message
     response['coordinate'] = args.node_coord    # Troubleshooting and QA
     response['node_id'] = args.node_id
+
     # Rally DE118: make it an atomic update
     newstatus = args.status_file + '.new'
     write_to_file(newstatus, json.dumps(response, indent=4))
@@ -705,7 +715,8 @@ def execute(args):
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir, args.golden_tar)
         tmp = extract_bootfiles(args)
-        assert len(tmp) == 1, 'Golden image %s had no kernel' % args.golden_tar
+        assert tmp, 'Golden image %s had no kernel' % args.golden_tar
+        assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
         vmlinuz_golden = tmp[0]
         update_status(args, 'Found golden kernel %s' %
                       os.path.basename(vmlinuz_golden))
@@ -749,7 +760,6 @@ def execute(args):
                          args.tftp_dir + '/' + manifest_tftp_file)
 
         response['message'] = 'PXE files ready to boot'
-        update_status(args, response['message'], 'ready')
 
     except RuntimeError as err:     # Caught earlier and re-thrown as this
         response['status'] = 505
@@ -760,10 +770,7 @@ def execute(args):
             sys.exc_info()[2].tb_lineno, str(err))
 
     args.logger.propagate = True   # push final messages to root logger
-    if response['status'] != 200:
-        update_status(args, response['message'], 'error')
-
-    args.logger(response)   # level based on status code
+    update_status(args, response, 'error')
     if not args.debug:  # I am the grandhild; release the wait() by init()
         args.logger.debug('Closing the build child.')
         os._exit(0)     # RTFM: this is the preferred exit after fork()
