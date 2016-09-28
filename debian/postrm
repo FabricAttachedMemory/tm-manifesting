@@ -5,14 +5,12 @@ set -e
 #. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
 
 TMMS_SRC=/usr/lib/python3/dist-packages/tmms
-TMMS_CFG_DIR=/etc/tmms
+TMMS_CFG=/etc/tmms
 
-IsInstall=false
-IsAbortInstall=false
-IsConfigure=false
-
+IsUpgrade=false
 IsRemove=false
 IsPurge=false
+IsFailedUpgrade=false
 IsAbortRemove=false
 
 for arg in "$@"
@@ -22,8 +20,16 @@ case $arg in
         IsRemove=true
         shift
     ;;
+    upgrade)
+        IsUpgrade=true
+        shift
+    ;;
     purge)
         IsPurge=true
+        shift
+    ;;
+    failed-upgrade)
+        IsFailedUpgrade=true
         shift
     ;;
     abort-remove)
@@ -38,11 +44,12 @@ done
 
 if [ "$IsRemove" ]; then
     if [ -d "$TMMS_SRC" ]; then
-        echo "Removing dist-packages/tmms/ with a postrm script..."
+        echo " --- postrm remove: removing dist-packages/tmms/ with a postrm script... --- "
         rm -r $TMMS_SRC
     fi
 
     # --------- UNLINK /usr/bin/ stuff ---------
+    echo " --- postrm remove: unlinking /usr/bin/tm-manifest* files --- "
 
     if [ -e "/usr/bin/tm-manifest" ]; then
         unlink /usr/bin/tm-manifest
@@ -50,16 +57,24 @@ if [ "$IsRemove" ]; then
     if [ -e "/usr/bin/tm-manifest-server" ]; then
         unlink /usr/bin/tm-manifest-server
     fi
-    if [ -e "/usr/bin/tm-manifest-setup" ]; then
-        unlink /usr/bin/tm-manifest-setup
-    fi
 
 fi # if IsRemove
 
-
-if [ "$IsPurge" ]; then
-    if [ -d "$TMMS_CFG" ]; then
+if [ "$IsPurge" == true ]; then
+    if [ -e "$TMMS_CFG" ]; then
         echo "Moving $TMMS_CFG to /etc/tmms.purge with a postrm script..."
-        mv $TMMS_CFG /tmp/tmms.purge
+        mv $TMMS_CFG ${TMMS_CFG}.purge
     fi
 fi # if IsRemove
+
+if [ "$IsUpgrade" == true ]; then
+    echo "postrm upgrade doing nothing... Next."
+fi
+
+if [ "$IsFailedUpgrade" == true ]; then
+    echo "postrm failed-upgrade is not handeled... Next."
+fi
+
+if [ "$IsAbortUpgrade" == true ]; then
+    echo "postrm abort-upgrade is not handeled... Next."
+fi

@@ -7,19 +7,20 @@ set -e
 TMMS_SRC=/usr/lib/python3/dist-packages/tmms
 TMMS_CFG_DIR=/etc/tmms
 
+IsUUpgrade=false
 IsInstall=false
 IsAbortInstall=false
 IsConfigure=false
-
-IsRemove=false
-IsPurge=false
-IsAbortRemove=false
 
 for arg in "$@"
 do
 case $arg in
     install)
         IsInstall=true
+        shift
+    ;;
+    upgrade)
+        IsUpgrade=true
         shift
     ;;
     abort-install)
@@ -42,5 +43,19 @@ if [ "$IsConfigure" == true ]; then
     if [ ! -e "/etc/tmms" ]; then
         echo " !!! Warning!!! Using default tmms config file! (/etc/tmms)"
         cp /usr/lib/python3/dist-packages/tmms/tmms /etc/tmms
+    else
+        echo " --- /etc/tmms config file exists. Skipping... --- "
+    fi
+fi
+
+if [ "$IsUpgrade" == true ]; then
+    echo "Postinst upgrade: comparing default tmms config files...."
+    cfg_diff="$(diff --side-by-side --suppress-common-lines ${TMMS_SRC}/tmms ${TMMS_SRC}.purge/tmms)"
+    if [ ! -z $cfg_diff ]; then
+        echo "!!! WARNING !!!"
+        echo "!!! Default 'tmms' config has changed! !!!"
+        echo " ---! Difference output !---"
+        echo $cfg_diff
+        echo "!!! Make sure to update your /etc/tmms !!!"
     fi
 fi
