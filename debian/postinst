@@ -2,12 +2,10 @@
 #DEBHELPER#
 set -e
 
-#. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
-
 TMMS_SRC=/usr/lib/python3/dist-packages/tmms
-TMMS_CFG_DIR=/etc/tmms
+TMMS_CFG=/etc/tmms
 
-IsUUpgrade=false
+IsUpgrade=false
 IsInstall=false
 IsAbortInstall=false
 IsConfigure=false
@@ -39,11 +37,24 @@ done
 
 if [ "$IsConfigure" == true ]; then
     systemctl daemon-reload
+    echo " --- postinst configure --- "
+    IsTMMSBackup=false
+    if [ -e "${TMMS_CFG}.purge" ]; then
+        IsTMMSBackup=true
+    fi
 
-    if [ ! -e "/etc/tmms" ]; then
-        echo " !!! Warning!!! Using default tmms config file! (/etc/tmms)"
-        cp /usr/lib/python3/dist-packages/tmms/tmms /etc/tmms
+    if [ ! -e "${TMMS_CFG}" ]; then
+        if [ "$IsTMMSBackup" ]; then
+            echo " --- !!! WARNING !!! --- "
+            echo " --- tmms config backup found ${TMMS_CFG}.purge. Restoring... --- "
+            mv ${TMMS_CFG}.purge ${TMMS_CFG}
+        else
+            echo " !!! Warning!!! Using default tmms config file! (/etc/tmms)"
+            cp ${TMMS_SRC}/tmms /etc/tmms
+        fi
     else
+        echo " --- !!! WARNING !!! --- "
+        echo " --- tmms config backup found ${TMMS_CFG}.purge. Just FYI. Doing nothing... --- "
         echo " --- /etc/tmms config file exists. Skipping... --- "
     fi
 fi
@@ -57,5 +68,16 @@ if [ "$IsUpgrade" == true ]; then
         echo " ---! Difference output !---"
         echo $cfg_diff
         echo "!!! Make sure to update your /etc/tmms !!!"
+    fi
+fi
+
+if [ "$IsAbortInstall" == true ]; then
+    echo " --- ! WARNING ! postinst abort-install... --- "
+    if [ -e "/etc/tmms.purge" ]; then
+        if [ -e "/etc/tmms" ]; then
+            echo " --- !!! WARNING !!! --- "
+            echo " --- Moving back the old tmms config file --- "
+        fi
+        mv ${TMMS_CFG}.purge ${TMMS_CFG}
     fi
 fi

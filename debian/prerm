@@ -59,15 +59,14 @@ fi
 
 
 if [ "$IsUpgrade" == true ]; then
-    echo " --- prerm upgrade: moving ${TMMS_SRC} to ${TMMS_SRC}.upgrade --- "
-    mv $TMMS_SRC ${TMMS_SRC}.upgrade   # Backup the original tmms dir (to restore on fail)
+    echo " --- prerm upgrade: doing nothing... --- "
 fi
 
 
 if [ "$IsFailedUpgrade" == true ]; then
-    echo " --- prerm failed-upgrade: moving ${TMMS_SRC}.upgrade to ${TMMS_SRC} --- "
-    mv ${TMMS_SRC}.upgrade $TMMS_SRC
+    echo " --- prerm failed-upgrade: doing nothing... (handled by postrm) --- "
 fi
+
 
 if [ "$IsAbortRemove" == true ]; then
     echo " --- prerm abort-remove: is not handlede... skipping. ---"

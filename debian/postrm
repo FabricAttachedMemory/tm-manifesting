@@ -43,21 +43,7 @@ done
 
 
 if [ "$IsRemove" ]; then
-    if [ -d "$TMMS_SRC" ]; then
-        echo " --- postrm remove: removing dist-packages/tmms/ with a postrm script... --- "
-        rm -r $TMMS_SRC
-    fi
-
-    # --------- UNLINK /usr/bin/ stuff ---------
-    echo " --- postrm remove: unlinking /usr/bin/tm-manifest* files --- "
-
-    if [ -e "/usr/bin/tm-manifest" ]; then
-        unlink /usr/bin/tm-manifest
-    fi
-    if [ -e "/usr/bin/tm-manifest-server" ]; then
-        unlink /usr/bin/tm-manifest-server
-    fi
-
+    echo " --- postrm remove: doing nothing... --- "
 fi # if IsRemove
 
 if [ "$IsPurge" == true ]; then
@@ -76,5 +62,13 @@ if [ "$IsFailedUpgrade" == true ]; then
 fi
 
 if [ "$IsAbortUpgrade" == true ]; then
-    echo "postrm abort-upgrade is not handeled... Next."
+    echo " --- postrm abort-upgrade... --- "
+    if [ -d "${TMMS_SRC}.upgrade" ]; then
+        if [ -d "${TMMS_SRC}" ]; then
+            echo " --- postrm abort-upgrade: removing ${TMMS_SRC} --- "
+            rm -r ${TMMS_SRC}
+        fi
+        echo " --- postrm abort-upgrade: moving ${TMMS_SRC}.upgrade to ${TMMS_SRC} --- "
+        mv ${TMMS_SRC}.upgrade ${TMMS_SRC}
+    fi
 fi

@@ -1,3 +1,11 @@
+tm-manifesting (1.7-0+l4tm1) catapult; urgency=low
+
+   * Added a -tmas version of golden image VMD config file
+   * Better error messages about golden image
+   * package upgrade support
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 29 September 2016 12:44:07 -0600
+
 tm-manifesting (1.6-0+l4tm1) catapult; urgency=low
 
    * package upgrade support
