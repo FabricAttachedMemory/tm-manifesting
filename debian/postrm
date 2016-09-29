@@ -2,14 +2,73 @@
 #DEBHELPER#
 set -e
 
-TMMS_DIR=/usr/lib/python3/dist-packages/tmms/
+#. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
 
-if [ -d "$TMMS_DIR" ]; then
-    echo "Removing dist-packages/tmms/ with a postrm script..."
-    rm -r $TMMS_DIR
+TMMS_SRC=/usr/lib/python3/dist-packages/tmms
+TMMS_CFG=/etc/tmms
+
+IsUpgrade=false
+IsRemove=false
+IsPurge=false
+IsFailedUpgrade=false
+IsAbortRemove=false
+
+for arg in "$@"
+do
+case $arg in
+    remove)
+        IsRemove=true
+        shift
+    ;;
+    upgrade)
+        IsUpgrade=true
+        shift
+    ;;
+    purge)
+        IsPurge=true
+        shift
+    ;;
+    failed-upgrade)
+        IsFailedUpgrade=true
+        shift
+    ;;
+    abort-remove)
+        IsAbortRemove=true
+        shift
+    ;;
+    *)
+    ;;
+esac
+done
+
+
+if [ "$IsRemove" ]; then
+    echo " --- postrm remove: doing nothing... --- "
+fi # if IsRemove
+
+if [ "$IsPurge" == true ]; then
+    if [ -e "$TMMS_CFG" ]; then
+        echo "Moving $TMMS_CFG to /etc/tmms.purge with a postrm script..."
+        mv $TMMS_CFG ${TMMS_CFG}.purge
+    fi
+fi # if IsRemove
+
+if [ "$IsUpgrade" == true ]; then
+    echo "postrm upgrade doing nothing... Next."
 fi
 
-if [ -e "/etc/tmms" ]; then
-    echo "Removing /etc/tmms"
-    rm /etc/tmms
+if [ "$IsFailedUpgrade" == true ]; then
+    echo "postrm failed-upgrade is not handeled... Next."
+fi
+
+if [ "$IsAbortUpgrade" == true ]; then
+    echo " --- postrm abort-upgrade... --- "
+    if [ -d "${TMMS_SRC}.upgrade" ]; then
+        if [ -d "${TMMS_SRC}" ]; then
+            echo " --- postrm abort-upgrade: removing ${TMMS_SRC} --- "
+            rm -r ${TMMS_SRC}
+        fi
+        echo " --- postrm abort-upgrade: moving ${TMMS_SRC}.upgrade to ${TMMS_SRC} --- "
+        mv ${TMMS_SRC}.upgrade ${TMMS_SRC}
+    fi
 fi

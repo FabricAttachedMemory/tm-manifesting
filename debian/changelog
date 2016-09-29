@@ -1,10 +1,56 @@
+tm-manifesting (1.7-0+l4tm1) catapult; urgency=low
+
+   * Added a -tmas version of golden image VMD config file
+   * Better error messages about golden image
+   * package upgrade support
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 29 September 2016 12:44:07 -0600
+
+tm-manifesting (1.6-0+l4tm1) catapult; urgency=low
+
+   * package upgrade support
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 28 September 2016 13:02:07 -0600
+
+tm-manifesting (1.5-0+l4tm1) catapult; urgency=low
+
+   * Add new tmms variable PXE_SUBNET to leave simplified TMCF domain name
+   * packaging to start handling upgrade routine (in progress)
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 26 September 2016 16:52:07 -0600
+
+tm-manifesting (1.4-0+l4tm3) catapult; urgency=low
+
+    * first steps on getting apt upgrade working
+        - post-args-parser script to parse command line
+    * Bugfix:
+        - tmms config file fixing repo url ends on dot
+        - warning on non existing .iptables file
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 22 September 2016 16:02:07 -0600
+
+tm-manifesting (1.4-0+l4tm2) catapult; urgency=low
+
+    * Fine tune some setup behavior to support real ToRMS with real DNS
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 22 September 2016 11:25:07 -0600
+
+tm-manifesting (1.4-0+l4tm1) catapult; urgency=low
+
+  * Generation of golden image with full librarian/LFS and drivers is now
+    working in a FAME environment
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 21 September 2016 11:35:07 -0600
+
 tm-manifesting (1.3-0+l4tm1) catapult; urgency=low
 
   * dnsmasq configuration
   * code refactor
   * cleanup and bug fixes
+  * new tests and tests with FAME
+  * other minor and not so minor fixes and changes
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 31 August 2016 10:50:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 19 September 2016 14:12:07 -0600
 
 tm-manifesting (1.2-0+l4tm1) catapult; urgency=low
 

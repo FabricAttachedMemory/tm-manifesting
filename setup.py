@@ -39,12 +39,20 @@ def link_into_usrlocalbin(git_repo_path):
         Create a symlink to THIS manifesting source tree tm_cmd for
     /usr/local/bin/tm-manifest as specified by ERS.
     """
-    make_symlink(
-        git_repo_path + '/tm_cmd/tm_manifest.py',
-        '/usr/local/bin/tm-manifest')
-    make_symlink(
-        git_repo_path + '/manifest_api.py',
-        '/usr/local/bin/tm-manifest-server')
+    symlink_path = '/usr/local/bin/'
+    if not os.path.exists('%s/tm-manifest' % (symlink_path)):
+        make_symlink(
+            git_repo_path + '/tm_cmd/tm_manifest.py',
+            '/usr/local/bin/tm-manifest')
+    else:
+        print ('path to tm-manifest exists(%s/tm-manifest)! Skipping...' % (symlink_path))
+
+    if not os.path.exists('%s/tm-manifest-server' % (symlink_path)):
+        make_symlink(
+            git_repo_path + '/manifest_api.py',
+            '/usr/local/bin/tm-manifest-server')
+    else:
+        print ('path to tm-manifest-server exists(%s/tm-manifest-server)! Skipping...' % (symlink_path))
 
 
 def try_dh_helper(argv):

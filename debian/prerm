@@ -1,13 +1,73 @@
-#!/bin/sh
+#!/bin/bash
 #DEBHELPER#
 set -e
 
-bin/systemctl stop tm-manifest-server
-bin/systemctl disable tm-manifest-server
+#. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
+TMMS_SRC=/usr/lib/python3/dist-packages/tmms
 
-rm /lib/systemd/system/tm-manifest-server.service
-rm /usr/default/tm-manifest-server
+IsUpgrade=false
+IsRemove=false
+IsPurge=false
+IsFailedUpgrade=false
+IsAbortRemove=false
 
-systemctl daemon-reload
 
-exit 0
+for arg in "$@"
+do
+case $arg in
+    upgrade)
+        IsUpgrade=true
+        shift
+    ;;
+    remove)
+        IsRemove=true
+        shift
+    ;;
+    purge)
+        IsPurge=true
+        shift
+    ;;
+    failed-upgrade)
+        IsFailedUpgrade=true
+        shift
+    ;;
+    abort-remove)
+        IsAbortRemove=true
+        shift
+    ;;
+    *)
+    ;;
+esac
+done
+
+
+
+if [ "$IsRemove" == true ]; then
+
+    bin/systemctl stop tm-manifest-server
+    bin/systemctl disable tm-manifest-server
+
+    if [ -e "/lib/systemd/system/tm-manifest-server.service" ]; then
+        rm /lib/systemd/system/tm-manifest-server.service
+    fi
+    if [ -e "/usr/default/tm-manifest-server" ]; then
+        rm /usr/default/tm-manifest-server
+    fi
+
+    systemctl daemon-reload
+fi
+
+
+if [ "$IsUpgrade" == true ]; then
+    echo " --- prerm upgrade: doing nothing... --- "
+fi
+
+
+if [ "$IsFailedUpgrade" == true ]; then
+    echo " --- prerm failed-upgrade: doing nothing... (handled by postrm) --- "
+fi
+
+
+if [ "$IsAbortRemove" == true ]; then
+    echo " --- prerm abort-remove: is not handlede... skipping. ---"
+fi

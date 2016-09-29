@@ -1,9 +1,83 @@
-#!/bin/sh
+#!/bin/bash
 #DEBHELPER#
 set -e
 
-systemctl daemon-reload
+TMMS_SRC=/usr/lib/python3/dist-packages/tmms
+TMMS_CFG=/etc/tmms
 
-if [ ! -e "/etc/tmms" ]; then
-    cp /usr/lib/python3/dist-packages/tmms/tmms /etc/tmms
+IsUpgrade=false
+IsInstall=false
+IsAbortInstall=false
+IsConfigure=false
+
+for arg in "$@"
+do
+case $arg in
+    install)
+        IsInstall=true
+        shift
+    ;;
+    upgrade)
+        IsUpgrade=true
+        shift
+    ;;
+    abort-install)
+        IsAbortInstall=true
+        shift
+    ;;
+    configure)
+        IsConfigure=true
+        shift
+    ;;
+    *)
+    ;;
+esac
+done
+
+
+if [ "$IsConfigure" == true ]; then
+    systemctl daemon-reload
+    echo " --- postinst configure --- "
+    IsTMMSBackup=false
+    if [ -e "${TMMS_CFG}.purge" ]; then
+        IsTMMSBackup=true
+    fi
+
+    if [ ! -e "${TMMS_CFG}" ]; then
+        if [ "$IsTMMSBackup" ]; then
+            echo " --- !!! WARNING !!! --- "
+            echo " --- tmms config backup found ${TMMS_CFG}.purge. Restoring... --- "
+            mv ${TMMS_CFG}.purge ${TMMS_CFG}
+        else
+            echo " !!! Warning!!! Using default tmms config file! (/etc/tmms)"
+            cp ${TMMS_SRC}/tmms /etc/tmms
+        fi
+    else
+        echo " --- !!! WARNING !!! --- "
+        echo " --- tmms config backup found ${TMMS_CFG}.purge. Just FYI. Doing nothing... --- "
+        echo " --- /etc/tmms config file exists. Skipping... --- "
+    fi
+fi
+
+if [ "$IsUpgrade" == true ]; then
+    echo "Postinst upgrade: comparing default tmms config files...."
+    cfg_diff="$(diff --side-by-side --suppress-common-lines ${TMMS_SRC}/tmms ${TMMS_SRC}.purge/tmms)"
+    if [ ! -z $cfg_diff ]; then
+        echo "!!! WARNING !!!"
+        echo "!!! Default 'tmms' config has changed! !!!"
+        echo " ---! Difference output !---"
+        echo $cfg_diff
+        echo "!!! Make sure to update your /etc/tmms !!!"
+    fi
+fi
+
+if [ "$IsAbortInstall" == true ]; then
+    echo " --- ! WARNING ! postinst abort-install... --- "
+    if [ -e "/etc/tmms.purge" ]; then
+        if [ -e "/etc/tmms" ]; then
+            echo " --- !!! WARNING !!! --- "
+            echo " --- Moving back the old tmms config file --- "
+        fi
+        mv ${TMMS_CFG}.purge ${TMMS_CFG}
+    fi
 fi
