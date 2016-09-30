@@ -8,6 +8,7 @@ on the system to satisfy package dependencies.
 import argparse
 import errno
 import os
+import sys
 
 from pdb import set_trace
 
@@ -29,7 +30,14 @@ def main(args):
 
     whereami = os.path.dirname(os.path.realpath(__file__))
     vmdebootstrap = whereami + '/vmdebootstrap'
-    vmdconfig = whereami + '/filesystem/golden.arm.vmd'
+    sampleVMDs = whereami + '/filesystem/'
+    try:
+        vmdconfig = args.extra[1]
+        if not vmdconfig.startswith('/'):
+            vmdconfig = sampleVMDs + vmdconfig
+    except IndexError:
+        vmdconfig = sampleVMDs + 'golden.arm.vmd'
+    assert os.path.isfile(vmdconfig), 'Cannot find ' + vmdconfig
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
