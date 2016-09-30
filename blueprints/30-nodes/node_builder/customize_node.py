@@ -698,6 +698,7 @@ def execute(args):
         'status': 200,
         'message': 'System image was created.'
     }
+    status = None   # Establish scope prior to possible Except clause
 
     # Replace the logger after parent may have closed extra fds
     fname='%s/build.log' % args.build_dir
@@ -760,17 +761,20 @@ def execute(args):
                          args.tftp_dir + '/' + manifest_tftp_file)
 
         response['message'] = 'PXE files ready to boot'
+        status = 'ready'
 
     except RuntimeError as err:     # Caught earlier and re-thrown as this
         response['status'] = 505
         response['message'] = 'Filesystem image build failed: %s' % str(err)
+        status = 'error'
     except Exception as err:        # Suppress Flask traceback
         response['status'] = 505
         response['message'] = 'Unexpected error: %d: %s' % (
             sys.exc_info()[2].tb_lineno, str(err))
+        status = 'error'
 
     args.logger.propagate = True   # push final messages to root logger
-    update_status(args, response, 'error')
+    update_status(args, response, status)
     if not args.debug:  # I am the grandhild; release the wait() by init()
         args.logger.debug('Closing the build child.')
         os._exit(0)     # RTFM: this is the preferred exit after fork()
