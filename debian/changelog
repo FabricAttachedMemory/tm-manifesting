@@ -1,3 +1,10 @@
+tm-manifesting (1.6-0+l4tm2) catapult; urgency=low
+
+   * Install bug fix - couldn't mv tmms.purge due to incorrect if statement in
+     postinst script
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 3 October 2016 10:54:07 -0600
+
 tm-manifesting (1.6-0+l4tm1) catapult; urgency=low
 
    * Added a -tmas version of golden image VMD config file
