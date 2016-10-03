@@ -50,7 +50,7 @@ blocks:
         - execute: ls -l /usr/bin/tm-manifest
         - execute: ls -l /lib/systemd/system/tm-manifest-server.service
         - execute: ls -l /usr/lib/python3/dist-packages/tmms/
-        - execute: ls -l /etc/tmms.purge
+        - shell: ls -l /etc/tmms.purge
 
 test:
 - step:
