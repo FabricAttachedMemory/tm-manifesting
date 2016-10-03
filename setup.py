@@ -158,8 +158,7 @@ if __name__ == '__main__':
         if not args.extra or 'all' in args.extra:
             actions = legal
         else:
-            for a in args.extra:
-                assert a in legal, 'Illegal action "%s"' % a
+            assert args.extra[0] in legal, 'Illegal action "%s"' % a
             actions = args.extra
         for a in actions:
             if a == 'environment':
