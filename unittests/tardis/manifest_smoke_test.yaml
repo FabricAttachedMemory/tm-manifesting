@@ -20,7 +20,7 @@ defaults:
     execute:
         failaction: fail, continue
         passaction: continue
-        rcpass: rc==1
+        rcpass: rc>=1
 
 blocks:
     test_install:
@@ -36,8 +36,8 @@ blocks:
     test_symlinks:
         - shell: ls -l /usr/bin/tm-manifest-server
         - shell: ls -l /usr/bin/tm-manifest
-        - shell: ls -l /usr/bin/tm-manifest-setup
         - shell: ls -l /lib/systemd/system/tm-manifest-server.service
+        - shell: ls -l /usr/default/tm-manifest-server
 
     test_python_env:
         - shell: ls -l /usr/lib/python3/dist-packages/tmms/
@@ -48,9 +48,9 @@ blocks:
     test_postrm:
         - execute: ls -l /usr/bin/tm-manifest-server
         - execute: ls -l /usr/bin/tm-manifest
-        - execute: ls -l /usr/bin/tm-manifest-setup
         - execute: ls -l /lib/systemd/system/tm-manifest-server.service
         - execute: ls -l /usr/lib/python3/dist-packages/tmms/
+        - execute: ls -l /etc/tmms.purge
 
 test:
 - step:
@@ -60,4 +60,4 @@ test:
         - test_symlinks
         - test_python_env
         - shell: apt purge --yes --force-yes --assume-yes tm-manifesting
-          #        - test_postrm
+        - test_postrm
