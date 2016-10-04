@@ -91,7 +91,7 @@ class BindNodeTest(unittest.TestCase):
             'Neither 200 nor 201 was returned on setnode: %s instead' % output)
 
         time.sleep(5)
-        status = json.loads(self.tmcmd.show([node]))
+        status = json.loads(self.tmcmd.show([node, ]))
 
         self.assertTrue('200' in status,
             'Status not 200 while building: %s' % status.keys())
@@ -109,7 +109,7 @@ class BindNodeTest(unittest.TestCase):
         self.assertTrue(status['status'] == 'building', msg)
 
         while status['status'] == 'building':
-            status = json.loads(self.tmcmd.show([node]))
+            status = json.loads(self.tmcmd.show([node, ]))
             self.assertTrue('200' in status,
                 'Status not 200 while building: %s' % status.keys())
             status = status['200']
@@ -121,11 +121,11 @@ class BindNodeTest(unittest.TestCase):
         msg = '%s: expected status == ready, got %s' % (node, str(status))
         self.assertTrue(status['status'] == 'ready', msg)
 
-        deleted = json.loads(self.tmcmd.delete(node))
+        deleted = json.loads(self.tmcmd.delete([node, ]))
         self.assertTrue('204' in deleted,
             '204 was not returned after node delete: %s' % deleted)
 
-        status = json.loads(self.tmcmd.show([node]))
+        status = json.loads(self.tmcmd.show([node, ]))
         self.assertTrue('204' in status,
                         '204 for non binded node was not returned: %s' % status.keys())
 
