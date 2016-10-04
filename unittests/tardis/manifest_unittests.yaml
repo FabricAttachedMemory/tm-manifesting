@@ -30,7 +30,7 @@ blocks:
          - shell: apt --assume-yes --force-yes install -t manifesting-catapult tm-manifesting
          - shell: apt-cache show tm-manifesting
 
-    test_setup_evn:
+    test_setup_env:
         - shell: tm-manifest setup environment
         - shell: ln -l /var/lib/tmms/
 
@@ -38,7 +38,6 @@ blocks:
         - shell: tm-manifest-setup all
         - shell: ls -l /var/lib/tmms/sys-images/golden/golden.arm.tar
         - shell: cat /lib/systemd/system/tm-manifest-server.service
-
 
     test_unittest:
         - shell: systemctl start tm-manifest-server
@@ -55,5 +54,3 @@ test:
         - deploy: tm-vm
         - test_install
         - test_setup_env
-#        - test_setup_golden
-#        - test_unittest
