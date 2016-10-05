@@ -130,7 +130,7 @@ class TmNode(tm_base.TmCmd):
         such as "ready", "unbound", or "error".
         """
         assert len(target) >= 1, \
-            'Missing argument: unsetnode <node coordinate>'
+            'Missing argument: waitnode <node coordinate>'
         node_coords = self._resolve_nodes(target)
         responses = {}      # only add them when non-building state is reached
         coordset = frozenset(node_coords)
