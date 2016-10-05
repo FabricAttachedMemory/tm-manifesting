@@ -2,6 +2,8 @@
 from pdb import set_trace
 import json
 import os
+import time
+
 from . import tm_base
 
 
@@ -17,7 +19,8 @@ class TmNode(tm_base.TmCmd):
             'listbindings': self.listbindings,
             'getnode':      self.show,
             'setnode':      self.set_node,
-            'unsetnode':    self.delete
+            'unsetnode':    self.delete,
+            'waitnode':     self.waitnode
         }
 
     def listall(self, arg_list=None, **options):
@@ -43,8 +46,10 @@ class TmNode(tm_base.TmCmd):
         return self.to_json(data)
 
     def _resolve_nodes(self, nodelist):
-        '''Nodelist is from command line, should be list of /bizmumble or integer'''
-        assert isinstance(nodelist, list) and nodelist, 'This really should not happen'
+        '''Nodelist is from command line, should be list of /bizmumble or
+           coordinates or integer node numbers.'''
+        nodelist = list(nodelist)
+        assert nodelist, 'nodelist is empty'
         if len(nodelist) == 1 and nodelist[0].lower() == 'all':
             nodelist = json.loads(self.listall())['200']['nodes']
         newlist = []
@@ -116,3 +121,38 @@ class TmNode(tm_base.TmCmd):
         if len(node_coords) == 1:
             return self.to_json(data)   # Per the ERS
         return json.dumps(responses)
+
+    def waitnode(self, target, **options):
+        """
+        waitnode <node coord>
+
+        Waits for node binding status to report a value other than "building"
+        such as "ready", "unbound", or "error".
+        """
+        assert len(target) >= 1, \
+            'Missing argument: waitnode <node coordinate>'
+        node_coords = self._resolve_nodes(target)
+        responses = {}      # only add them when non-building state is reached
+        coordset = frozenset(node_coords)
+        remaining = coordset - frozenset(responses.keys())
+        sleepy = 0
+        while remaining:
+            time.sleep(sleepy)
+            for node_coord in remaining:
+                time.sleep(0.1)
+                resp = json.loads(self.show((node_coord,)))
+                try:
+                    status = resp['200']['status']  # some phase of binding
+                    if status != 'building':
+                        responses[node_coord] = status
+                except KeyError:
+                    if '204' in resp:
+                        status = 'unbound'
+                    elif '404' in resp:
+                        status = 'unknown'
+                    else:
+                        status = 'error'
+                    responses[node_coord] = status
+            remaining = coordset - frozenset(responses.keys())
+            sleepy = 5
+        return json.dumps({'200': responses})   # Just like other commands
