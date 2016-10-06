@@ -393,13 +393,21 @@ def install_packages(args):
             len(packages), len(downloads))
     update_status(args, msg)
 
+    # Some packages need this (python-mon-agent)
+    shutil.copy(args.tmconfig, args.new_fs_dir + '/etc/tmconfig')
+
     # Fill out the install script.  Everything goes at root $HOME.
     installsh = '/root/install.sh'
     installog = '/root/install.log'
     script_file = args.new_fs_dir + installsh
+
+    # Don't use "-e" (exit on error).  It always does "exit 1" which gets
+    # treated as EPERM, masking real error.  It's also inherited by
+    # subshells which masks things even further.
+
     script_header = """#!/bin/bash
 # Created %s
-set -ue
+set -u
 cd /root
 exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
@@ -444,7 +452,16 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     continue
                 with open(args.new_fs_dir + '/root/' + deb, 'wb') as debian:
                     debian.write(pkgresp.content)
-                install.write('dpkg -i %s\nrm %s\n\n' % (deb, deb))
+                dpkgIstr = '''
+dpkg -i {0}
+[ $? -eq 0 ] && rm {0}
+# Resolve dependencies of {0}
+apt-get -f -y install
+RET=$?
+[ $RET -ne 0 ] && echo "Install {0} failed" >&2 && exit $RET
+
+'''.format(deb)
+                install.write(dpkgIstr)
 
         if args.postinst is not None:
             install.write('\n# "postinst" scriptlet from manifest\n\n')
@@ -458,6 +475,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
 
     try:
         procmount = args.new_fs_dir + '/proc'
+        os.makedirs(procmount, exist_ok=True)
         ret, stdout, sterr = piper('mount -obind /proc ' + procmount)
         assert not ret, 'Cannot bind mount /proc'
 
