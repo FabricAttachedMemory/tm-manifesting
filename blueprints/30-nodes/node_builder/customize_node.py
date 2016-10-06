@@ -271,20 +271,20 @@ def set_l4tm_sshkeys(args):
         with open(auth, 'w+') as f:
             f.write('\n')
             f.write(args.l4tm_pubkey)
-        os.chmod(auth, 0o600)
+        os.chmod(auth, 0o644)   # pubkey doesn't work if other/world-writeable
         os.chown(auth, uid, gid)
 
     if args.l4tm_privkey is not None:
         id_rsa = dotssh + '/id_rsa'     # default, simplifies config file
         with open(id_rsa, 'w') as f:
             f.write(args.l4tm_privkey)
-        os.chmod(id_rsa, 0o600)
+        os.chmod(id_rsa, 0o400)
         os.chown(id_rsa, uid, gid)
 
         config = dotssh + '/config'
         with open(config, 'w') as f:
             f.write('# From Manifesting\n\nStrictHostKeyChecking no\n')
-        os.chmod(config, 0o600)
+        os.chmod(config, 0o400)
         os.chown(config, uid, gid)
 
 #==============================================================================
