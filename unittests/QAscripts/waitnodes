@@ -2,19 +2,18 @@
 
 ###########################################################################
 # Wait for ping and ssh responses, no extra tools required.  Well, ping :-).
-# Command line processing; usually called from startnodes.
-
-NODES="$@"
-N_WANTED=$#
 
 [ -z "$NETNAME" ] && echo "export NETNAME=something" >&1 && exit 1
 
+jq --version >/dev/null 2>&1
+[ $? -ne 0 ] && echo 'First "apt-get install jq"' >&2 && exit 1
+
 set -u
 
-LOG=/tmp/waitnodes.$NETNAME.log
-echo -e "\n-----------------------\nSTARTING NEW RUN AT `date`" >> $LOG
-
 ###########################################################################
+# Logging
+
+LOG=/tmp/waitnodes.$NETNAME.log
 
 function log() {
 	echo -e "$@"
@@ -22,6 +21,32 @@ function log() {
 }
 
 ###########################################################################
+# Turn "all" into a list of integers
+
+function expand_nodelist() {
+    if [ $1 != all ]; then
+	NODES="$@"	# These aren't qualified in any way
+    else # Use manifesting service to walk through all nodes ready to run.
+    	NODE_COORDS=`tm-manifest listnodes | jq -r '."200".nodes[]'`
+    	# echo $NODE_COORDS >&2
+
+    	echo -n 'Building list of "ready" nodes:' >&2
+    	NODES=
+    	for N in $NODE_COORDS; do
+	    TEMP=`tm-manifest getnode $N`
+	    STATUS=`echo $TEMP | jq -r '."200".status'`
+	    [ "$STATUS" != ready ] && continue
+	    NODE_ID=`echo $TEMP | jq -r '."200".node_id'`
+	    echo -n " $NODE_ID" >&2
+	    NODES="$NODES $NODE_ID"
+	done
+	echo >&2
+    fi
+    echo $NODES
+}
+
+###########################################################################
+# Count QEMUs
 
 function all_running() {	# Optional $1 means wait, else die
     while true; do
@@ -72,17 +97,21 @@ function waitlimit() {	# $1: topic; $2: current wait list
 ###########################################################################
 # Main
 
-all_running wait	# settling time if called from startnodes
+log "\n-----------------------\nSTARTING NEW RUN AT `date`"
 
+NODES=`expand_nodelist $@`
 HOSTNAMES=`for N in $NODES; do printf "node%02d " $N; done`
 
+N_WANTED=`echo $HOSTNAMES | wc -w`	# Needed by...
+all_running wait			# settling time after startnodes
+
 WAITLIST=$HOSTNAMES
-LAST_WAITLIST=
+LAST_WAITLIST=				# Used by waitlimit()
 while [ "$WAITLIST" ]; do
     all_running
     WAITLIST=
     echo -en "\nPing"
-    for H in $HOSTNAMES; do	# yeah do them all each time
+    for H in $HOSTNAMES; do		# Yes do them all each time
 	echo -n " $H"
 	ping -c1 $H >/dev/null 2>&1
 	[ $? -ne 0 ] && WAITLIST="$WAITLIST $H" && echo -n " (no ping)"
@@ -93,9 +122,8 @@ while [ "$WAITLIST" ]; do
 done
 
 WAITLIST=$HOSTNAMES
-LAST_WAITLIST=
+LAST_WAITLIST=				# Used by waitlimit()
 while [ "$WAITLIST" ]; do
-
     all_running
     WAITLIST=
     echo -en "\nRe-ping and test sshd to"
