@@ -211,7 +211,7 @@ def set_l4tm_sudo(args):
         Set sudoer policy of no password for user l4tm.  That user was
     configured with sudo in the golden image via vmdebootstrap.  This
     removes the password restriction for easier automation and has been
-    approved by Operational Security.  See also set_l4tm_pubkey().
+    approved by Operational Security.  See also set_l4tm_sshkeys().
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
@@ -232,40 +232,63 @@ def set_l4tm_sudo(args):
         raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
 #==============================================================================
+# ssh private and public keys.  At least one demo (LSGi) wants nodes to
+# freely ssh between each other.  I don't know if the LDAP miracle will
+# allow this, but FAME needs it anyhow.
 
 
-def set_l4tm_pubkey(args):
-    """
-        Add the l4tm_pubkey data to /home/l4tm/.ssh/authorized_keys.
-    Where it comes from is your problem, but ssh-key -t rsa is a good start.
-
-    :param 'l4tm_pubkey': [str] RSA public key
-    :return: 'None' on success. Raise 'RuntimeError' on problems.
-    """
-    update_status(args, 'Set authorized keys file for user l4tm')
-    if args.l4tm_pubkey is None:
-        return
+def _get_userstuff(args, user):
     with workdir(args.new_fs_dir):
         with open('etc/passwd', 'r') as f:
             for line in f:
-                if line.startswith('l4tm:'):
+                if line.startswith('%s:' % user):
                     _, _, uid, gid, gecos, home, shell = line.split(':')
                     uid = int(uid)
                     gid = int(gid)
-                    dotssh = home[1:] + '/.ssh'     # relative to workdir
-                    auth = dotssh + '/authorized_keys'
-                    break
+                    return args.new_fs_dir + home, uid, gid
             else:
                 raise RuntimeError('Cannot find user l4tm')
-        os.makedirs(dotssh, mode=0o700, exist_ok=True)
+
+
+def set_l4tm_sshkeys(args):
+    """
+        Add l4tm_pubkey to /home/l4tm/.ssh/authorized_keys.  Overwrite
+    /home/l4tm/.ssh/id_rsa with l4tmy_privkey.  Where they come from is
+    your problem, but ssh-key -t rsa is a good start.
+
+    :param 'l4tm_privkey': [str] RSA private key, phraseless
+    :param 'l4tm_pubkey':  [str] RSA public key, phraseless
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
+    update_status(args, 'Set ssh keys for user l4tm')
+    home, uid, gid = _get_userstuff(args, 'l4tm')
+    dotssh = home + '/.ssh'
+    os.makedirs(dotssh, mode=0o700, exist_ok=True)
+    os.chown(dotssh, uid, gid)
+
+    if args.l4tm_pubkey is not None:
+        auth = dotssh + '/authorized_keys'
         with open(auth, 'w+') as f:
             f.write('\n')
             f.write(args.l4tm_pubkey)
-        os.chmod(auth, 0o600)
+        os.chmod(auth, 0o644)   # pubkey doesn't work if other/world-writeable
         os.chown(auth, uid, gid)
-        os.chown(dotssh, uid, gid)
+
+    if args.l4tm_privkey is not None:
+        id_rsa = dotssh + '/id_rsa'     # default, simplifies config file
+        with open(id_rsa, 'w') as f:
+            f.write(args.l4tm_privkey)
+        os.chmod(id_rsa, 0o400)
+        os.chown(id_rsa, uid, gid)
+
+        config = dotssh + '/config'
+        with open(config, 'w') as f:
+            f.write('# From Manifesting\n\nStrictHostKeyChecking no\n')
+        os.chmod(config, 0o400)
+        os.chown(config, uid, gid)
 
 #==============================================================================
+
 
 def rewrite_rclocal(args):
     """
@@ -728,7 +751,7 @@ def execute(args):
         set_hosts(args)
         set_client_id(args)
         set_l4tm_sudo(args)
-        set_l4tm_pubkey(args)
+        set_l4tm_sshkeys(args)
 
         persist_initrd(args)
 

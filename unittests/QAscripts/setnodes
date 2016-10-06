@@ -3,6 +3,8 @@
 # Wrap "tm-manifest setnode" with a loop and a stopwatch.  Needs "jq" package.
 # Assumes TMMS config is /etc/tmms
 
+echo "DEPRECATED; use tm-manifest setnode ....." >&2 && exit 1
+
 set -u
 
 jq --version >/dev/null 2>&1
