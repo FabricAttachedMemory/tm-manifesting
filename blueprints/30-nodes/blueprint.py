@@ -307,6 +307,7 @@ def build_node(manifest, node_coord):
         'node_coord':   node_coord,
         'node_id':      node_id,
         'manifest':     manifest,
+        'tmconfig':     BP.config['TMCONFIG'],      # the file name
         'repo_mirror':  BP.config['L4TM_MIRROR'],
         'repo_release': BP.config['L4TM_RELEASE'],
         'repo_areas':   BP.config['L4TM_AREAS'],
