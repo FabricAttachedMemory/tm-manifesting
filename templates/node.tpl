@@ -1,6 +1,6 @@
 <!doctype html>
 <HTML>
-<HEAD><TITLE>{{ label }}: {{ name }}</TITLE>
+<HEAD><TITLE>{{ label }}: {{ node.hostname }}</TITLE>
 </HEAD>
 
 <BODY>
@@ -56,6 +56,16 @@ Manifest Binding Details
 {% endif %}
 </p>
 
+<!-- chroot install details -->
+{% if installlog is not none and (status.status == 'ready' or status.status == 'building') %}
+<hr>
+<h4>chroot install script</h4>
+<pre>{{ installsh }}</pre>
+<p>
+<hr>
+<h4>chroot install log</h4>
+<pre>{{ installlog }}</pre>
+{% endif %}
 
 </BODY>
 </HTML>

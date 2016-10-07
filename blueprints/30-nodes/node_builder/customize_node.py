@@ -413,7 +413,7 @@ exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -q --assume-yes
-apt-get dist-upgrade -q --assume-yes
+# apt-get dist-upgrade -q --assume-yes
 
 echo "en_US UTF-8" > /etc/locale.gen
 /usr/sbin/locale-gen
@@ -429,15 +429,22 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
             for pkg in packages:
                 cmd = 'apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
                 install.write(cmd)
-
-            # FIXME: zero out the apt cache, save some space?
+                # Things from the repo OUGHT to work.
+                install.write(
+                    '[ $? -ne 0 ] && echo "Install %s failed" && exit 1' %
+                    pkg)
 
         install.write('\n# Tasks: %s\n' % args.tasks)
         if args.tasks is not None:
             for task in args.tasks.split(','):
                 cmd = 'tasksel install %s\n' % task
                 install.write(cmd)
+                # Things from the repo OUGHT to work.
+                install.write(
+                    '[ $? -ne 0 ] && echo "Tasksel %s failed" && exit 1' %
+                    task)
 
+        # These are one-offs so relax the expectation of correctness
         if downloads is not None:
             install.write('\n# Show me the Debians! (%d)\n' % len(downloads))
             for pkg in downloads:
@@ -452,14 +459,20 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     continue
                 with open(args.new_fs_dir + '/root/' + deb, 'wb') as debian:
                     debian.write(pkgresp.content)
+
+                # Log the failures but don't abort the image build.
                 dpkgIstr = '''
 dpkg -i {0}
-[ $? -eq 0 ] && rm {0}
-# Resolve dependencies of {0}
-apt-get -f -y install
 RET=$?
-[ $RET -ne 0 ] && echo "Install {0} failed" >&2 && exit $RET
-
+if [ $RET -eq 0 ]; then
+    rm {0}
+else
+    # Most likely: dependencies for {0}
+    echo "dpkg -i {0} had problems, return value = $RET" >&2
+    apt-get -f -y install
+    RET=$?
+    [ $RET -ne 0 ] && echo "Cleanup {0} problems, return value = $RET" >&2
+fi
 '''.format(deb)
                 install.write(dpkgIstr)
 
@@ -469,7 +482,7 @@ RET=$?
 
         # Release cache space (megabytes).  DON'T use autoclean, it increases
         # the used space (new indices?)
-        install.write('\nexec apt-get clean\n')
+        install.write('\nexec apt-get clean\n')     # Final exit value
 
     os.chmod(script_file, 0o744)
 
