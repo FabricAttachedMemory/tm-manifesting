@@ -14,7 +14,7 @@
 </TD>
 </TR></TABLE>
 <p>
-The <a href='/static/software-arch.pdf'>L4TM Software ERS</a> chapter 8
+The <a href='http://hlinux-build.us.rdlabs.hpecorp.net/~packardk/software-arch.pdf'>L4TM Software ERS</a> chapter 8
 describes the Manifesting service.  The functions in chapter 7,
 Provisioning, are also covered by this service.
 <br>
