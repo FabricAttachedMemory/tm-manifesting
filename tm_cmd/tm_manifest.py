@@ -1,7 +1,9 @@
-#!/usr/bin/python3 -tt
+#!/usr/bin/python3
+
 import argparse
-from pdb import set_trace
 import sys
+
+from pdb import set_trace
 
 from tmcmd import cmdlookup
 
