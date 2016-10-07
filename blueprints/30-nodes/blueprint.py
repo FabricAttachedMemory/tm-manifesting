@@ -108,7 +108,7 @@ def get_all_nodes():
     """
         List all nodes coordinates known to the server.
     """
-    response = jsonify({'nodes': list(BP.node_coords)})	# already sorted
+    response = jsonify({'nodes': list(BP.node_coords)})     # already sorted
     response.status_code = 200
 
     BP.logger.debug(response)
@@ -142,7 +142,7 @@ def _resolve_node_coord(nodespec):
     node_coord = None
     try:
         node_id = int(nodespec)
-        try:	# Sparseness holes return None which leads to AttributeError
+        try:    # Sparseness holes return None which leads to AttributeError
             # FIXME: move into TMConfig and export a "node_id" property
             racknum = 1     # FRD/MFT
             encnum = ((node_id - 1) // 10) + 1
@@ -151,7 +151,7 @@ def _resolve_node_coord(nodespec):
             node_coord = rack.enclosures[encnum].nodes[nodenum].coordinate
         except (AttributeError, IndexError) as e:
             return None
-    except ValueError:	# assume it's a coordinate path
+    except ValueError:  # assume it's a coordinate path
         # Two rules invoke Postel's Law of liberal reception.  Either way,
         # we MAY need to add leading /.
         node_coord = nodespec if nodespec[0] == '/' else '/' + nodespec
@@ -297,6 +297,7 @@ def build_node(manifest, node_coord):
         tasks = None     # sentinel for following loop
 
     # Optional manifest fields not in the ERS but useful during bringup
+    l4tm_privkey = manifest.thedict.get('l4tm_privkey', None)
     l4tm_pubkey = manifest.thedict.get('l4tm_pubkey', None)
     postinst = manifest.thedict.get('postinst', None)
     rclocal = manifest.thedict.get('rclocal', None)
@@ -306,11 +307,13 @@ def build_node(manifest, node_coord):
         'node_coord':   node_coord,
         'node_id':      node_id,
         'manifest':     manifest,
+        'tmconfig':     BP.config['TMCONFIG'],      # the file name
         'repo_mirror':  BP.config['L4TM_MIRROR'],
         'repo_release': BP.config['L4TM_RELEASE'],
         'repo_areas':   BP.config['L4TM_AREAS'],
         'packages':     packages,
         'tasks':        tasks,
+        'l4tm_privkey': l4tm_privkey,
         'l4tm_pubkey':  l4tm_pubkey,
         'postinst':     postinst,
         'rclocal':      rclocal,
@@ -371,7 +374,7 @@ def build_node(manifest, node_coord):
         return make_response(
             'AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
 
-    if forked > 0: # wait for the child1 to exit.
+    if forked > 0:  # wait for the child1 to exit.
         try:
             pid, retval = os.waitpid(forked, 0)
             if retval:
@@ -428,7 +431,8 @@ def get_node_status(node_coord):
             'manifest': 'unknown',
             'status':   'error'
         }
-    BP.logger.debug('<get_node_status> for %s: %s' % (node_coord, json.dumps(status, indent=4)))
+    BP.logger.debug('<get_node_status> for %s: %s' % (
+        node_coord, json.dumps(status, indent=4)))
     return status
 
 

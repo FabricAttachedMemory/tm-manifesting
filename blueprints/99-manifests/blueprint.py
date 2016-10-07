@@ -116,7 +116,8 @@ def show_manifest_json(manname='/'):
 
         response = None
         if not found_manifest:
-            response = make_response('The specified manifest does not exist.', 404)
+            response = make_response(
+                'The specified manifest does not exist.', 404)
         else:
             response = make_response(jsonify(found_manifest.thedict), 200)
 
@@ -215,7 +216,7 @@ def delete_manifest(manname=None):
         try:
             if not BP.config['DRYRUN']:
                 os.remove(manifest_server_path)
-                # TODO: cleanout prefix folders of the manifests if it is empty!
+                # TODO: remove prefix folders of the manifests if empty
         except EnvironmentError as err:
             response = make_response('Failed to remove manifest', 500)
 
@@ -243,8 +244,9 @@ class ManifestDestiny(object):
         missing = list(legal - keys)
         assert not len(missing), 'Missing key(s): ' + ', '.join(missing)
 
-        molegal = legal.union(frozenset(    # Optional
-            ('comment', '_comment', 'l4tm_pubkey', 'postinst', 'rclocal')))
+        molegal = legal.union(frozenset((    # Optional
+            'comment', '_comment', 'l4tm_privkey', 'l4tm_pubkey',
+            'postinst', 'rclocal')))
         illegal = list(keys - molegal - frozenset((_UPFROM, )))
         assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
 
@@ -328,6 +330,7 @@ def _lookup(manifest_name):    # Can be sub/path/name
 
 def get_all():
     return tuple(_data.keys())
+
 
 def is_file_allowed(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in BP.allowed_files

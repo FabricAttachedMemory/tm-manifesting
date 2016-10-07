@@ -17,7 +17,7 @@ attachnode
 	GNU screen(1) session named <NETNAME>.  This command takes
 	a number from 1-40 and attaches to that console.
 
-lxc-fixdev
+lxc-fixdev DEPRECATED
 	Used after starting an LXC container the first time to tweak a few
 	things for FAME (especially libvirt bridges and vmdebootstrap)
 
@@ -25,7 +25,7 @@ octets2str
 	Pass the client id octet stream from dhcpdump(1M) to see the
 	ASCII string.
 
-setnodes
+setnodes DEPRECATED; use 'tm-manifest setnode <list> or "all" manname
 	Takes a list of nodes or the word "all" and a manifest name
 	(previously uploaded via "tm-manifest put ...").   Bind the
 	specified nodes to that manifest.  Waits until all nodes
@@ -59,7 +59,6 @@ dotssh/
 manifests/
 	Sample manifests.  The "bender.json" only specifies a single
 	extra package but that loads about eight dependent packages.
-
 
 Setting up a new FAME system or LXC container
 ---------------------------------------------
@@ -165,11 +164,10 @@ Setting up a new FAME system or LXC container
 
 8. tm-manifest listnodes should reflect /etc/tmconfig
 
-
 EXERCISING THE MANIFESTING SERVICE AND BOOTING FAME NODES
 =========================================================
 
-1. On your host, as root, edit /etc/resolv.conf to add a new line:
+1. On your "torms" host, as root, edit /etc/resolv.conf to add a new line:
 
    nameserver w.x.y.z
 
@@ -185,7 +183,7 @@ EXERCISING THE MANIFESTING SERVICE AND BOOTING FAME NODES
    overwritten when it renews its lease.  You can prevent that with chattr
    and the immutable bit.  FYI.
 
-2. tm-manifest put manifests/something.json
+2. tm-manifest put something.json
 
    There are sample manifest JSON files in 
    
@@ -211,9 +209,13 @@ EXERCISING THE MANIFESTING SERVICE AND BOOTING FAME NODES
 
    b. export FAM=/var/cache/FAM
 
-4. setnodes all manname
+4. tm-manifest setnode all manname
 
-    This will bind all nodes to the manifest named "manname".   
+    This will bind all nodes to the manifest named "manname".
+
+    To wait for all the bindings to complete,
+
+    tm-manifest waitnode all
 
 5. startnode.arm 1
 
