@@ -4,10 +4,9 @@
 # this file and edit the copy as appropriate.  Then move the custom copy to
 # 1) /etc/tmms, where it will be used by default by all the commands.  This
 #    is the system default location expected by the systems service startup.
-# 2) /some/where/else/mytmms.  All five commands listed above must then be
-#    started with "--config /some/where/else/mytmms".  This allows you to run
-#    multiple TMMS environments on a single system although you must setup
-#    and start them by hand.
+# 2) /some/where/else/mytmms.  All commands must then be started with
+#    "--config /some/where/else/mytmms".  This allows you to run multiple TMMS 
+#    environments on a single system.
 
 # Values below control the API, golden image aspects, PXE server, and
 # firewall (iptables) rules.  Any change to this file should be followed
@@ -38,10 +37,10 @@ L4TM_RELEASE = 'catapult'
 L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
 
 # NIC connected to the node network on which DHCP and TFTP will be served
-# (usually something like ethX).  If the interface cannot be found,
-# the PXE server (dnsmasq) will NOT be started.  The manifesting API will
+# (usually something like ethX).  If the interface cannot be found (or is
+# 'None') PXE services will NOT be started.  The manifesting API will
 # still work, you just can't boot any images.  After changing this value
-# you need to (re)-run "setup.py networking".
+# you need to (re)-run "tm-manifest setup networking".
 PXE_INTERFACE = 'None'
 
 # Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
@@ -62,4 +61,4 @@ PXE_FIREWALL = 'DHCP'
 # x.y.z.1, etc.   A FAME network created via libvirt will # probably be a
 # /24 network like 10.11.12.0/24
 
-PXE_SUBNET = 'None'     # 'None' falls back to external DNS for nodeXX
+PXE_SUBNET = 'None'     # 'None' falls back to external DNS
