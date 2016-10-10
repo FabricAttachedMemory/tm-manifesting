@@ -27,7 +27,7 @@ defaults:
 blocks:
     install_pkg:
          - shell: env
-         - shell: echo "${REPO}" > /etc/apt/sources.list
+         - shell: echo "${REPO}" >> /etc/apt/sources.list
          - shell: cat /etc/apt/sources.list
          - shell: apt -y update
          - shell: apt -y upgrade
