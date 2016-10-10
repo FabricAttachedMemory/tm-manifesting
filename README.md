@@ -5,7 +5,7 @@ for use in The Machine environment. Support for any other distro, even Debian or
 HPE Linux, is optional and discretionary.
 
 ---
-#### MANIFESTING SETUP: THE MACHINE CONFIGURATION FILE
+#### MANIFESTING: THE MACHINE CONFIGURATION FILE (/etc/tmconfig)
 
 TMCF (The Machine Configuration File) is the large JSON file that completely
 describes the topology of an instance of The Machine.  Every instance needs
@@ -18,15 +18,15 @@ file you should save it in the default location /etc/tmconfig.  Note:
 the Librarian also uses this file.
 
 ---
-#### MANIFESTING SETUP: MANIFESTING CONFIGURATION FILE
+#### MANIFESTING SETUP: MANIFESTING CONFIGURATION FILE (/etc/tmms)
 
 The sample manifesting configuration file supplied with the repo is "tmms".
-Yes, it is Python syntax. The default config installed with the package does 
-not provide booting of the node copabilities, BUT, still allowes you to use 
-API full functionality. This is due to unknown networking state of the each 
-individual system (e.g. NIC and TMDOMAIN).                                            
+Yes, it is Python syntax. The default config installed with the package does
+not provide booting of the node copabilities, BUT, still allowes you to use
+API full functionality. This is due to unknown networking state of the each
+individual system (e.g. NIC and TMDOMAIN).
 
-Instructions on configuring your netwrok will be provided bellow. 
+Instructions on configuring your netwrok will be provided bellow.
 
 ---
 #### MANIFESTING SETUP and Configuration
@@ -42,23 +42,42 @@ sudo apt update
 sudo apt install tm-manifesting
 ```
 
-Now, you will be able to use the following commands from anywhere on your 
-system to interuct with the API:
-
+As part of the package install process, it will create the following for you to
+use:
 ```bash
 tm-manifest
 tm-manifest-server
 ```
 
-_Note: To get full list of the operations run_
+_Note: ManPage also available for each of the tools to read_
 ```bash
-tm-manifest help
-tm-manifest-server --help
+man tm-manifest
+man tm-manifest-server
 ```
+
+NOTE: we are not done yet configuring the API. Read next "Configuration: SETUP".
 
 ---
 
-##### Configuration: _SETUP ALL_
+##### Configuration: _SETUP_
+
+###### Prerequisite: /etc/tmconfig
+Obtain a copy of TMCF for your TM instance and put it at /etc/tmconfig
+
+An easy way is through the librarian.  Copy these lines to "fame40.ini":
+```
+[global]
+node_count = 40
+book_size_bytes = 8M
+nvm_size_per_node = 512B
+```
+
+Then run
+```bash
+book_register.py -j fame40.ini > /tmp/tmconfig
+sudo mv /tmp/tmconfig /etc/tmconfig
+```
+---
 
 Next, we need to configure your system before you can start tm-manifest-server.
 Though, this can be done with one command that runs through all the setup
@@ -67,14 +86,14 @@ phases, you can manually run each of them separatly (discussed below):
 tm-manifest setup
 ```
 
-By default (no arguments), or specifying "all", setup will start the 
+By default (no arguments), or specifying "all", setup will start the
 first of several phases of setup, and proceed through all of them.  That
-is the recommended invocation.  
+is the recommended invocation.
 
 You may see some package installation output from apt-get depending on
 the packages currently on your system.
 
-The configuration file chosen will be display, then a summary of 
+The configuration file chosen will be display, then a summary of
 operations performed.
 
 Hopefully all error messages are clear on the nature of any problem(s)
@@ -121,22 +140,22 @@ Error messages are intended to be suggestive of their own remedy.
 
 ##### Configuration: _SETUP GOLDEN IMAGE__
 
-The finally step of the setup process is generating a golden image. It should 
-happen automatically if you did "setup.py all", or you can invoke only this 
+The finally step of the setup process is generating a golden image. It should
+happen automatically if you did "setup.py all", or you can invoke only this
 stage with:
 
 ```bash
 sudo tm-manifest setup golden_image
 ```
 
-This will take about twenty minutes, as the tasks involve building a 
+This will take about twenty minutes, as the tasks involve building a
 file system under QEMU-static control (for aarch64).  Be patient.
 
 ---
 #### Starting the Server
 
 When all the configurations are finished successully, you should be able to
-start an API server. 
+start an API server.
 
 To start is in a foreground mode:
 ```bash

@@ -1,8 +1,14 @@
 metadata:
+    copyright: "Copyright 2016, Hewlett Packard Enterprise, LTD"
+    name: tm-manifest_setup
+    description: Install test of the tm-manifesting package and its setup routine
+            process with unittests.
     maintainer:
         - name: Zach Volchak
           email: zakhar.volchak@hpe.com
-    notes: |
+    creator:
+        - name: Zach Volchak
+          email: zakhar.volchak@hpe.com
 
 infrastructure:
     - host:
@@ -18,10 +24,8 @@ defaults:
         passaction: continue
         rcpass: rc==0
 
-#TODO: THIS IS NOT A VALID TEST, YET
-
 blocks:
-    test_install:
+    install_pkg:
          - shell: env
          - shell: echo "${REPO}" >> /etc/apt/sources.list
          - shell: cat /etc/apt/sources.list
@@ -30,27 +34,33 @@ blocks:
          - shell: apt --assume-yes --force-yes install -t manifesting-catapult tm-manifesting
          - shell: apt-cache show tm-manifesting
 
-    test_setup_env:
+    setup_env:
         - shell: tm-manifest setup environment
         - shell: ln -l /var/lib/tmms/
 
-    test_setup_golden:
-        - shell: tm-manifest-setup all
-        - shell: ls -l /var/lib/tmms/sys-images/golden/golden.arm.tar
-        - shell: cat /lib/systemd/system/tm-manifest-server.service
+    setup_networking:
+        - shell: tm-manifest setup networking
+        - shell: ln -l /var/lib/dnsmasq
 
-    test_unittest:
-        - shell: systemctl start tm-manifest-server
+    setup_golden:
+        - shell: tm-manifest setup golden_image
+        - shell: ls -l /var/lib/tmms/sys-images/golden/golden.arm.tar
+
+    unittest_tmms:
+        - shell: tm-manifest-server -D
         - shell: sleep 30
-        - shell: systemctl status tm-manifest-server
+        - shell: tm-manifest-server --daemon-status
         - shell: cd /usr/lib/python3/dist-packages/tmms/unittests/
         - shell: ./test_all.sh
-        - shell: systemctl stop tm-manifest-server
-        - shell: systemctl status tm-manifest-server
+        - shell: tm-manifest-server --daemon-stop
+        - shell: tm-manifest-server --daemon-status
 
 test:
 - step:
     tm-vm:
         - deploy: tm-vm
-        - test_install
-        - test_setup_env
+        - install_pkg
+        - setup_env
+        - setup_networking
+        - setup_golden
+        - unittest_tmms
