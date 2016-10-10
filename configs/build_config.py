@@ -111,14 +111,18 @@ class ManifestingConfiguration(object):
         self._settings['DNSMASQ_LOGFILE'] = '%s.log' % (
             self._settings['DNSMASQ_PREPATH'])
 
+        if self._settings['PXE_INTERFACE'].lower() == 'none':
+            self._settings['PXE_INTERFACE'] = None
+
         if autoratify:
             errors = self.ratify()
             if errors:
                 raise ValueError('\n'.join(errors))
 
-    # Duck-type a dict.  It's empty before extract_flask_config()
+    # Duck-type a dict.  It's empty before extract_flask_config().  The
+    # flask routines turn the string value 'None' into Python None.
     def __getitem__(self, key):
-        return self._settings.get(key, None)
+        return self._settings.get(key)
 
     def __setitem__(self, key, value):
         self._settings[key] = value
@@ -143,8 +147,9 @@ class ManifestingConfiguration(object):
             dontcare = ()
         missing = []
         for key in frozenset(self._all_env) - frozenset(dontcare):
-            path = self[key]
-            if path is None:
+            try:
+                path = self[key]    # Note that None is a valid value
+            except KeyError:
                 missing.append('Missing key "%s"' % key)
                 continue
             # FIXME: tagged keys would be better
@@ -163,6 +168,7 @@ class ManifestingConfiguration(object):
     def _extract_flask_config(self):
         """
         Use Flask convenience routine to parse the main config file.
+        Note this converts a string value of 'None' into Python's None.
         """
         import flask    # DE102: this must come AFTER installing base packages
 

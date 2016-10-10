@@ -335,6 +335,8 @@ class TMgrub(object):
         self.torms = None
         self.addr = None        # Might become a string
         self.network = None     # WILL become an IPNetwork object
+        if self.pxe_interface is None:
+            return
         try:
             assert self.pxe_interface in NIF.interfaces(), \
                 'PXE_INTERFACE: no such interface "%s"' % self.pxe_interface
