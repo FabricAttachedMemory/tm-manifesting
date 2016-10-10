@@ -1,8 +1,14 @@
 metadata:
+    copyright: "Copyright 2016, Hewlett Packard Enterprise, LTD"
+    name: tm-manifest_setup
+    description: Install test of the tm-manifesting package and its setup routine
+            process with unittests.
     maintainer:
         - name: Zach Volchak
           email: zakhar.volchak@hpe.com
-    notes: |
+    creator:
+        - name: Zach Volchak
+          email: zakhar.volchak@hpe.com
 
 infrastructure:
     - host:
@@ -18,10 +24,8 @@ defaults:
         passaction: continue
         rcpass: rc==0
 
-#TODO: THIS IS NOT A VALID TEST, YET
-
 blocks:
-    test_install:
+    install_pkg:
          - shell: env
          - shell: echo "${REPO}" >> /etc/apt/sources.list
          - shell: cat /etc/apt/sources.list
@@ -30,25 +34,41 @@ blocks:
          - shell: apt --assume-yes --force-yes install -t manifesting-catapult tm-manifesting
          - shell: apt-cache show tm-manifesting
 
-    test_setup_golden:
-        - shell: tm-manifest-setup all
+    generate_tmconfig:
+        - shell: echo "[global]" >> fame40.ini
+        - shell: echo "node_count = 40" >> fame40.ini
+        - shell: echo "book_size_bytes = 8M" >> fame40.ini
+        - shell: echo "nvm_size_per_node = 512B" >> fame40.ini
+        - shell: book_register.py -j fame40.ini > /etc/tmconfig
+
+    setup_env:
+        - shell: tm-manifest setup environment
+        - shell: ln -l /var/lib/tmms/
+
+    setup_networking:
+        - shell: tm-manifest setup networking
+        - shell: ln -l /var/lib/dnsmasq
+
+    setup_golden:
+        - shell: tm-manifest setup golden_image
         - shell: ls -l /var/lib/tmms/sys-images/golden/golden.arm.tar
-        - shell: cat /lib/systemd/system/tm-manifest-server.service
 
-
-    test_unittest:
-        - shell: systemctl start tm-manifest-server
+    unittest_tmms:
+        - shell: tm-manifest-server -D
         - shell: sleep 30
-        - shell: systemctl status tm-manifest-server
+        - shell: tm-manifest-server --daemon-status
         - shell: cd /usr/lib/python3/dist-packages/tmms/unittests/
         - shell: ./test_all.sh
-        - shell: systemctl stop tm-manifest-server
-        - shell: systemctl status tm-manifest-server
+        - shell: tm-manifest-server --daemon-stop
+        - shell: tm-manifest-server --daemon-status
 
 test:
 - step:
     tm-vm:
         - deploy: tm-vm
-        - test_install
-        - test_setup_golden
-        - test_unittest
+        - install_pkg
+        - generate_tmconfig
+        - setup_env
+        - setup_networking
+        - setup_golden
+        - unittest_tmms

@@ -1,3 +1,23 @@
+tm-manifesting (1.8-0+l4tm1) catapult; urgency=low
+
+   * Do not exit on errors for one-off packages loaded via URL
+   * Display ERS from link rather than local copy; show install script and log on web page
+   * Use a shell environment variable TM_MANIFEST_SERVERPORT to change target
+   * No local copy of ERS; show log files on web page; undo hardcoded dest for tm-manifest
+   * Properly process a PXE_INTERFACE of "None"
+   * Updating documentation
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 10 October 2016 16:16:07 -0600
+
+
+tm-manifesting (1.7-0+l4tm1) catapult; urgency=low
+
+   * Support for LSGi automated testing
+   * Tweak permissions on .ssh files
+   * Add "all" processing to waitnodes
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 6 October 2016 16:54:07 -0600
+
 tm-manifesting (1.6-0+l4tm2) catapult; urgency=low
 
    * Install bug fix - couldn't mv tmms.purge due to incorrect if statement in

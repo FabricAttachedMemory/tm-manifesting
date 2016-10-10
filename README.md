@@ -42,23 +42,42 @@ sudo apt update
 sudo apt install tm-manifesting
 ```
 
-Now, you will be able to use the following commands from anywhere on your 
-system to interuct with the API:
-
+As part of the package install process, it will create the following for you to
+use:
 ```bash
 tm-manifest
 tm-manifest-server
 ```
 
-_Note: To get full list of the operations run_
+_Note: ManPage also available for each of the tools to read_
 ```bash
-tm-manifest help
-tm-manifest-server --help
+man tm-manifest
+man tm-manifest-server
 ```
+
+NOTE: we are not done yet configuring the API. Read next "Configuration: SETUP".
 
 ---
 
-##### Configuration: _SETUP ALL_
+##### Configuration: _SETUP_
+
+###### Prerequisite: /etc/tmconfig
+Obtain a copy of TMCF for your TM instance and put it at /etc/tmconfig
+
+An easy way is through the librarian.  Copy these lines to "fame40.ini":
+```
+[global]
+node_count = 40
+book_size_bytes = 8M
+nvm_size_per_node = 512B
+```
+
+Then run
+```bash
+book_register.py -j fame40.ini > /tmp/tmconfig
+sudo mv /tmp/tmconfig /etc/tmconfig
+```
+---
 
 Next, we need to configure your system before you can start tm-manifest-server.
 Though, this can be done with one command that runs through all the setup
@@ -90,9 +109,11 @@ means you need to set PXE_INTERFACE to the NIC which is actually connected
 to your nodes.  No, all permutations of error messages will not be listed.
 If you get confused, ask for help.
 
+##### You may skip next three sections if you ran "tm-manifest setup" successfully
+
 ---
 
-##### Configuration: _SETUP ENVIRONMENT_
+###### Configuration: _SETUP ENVIRONMENT_
 
 This is the first phase of "tm-manifest setup all".   It may be explicitly 
 invoked via:
@@ -106,7 +127,7 @@ will most likely fail.
 
 ---
 
-##### Configuration: _SETUP NETWORKING_
+###### Configuration: _SETUP NETWORKING_
 
 Networking phase configures the DHCP\TFTP server, dnsmasq, firewalls and etc.
 It can be manually invoked via:
@@ -119,7 +140,7 @@ Error messages are intended to be suggestive of their own remedy.
 
 ---
 
-##### Configuration: _SETUP GOLDEN IMAGE__
+###### Configuration: _SETUP GOLDEN IMAGE__
 
 The finally step of the setup process is generating a golden image. It should
 happen automatically if you did "setup.py all", or you can invoke only this
