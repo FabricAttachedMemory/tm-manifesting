@@ -109,9 +109,11 @@ means you need to set PXE_INTERFACE to the NIC which is actually connected
 to your nodes.  No, all permutations of error messages will not be listed.
 If you get confused, ask for help.
 
+##### You may skip next three sections if you ran "tm-manifest setup" successfully
+
 ---
 
-##### Configuration: _SETUP ENVIRONMENT_
+###### Configuration: _SETUP ENVIRONMENT_
 
 This is the first phase of "tm-manifest setup all".   It may be explicitly 
 invoked via:
@@ -125,7 +127,7 @@ will most likely fail.
 
 ---
 
-##### Configuration: _SETUP NETWORKING_
+###### Configuration: _SETUP NETWORKING_
 
 Networking phase configures the DHCP\TFTP server, dnsmasq, firewalls and etc.
 It can be manually invoked via:
@@ -138,7 +140,7 @@ Error messages are intended to be suggestive of their own remedy.
 
 ---
 
-##### Configuration: _SETUP GOLDEN IMAGE__
+###### Configuration: _SETUP GOLDEN IMAGE__
 
 The finally step of the setup process is generating a golden image. It should
 happen automatically if you did "setup.py all", or you can invoke only this

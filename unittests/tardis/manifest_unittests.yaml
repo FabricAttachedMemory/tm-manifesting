@@ -34,6 +34,13 @@ blocks:
          - shell: apt --assume-yes --force-yes install -t manifesting-catapult tm-manifesting
          - shell: apt-cache show tm-manifesting
 
+    generate_tmconfig:
+        - shell: echo "[global]" >> fame40.ini
+        - shell: echo "node_count = 40" >> fame40.ini
+        - shell: echo "book_size_bytes = 8M" >> fame40.ini
+        - shell: echo "nvm_size_per_node = 512B" >> fame40.ini
+        - shell: book_register.py -j fame40.ini > /etc/tmconfig
+
     setup_env:
         - shell: tm-manifest setup environment
         - shell: ln -l /var/lib/tmms/
@@ -60,6 +67,7 @@ test:
     tm-vm:
         - deploy: tm-vm
         - install_pkg
+        - generate_tmconfig
         - setup_env
         - setup_networking
         - setup_golden
