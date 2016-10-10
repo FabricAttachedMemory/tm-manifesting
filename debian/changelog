@@ -1,3 +1,14 @@
+tm-manifesting (1.8-0+l4tm1) catapult; urgency=low
+
+   * Do not exit on errors for one-off packages loaded via URL
+   * Display ERS from link rather than local copy; show install script and log on web page
+   * Use a shell environment variable TM_MANIFEST_SERVERPORT to change target
+   * No local copy of ERS; show log files on web page; undo hardcoded dest for tm-manifest
+   * Updating documentation
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 10 October 2016 14:34:07 -0600
+
+
 tm-manifesting (1.7-0+l4tm1) catapult; urgency=low
 
    * Support for LSGi automated testing

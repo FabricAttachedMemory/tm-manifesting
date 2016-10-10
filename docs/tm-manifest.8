@@ -20,20 +20,76 @@ instance of The Machine.  There are four classes of directives:
 Debian packages, predefined tasks, manifest upload/download, and
 binding a node to a manifest.
 
+
 .SH DIRECTIVES
+
+.SS Setup
+Perform set of configuration of the system before using the manifesting server.
+NOTE: prior to running setup routine, configure /etc/tmms appropriately. The
+most important variable that needs to be adjusted is "PXE_INTERFACE" to set your
+server to server nodes via PXE. If you don't know which interface you are going
+to use, then keep it "None" and run the setup routine. But be ware, when PXE_INTERFACE
+is not set - your server is not capable of booting the nodes, even though all the
+API functionality is still available to use.
+
+Documentation of the "/etc/tmms" config file is in itself.
+
+ALSO, NOTE: every time you change networking related parameters you must run
+"tm-manifest setup networking" to get your changes applied. Same goes for the
+environment parameters (TMCONFIG, MANIFESTING_ROOT and etc) and will require
+rerun of "tm-manifest setup envrionment" and "tm-manifest setup golden_image" as
+well.
+
+
+.PP
+.TP
+all
+Optional parameter which will trigger all of the configuration steps in the
+correct order: environment, networking, golden_image. This is equivalent as
+running "tm-manifest setup" as is (without any arguments)
+
+.PP
+.TP
+environment
+Prepare manifesting environment, by installing dependencies (python3-flask,
+python3-requests, vmdebootstrap and etc), creating required folders for the
+server (if missing), creating symlinks and putting the config files to the right
+location.
+This is the esential and must be run prior to "networking" and "golden_image"
+
+.PP
+.TP
+networking
+Configure DHCP\TFTP(pxe) using dnsmasq config file.
+Make sure to set PXE_INTERFACE in /etc/tmms appropriately before running this.
+Also, /etc/tmconfig must be configured with the right DOMAIN parameter.
+NOTE: it is possible to ignore this parameters by setting PXE_INTERFACE="None",
+BUT, it is not recommended and should be used for development-like purposes.
+
+.PP
+.TP
+golden_image
+Generate a golden image that will be used for all the custom images as a base,
+to save a significant amount of time. However, it might take more than 10 minutes
+to complete.
+
+By default, golden image will be placed under /var/lib/tmms/sys-images/golden/
+and should not be messed with, unless you know what you doing.
+
+
 .SS Packages
 \fBtm-manifest\fP needs an L4TM repo from which to pull (Debian) packages.
 These directives allow you to peruse that repo.
 
 .PP
 .TP
-\fBtm-manifest\fP listpkgs
+listpkgs
 
 List a summary of all packages available in the repo.
 
 .PP
 .TP
-\fBtm-manifest\fP showpkg <name>
+showpkg <name>
 
 Show all the repo metadata for an individual package.
 
@@ -44,11 +100,13 @@ These tasks are built in to the manifesting service and cannot be uploaded.
 
 .PP
 .TP
-\fBtm-manifest\fP listtasks
+listtasks
+List all the tasks available on the server to use for the manifest.
 
 .PP
 .TP
-\fBtm-manifest\fP showtask <name>
+showtask <name>
+Show the contents of the requested taksks in the json format.
 
 .SS Manifests
 Manifests represent the packages present in a filesystem image.  Every
@@ -58,20 +116,26 @@ added to that default image.   The format of a manifest is JSON as shown
 below:
 
 {
-	"foo": "Got to find the nroff macro",
+    "foo": "Got to find the nroff macro",
 }
 
 .PP
 .TP
-\fBtm-manifest\fP list
+list
+List all available\\uploaded manifests on the server.
 
 .PP
 .TP
-\fBtm-manifest\fP show <name>
+show <name>
+Show contents of the manifest in the json format.
 
 .PP
 .TP
-\fBtm-manifest\fP upload <file>
+put [prefix] <file>
+Upload a manifest to the server.
+param 'prefix': optional parameter to set a prefix for the manifest. Example:
+"put my/manifest/folder/ /path/to/awesome_manifest.json" will put this manifest
+available under the "my/manifest/folder/awesome_manifest" name.
 
 .SS Node and manifest binding
 .PP
@@ -84,41 +148,49 @@ PXE boot that image.
 
 .PP
 .TP
-\fBtm-manifest\fP listnodes
+listnodes
 Shows all nodes and their manifest bindings.
 
 .PP
 .TP
-\fBtm-manifest\fP setnode <nodestring> <manifestname>
-
-
+setnode <nodestring> <manifestname>
+Generate a filesystem image based of the specified manifest to bood a desiered
+node. Node will need to be restarted to pick up a new filesystem image.
+Warning: Previous state of the node will be replaced with a new, fresh one.
 
 \fP
 .SH OPTIONS
 .PP
 
 .TP
-\fB-?\fR
+-?
 Print a synopsis of all options and hints
 
 .TP
-\fB-d\fR
+-d
 Turn on debugging
 
 .TP
-\fB-v\fR
+-v
 Make it talk
 
 \fP
 .SH FILES
-http://some.where/software-arch.pdf for the L4TM Software ERS.
-Section XXX describes the JSON format of manifest files.
-
 The global config file for the manifesting service on the ToRMS is at
-/etc/tm-manifest/wherever.  Comments should make it self-documenting.
+"/etc/tmms".  Comments should make it self-documenting.
 
-On the ToRMS, file system images can be found under the TFTP directory,
-usually /var/local/manifesting/xxxxx
+   Source code
+        /usr/lib/python3/dist-packages/tmms/
+        All the source code located here, including the test suites.
+
+    Build directories
+         /var/lib/tmms/
+        All the artifacts to boot Nodes are here: manifests, pxe server, golden image
+        and node images and etc.
+
+    Systemd files
+        /usr/default/tm-manifest-server
+        /lib/systemd/system/tm-manifest-server.service
 
 .SH BUGS
 None that we know of.  Today.  Between noon and 1 pm.
