@@ -61,14 +61,29 @@ def web_node_status(name=None):
         node = BP.nodes[name][0]
         ESPURL = None    # testable value in Jinja2
         ESPsizeMB = 0
+        installsh = installlog = None
         status = get_node_status(name)
-        if status is not None and status['status'] == 'ready':
-            ESPpath = '%s/%s/%s.ESP' % (
-                BP.config['TFTP_IMAGES'], node.hostname, node.hostname)
-            if os.path.isfile(ESPpath):
-                prefix = request.url.split(_ERS_element)[0]
-                ESPURL = '%s%s/ESP/%s' % (prefix, _ERS_element, node.hostname)
-                ESPsizeMB = os.stat(ESPpath).st_size >> 20
+        if status is not None:
+            if status['status'] == 'ready':
+                ESPpath = '%s/%s/%s.ESP' % (
+                    BP.config['TFTP_IMAGES'], node.hostname, node.hostname)
+                if os.path.isfile(ESPpath):
+                    prefix = request.url.split(_ERS_element)[0]
+                    ESPURL = '%s%s/ESP/%s' % (
+                        prefix, _ERS_element, node.hostname)
+                    ESPsizeMB = os.stat(ESPpath).st_size >> 20
+
+            if status['status'] in ('building', 'ready'):
+                installpath = '%s/%s/untar/root' % (
+                    BP.config['FILESYSTEM_IMAGES'], node.hostname)
+                try:
+                    with open(installpath + '/install.sh') as f:
+                        installsh = f.read()
+                    with open(installpath + '/install.log') as f:
+                        installlog = f.read()
+                except Exception as e:
+                    installsh = installlog = None
+                    pass
 
         # all manifests' names with namespace
         manifests = sorted(BP.blueprints['manifest'].get_all())
@@ -80,7 +95,9 @@ def web_node_status(name=None):
             status=status,
             base_url=request.url.split(name)[0],
             ESPURL=ESPURL,
-            ESPsizeMB=ESPsizeMB
+            ESPsizeMB=ESPsizeMB,
+            installsh=installsh,
+            installlog=installlog
         )
     except Exception as e:
         return make_response('Kaboom: %s' % str(e), 404)
@@ -307,6 +324,7 @@ def build_node(manifest, node_coord):
         'node_coord':   node_coord,
         'node_id':      node_id,
         'manifest':     manifest,
+        'tmconfig':     BP.config['TMCONFIG'],      # the file name
         'repo_mirror':  BP.config['L4TM_MIRROR'],
         'repo_release': BP.config['L4TM_RELEASE'],
         'repo_areas':   BP.config['L4TM_AREAS'],

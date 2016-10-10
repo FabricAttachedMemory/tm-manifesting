@@ -1,10 +1,12 @@
 #/usr/bin/python3
 
-import requests as HTTP_REQUESTS
 import json
-from werkzeug.datastructures import FileStorage
+import os
+import requests as HTTP_REQUESTS
+
 from pdb import set_trace
 
+from werkzeug.datastructures import FileStorage
 
 def _NST(func):     # No Stack Trace
     def new_func(*args, **kwargs):
@@ -26,7 +28,9 @@ def _NST(func):     # No Stack Trace
 
 class TmCmd():
 
-    url = 'http://localhost:31178/manifesting/api/'
+    # Strangle a rookie today.
+    url = 'http://%s/manifesting/api/' % os.getenv(
+        'TM_MANIFEST_SERVERPORT', 'localhost:31178')
     args = {}
 
     def __init__(self, sort=True, headers=None, indent=4, **options):

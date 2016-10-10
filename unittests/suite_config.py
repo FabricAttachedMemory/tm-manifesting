@@ -21,7 +21,8 @@ hpetmconfig = TMConfig(server_config['TMCONFIG'])
 if hpetmconfig.errors:
     raise SystemExit('Bad TMCF:\n' + '\n'.join(hpetmconfig.errors))
 
-MANIFESTING_SERVER = 'http://localhost:31178/manifesting/api/'
+MANIFESTING_SERVER = 'http://%s/manifesting/api/' % os.getenv(
+    'TM_MANIFEST_SERVERPORT', 'localhost:31178')
 
 # TO IMPORT THIS CONFIG, MANIFESTING SERVER MUST BE RUNNING
 try:

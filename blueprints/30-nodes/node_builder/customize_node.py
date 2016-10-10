@@ -393,19 +393,27 @@ def install_packages(args):
             len(packages), len(downloads))
     update_status(args, msg)
 
+    # Some packages need this (python-mon-agent)
+    shutil.copy(args.tmconfig, args.new_fs_dir + '/etc/tmconfig')
+
     # Fill out the install script.  Everything goes at root $HOME.
     installsh = '/root/install.sh'
     installog = '/root/install.log'
     script_file = args.new_fs_dir + installsh
+
+    # Don't use "-e" (exit on error).  It always does "exit 1" which gets
+    # treated as EPERM, masking real error.  It's also inherited by
+    # subshells which masks things even further.
+
     script_header = """#!/bin/bash
 # Created %s
-set -ue
+set -u
 cd /root
 exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -q --assume-yes
-apt-get dist-upgrade -q --assume-yes
+# apt-get dist-upgrade -q --assume-yes
 
 echo "en_US UTF-8" > /etc/locale.gen
 /usr/sbin/locale-gen
@@ -421,15 +429,22 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
             for pkg in packages:
                 cmd = 'apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
                 install.write(cmd)
-
-            # FIXME: zero out the apt cache, save some space?
+                # Things from the repo OUGHT to work.
+                install.write(
+                    '[ $? -ne 0 ] && echo "Install %s failed" && exit 1' %
+                    pkg)
 
         install.write('\n# Tasks: %s\n' % args.tasks)
         if args.tasks is not None:
             for task in args.tasks.split(','):
                 cmd = 'tasksel install %s\n' % task
                 install.write(cmd)
+                # Things from the repo OUGHT to work.
+                install.write(
+                    '[ $? -ne 0 ] && echo "Tasksel %s failed" && exit 1' %
+                    task)
 
+        # These are one-offs so relax the expectation of correctness
         if downloads is not None:
             install.write('\n# Show me the Debians! (%d)\n' % len(downloads))
             for pkg in downloads:
@@ -444,7 +459,22 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     continue
                 with open(args.new_fs_dir + '/root/' + deb, 'wb') as debian:
                     debian.write(pkgresp.content)
-                install.write('dpkg -i %s\nrm %s\n\n' % (deb, deb))
+
+                # Log the failures but don't abort the image build.
+                dpkgIstr = '''
+dpkg -i {0}
+RET=$?
+if [ $RET -eq 0 ]; then
+    rm {0}
+else
+    # Most likely: dependencies for {0}
+    echo "dpkg -i {0} had problems, return value = $RET" >&2
+    apt-get -f -y install
+    RET=$?
+    [ $RET -ne 0 ] && echo "Cleanup {0} problems, return value = $RET" >&2
+fi
+'''.format(deb)
+                install.write(dpkgIstr)
 
         if args.postinst is not None:
             install.write('\n# "postinst" scriptlet from manifest\n\n')
@@ -452,12 +482,13 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
 
         # Release cache space (megabytes).  DON'T use autoclean, it increases
         # the used space (new indices?)
-        install.write('\nexec apt-get clean\n')
+        install.write('\nexec apt-get clean\n')     # Final exit value
 
     os.chmod(script_file, 0o744)
 
     try:
         procmount = args.new_fs_dir + '/proc'
+        os.makedirs(procmount, exist_ok=True)
         ret, stdout, sterr = piper('mount -obind /proc ' + procmount)
         assert not ret, 'Cannot bind mount /proc'
 
