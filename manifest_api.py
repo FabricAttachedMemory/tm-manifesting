@@ -191,6 +191,8 @@ def root():
 
 
 def _read_iptables_config(config):
+    if config['PXE_INTERFACE'] is None:
+        return
     format_path = '%(DNSMASQ_CONFIGS)s/%(PXE_INTERFACE)s.iptables' % config
     try:
         with open(format_path, 'r') as f:
@@ -203,6 +205,8 @@ def _read_iptables_config(config):
 
 
 def clear_iptables(config):
+    if config['PXE_INTERFACE'] is None:
+        return
     action_format = _read_iptables_config(config)
     delrules = action_format.format(action='D').split('\n')
     for d in delrules:  # Delete them until they're gone
@@ -217,6 +221,8 @@ def clear_iptables(config):
 
 def set_iptables(config):
     '''This will actually insert rules regardless of existence of interface.'''
+    if config['PXE_INTERFACE'] is None:
+        return
     action_format = clear_iptables(config)
     addrules = action_format.format(action='A').split('\n')
     for a in addrules:
@@ -255,6 +261,8 @@ def kill_pid(pid, procname='', daemon=True):      # FIXME: utils?
 def kill_dnsmasq(config):
     # There can be more than one bound to it, especially if libvirt was used..
     # Easy way: started from (previous) run of manifest_api.
+    if config['PXE_INTERFACE'] is None:
+        return
     try:
         with open(config['DNSMASQ_PIDFILE'], 'r') as f:
             pid = int(f.read())
@@ -293,6 +301,8 @@ def kill_dnsmasq(config):
 
 def start_dnsmasq(config):
     pxe_interface = config['PXE_INTERFACE']
+    if pxe_interface is None:
+        return True     # Yes, I did what I was configured to do
     if pxe_interface not in NIF.interfaces():
         mainapp.logger.warning('%s does not exist; cannot start dnsmasq.' %
             pxe_interface)

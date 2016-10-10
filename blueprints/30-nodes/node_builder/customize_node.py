@@ -543,6 +543,7 @@ def update_status(args, message, status='building'):
     response['message'] = message
     response['coordinate'] = args.node_coord    # Troubleshooting and QA
     response['node_id'] = args.node_id
+    response['hostname'] = args.hostname
 
     # Rally DE118: make it an atomic update
     newstatus = args.status_file + '.new'
