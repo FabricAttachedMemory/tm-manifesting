@@ -145,7 +145,7 @@ def _response_bad(errmsg, status_code=418):
 def check_version(*args, **kwargs):
     if 'api' not in request.path:   # Ignore versioning/JSON for HTML
         return None
-    hdr_accept = request.headers['Accept']
+    hdr_accept = request.headers.get('Accept','NADA')
     if 'application/json' not in hdr_accept:
         return _response_bad('I see no JSON in header/accept.', 406)
     version = -1.0
