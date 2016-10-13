@@ -62,6 +62,10 @@ set linux_gfx_mode=text
 terminal_output gfxterm
 background_image "(tftp)/grub/manifest.jpg"
 
+# Originally for SNBU but worth keeping
+set debug=linux,linuxefi,efi
+set pager=1
+
 configfile  "(tftp){menudir}/${{net_efinet0_hostname}}.menu"
 configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 '''
@@ -81,6 +85,10 @@ set default=0
 set timeout=1
 
 set menu_color_highlight=white/brown
+
+# Originally for SNBU but worth keeping
+set debug=linux,linuxefi,efi
+set pager=1
 
 menuentry '{hostname} L4TM ARM64' {{
     linux (tftp){images_dir}/{hostname}.vmlinuz.gz console=ttyAMA0 acpi=force rw
@@ -206,6 +214,11 @@ class TMgrub(object):
         self.tftp_grub_cfg = self.tftp_grub_dir + '/grub.cfg'
         self.tftp_grub_efi = self.tftp_grub_dir + '/grubnetaa64.efi'
 
+        # SDHC images need a different GRUB because the memdisk core code
+        # is different from grubnetaa64.efi.  Stick it in TFTP dir for
+        # convenience and continuity but it will never be used by PXE.
+        self.sdhc_grub_efi = self.tftp_grub_dir + '/grubaa64.efi'
+
         self.dnsmasq_configs = manconfig['DNSMASQ_CONFIGS']
         self.dnsmasq_logfile = manconfig['DNSMASQ_LOGFILE']
         self.dnsmasq_pidfile = manconfig['DNSMASQ_PIDFILE']
@@ -229,22 +242,24 @@ class TMgrub(object):
         self.chroot_grub_menus_dir = basepath(
             self.tftp_grub_menus_dir, self.tftp_root)
 
-        # This file is also in the Debian package "grub-efi-arm64-signed"
-        # (w/ appropriate revision) but Linn Crosetto keeps it here.
+        # These files are also in the Debian package "grub-efi-arm64-signed"
+        # (w/ appropriate revision) but Linn Crosetto keeps them here.
         # The grub-mkimage command is in the source deb under build/xxxx
 
-        grubURL = manconfig['L4TM_MIRROR'] + \
-            '/dists/catapult/main/uefi/grub2-arm64/' +\
-            'current/grubnetaa64.efi.signed'
-        try:
-            r = HTTP_REQUESTS.get(grubURL)
-            assert r.status_code == 200, 'Cannot retrieve "%s"' % grubURL
-            assert len(r.content) == int(r.headers['Content-Length']), \
-                'Length mismatch on "%s"' % grubURL
-        except Exception as e:
-            raise SystemExit(str(e))
-        with open(self.tftp_grub_efi, 'wb') as f:
-            f.write(r.content)
+        for dest in (self.tftp_grub_efi, self.sdhc_grub_efi):
+            base = os.path.basename(dest)
+            grubURL = manconfig['L4TM_MIRROR'] + \
+                '/dists/catapult/main/uefi/grub2-arm64/' +\
+                'current/%s.signed' % base
+            try:
+                r = HTTP_REQUESTS.get(grubURL)
+                assert r.status_code == 200, 'Cannot retrieve "%s"' % grubURL
+                assert len(r.content) == int(r.headers['Content-Length']), \
+                    'Length mismatch on "%s"' % grubURL
+            except Exception as e:
+                raise SystemExit(str(e))
+            with open(dest, 'wb') as f:
+                f.write(r.content)
 
     @property
     def hostnames(self):

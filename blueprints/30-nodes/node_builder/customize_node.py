@@ -11,6 +11,7 @@
 """
 
 import argparse
+import contextlib
 import gzip
 import json
 import os
@@ -45,6 +46,9 @@ def extract_bootfiles(args):
     update_status(args, 'Extract any /boot/[vmlinuz,initrd]')
     boot_dir = '%s/boot/' % args.new_fs_dir
     vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # one list
+    if args.debug and len(vmlinuz) > 1:
+        set_trace()
+        pass    # multiple kernels exist, probably a dependency cascade
     initrd = glob('%s/initrd.img*' % (boot_dir))    # two lists
     vmlinuzes = []
     try:
@@ -465,7 +469,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
 dpkg -i {0}
 RET=$?
 if [ $RET -eq 0 ]; then
-    rm {0}
+    [ "False" = "{1}" ] && rm {0}   # "False" = "--debug flag"
 else
     # Most likely: dependencies for {0}
     echo "dpkg -i {0} had problems, return value = $RET" >&2
@@ -473,7 +477,7 @@ else
     RET=$?
     [ $RET -ne 0 ] && echo "Cleanup {0} problems, return value = $RET" >&2
 fi
-'''.format(deb)
+'''.format(deb, str(bool(args.debug)))
                 install.write(dpkgIstr)
 
         if args.postinst is not None:
@@ -482,6 +486,7 @@ fi
 
         # Release cache space (megabytes).  DON'T use autoclean, it increases
         # the used space (new indices?)
+        install.write('\necho chroot installer complete at `date`\n')
         install.write('\nexec apt-get clean\n')     # Final exit value
 
     os.chmod(script_file, 0o744)
@@ -554,19 +559,31 @@ def update_status(args, message, status='building'):
 # ESP == EFI System Partition, where EFI wants to scan for FS0:.
 
 
-def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
+def create_ESP(args, blockdev, vmlinuz, cpio):
     update_status(args, 'Creating and filling ESP')
+    ESP_mnt = '%s/mnt' % (args.build_dir)   # Going to be a VFAT FS image
+    remove_target(ESP_mnt)
+    os.makedirs(ESP_mnt)
 
     # tftp_dir has "images/nodeZZ" tacked onto it from caller.
     # Grub itself is pulled live from L4TM repo at setup networking time.
-    grub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/grubnetaa64.efi'
-
-    ESP_mnt = '%s/mnt' % (args.build_dir)   # VFAT FS
-    os.makedirs(ESP_mnt, exist_ok=True)     # That was easy
+    # Plain grubaa64.efi was built with prefix "/EFI/debian" as opposed
+    # to the '/grub' of grubnetaa64.efi.  In either case, grub[net]aa64.efi
+    # turns around and grabs <prefix>/grub.cfg, where "prefix" was set at
+    # grub construction.
+    follow_Linns_advice = True
+    if follow_Linns_advice:
+        grubbase = 'grubaa64.efi'
+        prefix = '/EFI/debian'
+    else:
+        grubbase = 'grubnetaa64.efi'    # gzipped files still choke it
+        prefix = '/grub'
+    getgrub = '/'.join(args.tftp_dir.split('/')[:-2]) + '/grub/%s' % grubbase
+    grubdir = ESP_mnt + prefix
 
     undo_mount = False
     try:
-        # This happens on containers, not sure why...
+        # This happens on containers. I think I solved it but paranoia is ok.
         assert os.path.exists(blockdev), \
             'Cannot find mapper file %s' % blockdev
 
@@ -574,28 +591,31 @@ def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
         ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
-        # Step 3: Make, mount and fill out the file system.  Put everything
-        # under /grub.  grubnetaa64.efi turns around and grabs /grub/grub.cfg.
-        # EFI directory separator is backslash, while grub is forward.
+        # Step 3: Make, mount, and fill the VFAT FS.  The EFI default startup
+        # script goes at /, but the grub stuff lives under "prefix".
 
         cmd = 'mount %s %s' % (blockdev, ESP_mnt)
         ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
         undo_mount = True
+        update_status(args, 'SDHC GRUB DIR established at %s' % grubdir)
 
+        if args.debug:
+            set_trace()
+        # The EFI directory separator is backslash, while grub is forward.
         with open(ESP_mnt + '/startup.nsh', 'w') as f:
-            f.write('\\grub\\grubnetaa64.efi\n')
-        grubdir = ESP_mnt + '/grub'
-        update_status(args, 'SDHC GRUB DIR AT %s' % grubdir)
+            f.write(prefix.replace('/', '\\') + '\\%s\n' % grubbase)
         os.makedirs(grubdir)
-        shutil.copy(vmlinuz_gzip, grubdir)
-        shutil.copy(cpio_gzip, grubdir)
-
-        shutil.copy(grub, grubdir)
+        shutil.copy(vmlinuz, grubdir)
+        shutil.copy(cpio, grubdir)
+        shutil.copy(getgrub, grubdir)
 
         with open(grubdir + '/grub.cfg', 'w') as f:
-            f.write('linux /grub/%s\n' % os.path.basename(vmlinuz_gzip))
-            f.write('initrd /grub/%s\n' % os.path.basename(cpio_gzip))
+            # Originally for SNBU but worth keeping
+            f.write('set debug=linux,linuxefi,efi\n')
+            f.write('set pager=1\n')
+            f.write('linux %s/%s\n' % (prefix, os.path.basename(vmlinuz)))
+            f.write('initrd %s/%s\n' % (prefix, os.path.basename(cpio)))
             f.write('boot\n')
 
     except Exception as e:
@@ -617,7 +637,7 @@ def create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip):
 # make all that much data, he says with a smile.
 
 
-def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
+def create_SNBU_image(args, vmlinuz, cpio):
     update_status(args, 'Building SNBU SDHC image')
     ESP_img = '%s/%s.ESP' % (args.build_dir, args.hostname)
     ESP_target = '%s/%s' % (args.tftp_dir, ESP_img)     # node-specific by now
@@ -663,7 +683,7 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
 
         # Step 3: fill it out
 
-        do_copy = create_ESP(args, blockdev, vmlinuz_gzip, cpio_gzip)
+        do_copy = create_ESP(args, blockdev, vmlinuz, cpio)
 
     except AssertionError as e:
         args.logger.error('%s failed: errno = %d: %s' % (str(e), ret, stderr))
@@ -695,20 +715,37 @@ def create_SNBU_image(args, vmlinuz_gzip, cpio_gzip):
 #          so about one minute to boot
 # MFT/FRD  is about  xx MB / sec  xfer then  xx seconds to uncompress
 #          so about  xx seconds to boot
+# For kernels, the name of the file (vmlinuz vs vmlinux, .gz or no .gz) is
+# no indication if it's already compressed.  While compressing again is
+# legal, the dual-compression makes grub very sad.  Check first.
+
+
+def _is_gzipped(fname):
+    try:
+        with gzip.open(fname, mode='rb') as test:
+            return test._read_gzip_header()
+    except OSError:
+        return False
 
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
     update_status(args, 'Compressing kernel and file system')
 
     vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
-    with open(vmlinuz_file, 'rb') as f_in:
-        with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    if _is_gzipped(vmlinuz_file):
+        shutil.copy(vmlinuz_file, vmlinuz_gzip)
+    else:
+        with open(vmlinuz_file, 'rb') as f_in:
+            with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
     cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
-    with open(cpio_file, 'rb') as f_in:
-        with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    if _is_gzipped(cpio_file):
+        shutil.copy(cpio_file, cpio_gzip)
+    else:
+        with open(cpio_file, 'rb') as f_in:
+            with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
     return vmlinuz_gzip, cpio_gzip
 
@@ -793,8 +830,15 @@ def execute(args):
         rewrite_rclocal(args)
 
         # Was there a custom kernel?  Note that it will probably only
-        # boot itself and not load any modules.
+        # boot itself and not load any modules.  I have seen a custom kernel
+        # force a reload of the original golden kernel, from a dependency
+        # cascade of the drivers (zbridge, atomics, tmfs, tmflush).
+        # I suspect /etc/kernel scripts from the original golden kernel but
+        # haven't actually tracked it down.  Work around it, especially with
+        # this clever little context manager.
         tmp = extract_bootfiles(args)
+        with contextlib.suppress(ValueError):
+            tmp.remove(vmlinuz_golden)
         if tmp:
             assert len(tmp) < 2, 'Too many custom kernels'
             update_status(args, 'Replacing golden kernel %s with %s' % (
