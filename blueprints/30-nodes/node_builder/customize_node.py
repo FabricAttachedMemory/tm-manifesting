@@ -648,7 +648,7 @@ def create_SNBU_image(args, vmlinuz, cpio):
 
     whitney_FW_image = True     # FW updates for Whitney need 128M hole
     if whitney_FW_image:
-        img_size = 768 << 20    # Was 384 but it wasn't big enough for SNBU
+        img_size = 384 << 20
         ESP_offset = 129
     else:
         img_size = 256 << 20    # Downloads and boots much faster
@@ -715,20 +715,37 @@ def create_SNBU_image(args, vmlinuz, cpio):
 #          so about one minute to boot
 # MFT/FRD  is about  xx MB / sec  xfer then  xx seconds to uncompress
 #          so about  xx seconds to boot
+# For kernels, the name of the file (vmlinuz vs vmlinux, .gz or no .gz) is
+# no indication if it's already compressed.  While compressing again is
+# legal, the dual-compression makes grub very sad.  Check first.
+
+
+def _is_gzipped(fname):
+    try:
+        with gzip.open(fname, mode='rb') as test:
+            return test._read_gzip_header()
+    except OSError:
+        return False
 
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
     update_status(args, 'Compressing kernel and file system')
 
     vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
-    with open(vmlinuz_file, 'rb') as f_in:
-        with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    if _is_gzipped(vmlinuz_file):
+        shutil.copy(vmlinuz_file, vmlinuz_gzip)
+    else:
+        with open(vmlinuz_file, 'rb') as f_in:
+            with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
     cpio_gzip = args.tftp_dir + '/' + os.path.basename(cpio_file) + '.gz'
-    with open(cpio_file, 'rb') as f_in:
-        with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    if _is_gzipped(cpio_file):
+        shutil.copy(cpio_file, cpio_gzip)
+    else:
+        with open(cpio_file, 'rb') as f_in:
+            with gzip.open(cpio_gzip, mode='wb', compresslevel=6) as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
     return vmlinuz_gzip, cpio_gzip
 
@@ -832,7 +849,7 @@ def execute(args):
 
         vmlinuz_gzip, cpio_gzip = compress_bootfiles(
             args, vmlinuz_golden, cpio_file)
-        create_SNBU_image(args, vmlinuz_golden, cpio_file)
+        create_SNBU_image(args, vmlinuz_gzip, cpio_gzip)
 
         # Free up space someday, but not during active development
         # remove_target(args.build_dir)

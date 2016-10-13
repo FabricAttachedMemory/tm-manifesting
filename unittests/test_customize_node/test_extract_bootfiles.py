@@ -44,7 +44,8 @@ class CleanupKernelTest(unittest.TestCase):
         """
         args = {'build_dir' : self.tmp_folder,
                 'new_fs_dir' : self.fs_img,
-                'dryrun' : True}
+                'dryrun' : True,
+                'debug': False}
 
         args = Namespace(**args)
 
