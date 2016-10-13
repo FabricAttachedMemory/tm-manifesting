@@ -178,6 +178,8 @@ if __name__ == '__main__':
     except NameError as err:
         errmsg = 'Name (coding) error: line %d: %s' % (
             sys.exc_info()[2].tb_lineno, str(err))
+    except RuntimeError as err:
+        errmsg = 'Stay calm. We just caught an error duing the install process! [%s]' % err
     except Exception as err:
         errmsg = 'UNEXPECTED ERROR: line %d: %s' % (
             sys.exc_info()[2].tb_lineno, str(err))
