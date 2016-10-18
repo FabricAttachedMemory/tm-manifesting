@@ -467,8 +467,14 @@ def main(args):
     missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
     if missing:
         raise RuntimeError('\n'.join(missing))
+
     grubby = TMgrub(manconfig)
-    grubby.create_tftp_environment()
+
+    try:
+        grubby.create_tftp_environment()
+    except OSError as err:
+        raise RuntimeError('Failed to create tftp environment! [%s]' % err)
+
     print('Master GRUB configuration in', grubby.tftp_grub_cfg)
     print('      Per-node grub menus in', grubby.tftp_grub_menus_dir)
     print('      Per-node image dirs in', grubby.tftp_images_dir)
