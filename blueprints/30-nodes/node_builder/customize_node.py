@@ -511,7 +511,7 @@ fi
 
         umount = 'umount -fl %s %s' %(procmount, ptsmount)
 
-        cmd = '/usr/sbin/chroot %s "/bin/bash -c %s"' % (
+        cmd = '/usr/sbin/chroot %s /bin/bash -c %s' % (
             args.new_fs_dir, installsh)
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
         # While running, sys-images/nodeXX/untar/root/install.log is updated.
