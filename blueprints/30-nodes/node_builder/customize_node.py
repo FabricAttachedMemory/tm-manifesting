@@ -404,10 +404,16 @@ def install_packages(args):
     installsh = '/root/install.sh'
     installog = '/root/install.log'
     script_file = args.new_fs_dir + installsh
+    log_file = args.new_fs_dir + installog
+
+    # In case the script never runs
+    with open(log_file, 'w') as prelog:
+        prelog.write(
+            'Syntax errors in %s kept it from ever running' % installsh)
 
     # Don't use "-e" (exit on error).  It always does "exit 1" which gets
-    # treated as EPERM, masking real error.  It's also inherited by
-    # subshells which masks things even further.
+    # treated as EPERM, masking the real error.  It's also inherited by
+    # subshells which mask things even further.
 
     script_header = """#!/bin/bash
 # Created %s
@@ -426,6 +432,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
 """ % (time.ctime(), installog)
 
     with open(script_file, 'w') as install:
+        # install.write("this isn't legal this cannot work\n")
         install.write(script_header)
 
         install.write('\n# Packages: %s\n' % packages)
@@ -504,21 +511,23 @@ fi
 
         umount = 'umount -fl %s %s' %(procmount, ptsmount)
 
-        cmd = '/usr/sbin/chroot %s %s ' % (args.new_fs_dir, installsh)
+        cmd = '/usr/sbin/chroot %s "/bin/bash -c %s"' % (
+            args.new_fs_dir, installsh)
         # This can take MINUTES.  "album" pulls in about 80 dependent packages.
-        # While running, sys_image/root/install.log is updated.  That could be
-        # tailed and status updated, MFT' time.
+        # While running, sys-images/nodeXX/untar/root/install.log is updated.
         ret, stdout, stderr = piper(cmd, use_call=True)
-        umountret, _, _ = piper(umount)
-        assert not ret, \
-            'chroot failed: errno %d: %s' % (ret, str(stdout) + str(stderr))
-        return True
+        if ret:
+            args.logger.error(
+                'chroot failed: errno %d: %s %s' % (
+                    ret, str(stdout), str(stderr)))
+        return not bool(ret)
     except Exception as err:
-        umountret, _, _ = piper(umount)
         args.logger.error(str(err))
         with open(args.new_fs_dir + installog, 'r') as log:
             args.logger.debug(log.read())
         raise RuntimeError('Couldn\'t install packages: %s' % str(err))
+    finally:
+        umountret, _, _ = piper(umount)
     return False
 
 #==============================================================================

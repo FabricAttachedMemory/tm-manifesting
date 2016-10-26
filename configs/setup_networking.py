@@ -50,9 +50,9 @@ from utils.file_utils import make_symlink, make_dir
 _grub_cfg_template = '''
 # Command/data prefix is (tftp)/grub; module prefix is (tftp)/grub/arm64-efi
 # so "insmod videoinfo" just works.  Both TMAS and FAME have a countdown
-# multiplier of about ten, and there's not really any menu choices, so
+# multiplier of about ten, but since we're on real hardware now...
 
-set timeout=1
+set timeout=10
 
 set gfxmode=auto
 set gfxmodepayload=text
@@ -81,17 +81,17 @@ configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 
 _grub_menu_template = '''
 set default=0
-# FAME and TMAS jack this X10.  Real HW will not care.
-set timeout=1
-
 set menu_color_highlight=white/brown
+
+# FAME and TMAS jack this X10.  The global in grub.cfg should work, but if not, uncomment this.
+# set timeout=10
 
 # Originally for SNBU but worth keeping
 set debug=linux,linuxefi,efi
 set pager=1
 
 menuentry '{hostname} L4TM ARM64' {{
-    linux (tftp){images_dir}/{hostname}.vmlinuz.gz console=ttyAMA0 acpi=force rw
+    linux (tftp){images_dir}/{hostname}.vmlinuz.gz {append}
     initrd (tftp){images_dir}/{hostname}.cpio.gz
 }}
 '''
@@ -232,7 +232,7 @@ class TMgrub(object):
             self.pxe_subnet = None
         else:
             self.pxe_subnet = manconfig['PXE_SUBNET']
-            if self.pxe_subnet.lower == 'none':
+            if self.pxe_subnet.lower() == 'none':
                 self.pxe_subnet = None
 
         # Relative to TFTP, these supply content to the files.
@@ -316,8 +316,8 @@ class TMgrub(object):
                     'FQDN(s) from TMCF that failed DNS lookup:\n%s' %
                     '\n'.join(noDNS))
 
-            # Since this is Corporate IT, assume the position.
-            kludge_network = IPNetwork(str(self.torms) + '/255.255.240.0').cidr
+            # Since this is Corporate IT, use the known value.
+            kludge_network = self.network
 
         else:   # Synthesize host names and IP addresses
             try:
@@ -448,7 +448,11 @@ class TMgrub(object):
         # Node binding places {hostname}.vmlinuz and {hostname}.cpio here
         images_dir = '%s/%s' % (self.chroot_images_dir, hostname)
         return _grub_menu_template.format(
-            hostname=hostname, images_dir=images_dir)
+            hostname=hostname,
+            images_dir=images_dir,
+            append='rw nosmp earlycon=pl011,0x402020000 ignore_loglevel'
+            )
+            # append='rw console=ttyAMA0 acpi=force'    # FAME/TMAS
 
     def compose_grub_cfg(self):
         """
