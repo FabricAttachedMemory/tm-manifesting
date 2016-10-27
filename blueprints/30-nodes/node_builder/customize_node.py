@@ -132,9 +132,10 @@ def set_client_id(args):
     """
     update_status(args, 'Set ClientID for dhcpc')
     dhclient_conf = '%s/etc/dhcp/dhclient.conf' % args.new_fs_dir
+    clientid = '/EncNum' + args.node_coord.split('EncNum')[1]
     try:
         with open(dhclient_conf, 'a') as f:
-            f.write('\nsend dhcp-client-identifier "%s";\n' % args.node_coord)
+            f.write('\nsend dhcp-client-identifier "%s";\n' % clientid)
     except Exception as err:
         raise RuntimeError('Cannot set DHCP client ID: %s' % str(err))
 
@@ -442,7 +443,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                 install.write(cmd)
                 # Things from the repo OUGHT to work.
                 install.write(
-                    '[ $? -ne 0 ] && echo "Install %s failed" && exit 1' %
+                    '[ $? -ne 0 ] && echo "Install %s failed" && exit 1\n' %
                     pkg)
 
         install.write('\n# Tasks: %s\n' % args.tasks)

@@ -51,8 +51,8 @@ _grub_cfg_template = '''
 # Command/data prefix is (tftp)/grub; module prefix is (tftp)/grub/arm64-efi
 # so "insmod videoinfo" just works.  Both TMAS and FAME have a countdown
 # multiplier of about ten, but since we're on real hardware now...
-
-set timeout=10
+# timeout doesn't seem to work here, see the menu template.
+# set timeout=10	
 
 set gfxmode=auto
 set gfxmodepayload=text
@@ -84,7 +84,7 @@ set default=0
 set menu_color_highlight=white/brown
 
 # FAME and TMAS jack this X10.  The global in grub.cfg should work, but if not, uncomment this.
-# set timeout=10
+set timeout=8
 
 # Originally for SNBU but worth keeping
 set debug=linux,linuxefi,efi
@@ -387,6 +387,9 @@ class TMgrub(object):
         self.FAMEMACs = ['52:54:42:%02d:%02d:%02d' % ((node.node_id, ) * 3)
                          for node in self.tmconfig.allNodes]
         self.coords = [node.coordinate for node in self.tmconfig.allNodes]
+        self.coords = [ '/EncNum' + c.split('EncNum')[1]
+            for c in self.coords ]
+        print('!!!!! USING THE SHORT FORM OF CLIENT IDS !!!!!!')
         # MAC and ClientID must be on the same line or else dnsmasq bitches
         # about duplicate IPs and skips the second set.
         assert len(self.hostIPs) == len(self.tmconfig.allNodes), \
