@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 '''L4TM packages'''
+from collections import defaultdict
 import gzip
 import os
 import requests as HTTP_REQUESTS
@@ -30,6 +31,7 @@ def _webpage(name=None):
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
+            alphabetic_sets=alphabetic_sets(_data.keys()),
             base_url=request.url)
 
     return render_template(
@@ -37,6 +39,16 @@ def _webpage(name=None):
         label=__doc__,
         name=name,
         itemdict=_data[name])
+
+
+def alphabetic_sets(data):
+    result = defaultdict(list)
+    for val in data:
+        if val[0].isalpha():
+            result[val[0]].append(val)
+        else:
+            result['_digit'].append(val)
+    return result
 
 ###########################################################################
 # API

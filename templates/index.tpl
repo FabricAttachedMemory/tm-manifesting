@@ -5,22 +5,10 @@
 
 <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<!-- Include all compiled plugins (below), or include individual files as needed -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-
-<style>
-#linksList{
-    padding-left: 5%;
-}
-
-#headerBg{
--webkit-box-shadow: 0px 2px 10px -2px rgba(0,0,0,0.77);
--moz-box-shadow: 0px 2px 10px -2px rgba(0,0,0,0.77);
-box-shadow: 0px 2px 10px -2px rgba(0,0,0,0.77);
-}
-
-</style>
+<script src="{{url_for('static', filename='plugins/jquery.min.js')}}"></script>
+<!-- Bootstrap css link (on this server) -->
+<link rel="stylesheet" href="{{url_for('static', filename='plugins/bootstrap/css/bootstrap.min.css')}}">
+<link rel="stylesheet" href="{{url_for('static', filename='plugins/local/css/layout.css')}}">
 
 </head>
 
@@ -55,15 +43,17 @@ box-shadow: 0px 2px 10px -2px rgba(0,0,0,0.77);
             <br>
             The following topics and links show the type of data available behind
             the API.  The actual API endpoints are given for each topic.
+        </p>
         <p>
         To exercise the APIs, get a browser plugin like <a href="http://restclient.net/">RESTClient</a>.
+        </p>
     </div>
 
     <div class="col-md-8" style="margin-bottom:-1%;">
         <h5><span class="label label-default">API Version: 1.0</span></h5>
     </div>
     <div class="col-md-8">
-        <h5><span class="label label-default">Location: {{ coordinate }}</span></h5>
+        <h4><span class="label label-default">Location: {{ coordinate }}</span></h4>
     </div>
   <!-- Add the extra clearfix for only the required viewport -->
   <div class="clearfix visible-xs-block"></div>
