@@ -133,8 +133,14 @@ dhcp-hostsfile={dnsmasq_hostsfile}
 addn-hosts={dnsmasq_dnslookupfile}
 dhcp-no-override
 dhcp-boot=/grub/grubnetaa64.efi
-# 512-byte blocks.  TM SFW does ask but it's not done automatically
+# 512-byte blocks.  TM SFW does ask but it's not sent by default.
 dhcp-option-force=option:boot-file-size,{boot_file_size_512_blocks}
+
+# Routing.  Default for FAME and most TMAS is to let dnsmasq supply the
+# default route of its host.  Real TM nodes are connected to a separate
+# firewall that also provides the gateway.  "setup networking" will look 
+# that up and supply the real value.
+{dnsmasq_defaultroute}
 
 enable-tftp
 tftp-root={tftp_root}
@@ -225,6 +231,7 @@ class TMgrub(object):
         self.dnsmasq_prepath = manconfig['DNSMASQ_PREPATH']
         self.dnsmasq_hostsfile = self.dnsmasq_prepath + '.hostsfile'
         self.dnsmasq_dnslookupfile = self.dnsmasq_prepath + '.dnslookup'
+        self.dnsmasq_defaultroute = '# dhcp-option=option:router,1.2.3.4'
         self.pxe_interface = manconfig['PXE_INTERFACE']
         self.tmdomain = manconfig['TMDOMAIN']
 
@@ -302,6 +309,7 @@ class TMgrub(object):
                     continue
                 A = next(iter(answer))
                 self.hostIPs.append(A.address)
+
             # Oh yeah...
             try:
                 FQDN = 'torms.' + self.tmdomain
@@ -310,11 +318,21 @@ class TMgrub(object):
                 self.torms = str(next(iter(answer)).address)
             except (RES.NXDOMAIN, AssertionError) as e:
                 noDNS.append(FQDN)
+            try:
+                FQDN = 'firewall'	# of default domain of ToRMS
+                answer = RES.query(FQDN, 'A')
+                assert len(answer) == 1
+                self.dnsmasq_defaultroute = 'dhcp-option=option:router,%s' % (
+                    str(next(iter(answer)).address))
+            except (RES.NXDOMAIN, AssertionError) as e:
+                # Not fatal
+                print('Cannot DNS resolve "%s", manually fix dnsmasq config' %
+                    FQDN, file=sys.stderr)
 
             if noDNS:
                 raise SystemExit(
-                    'FQDN(s) from TMCF that failed DNS lookup:\n%s' %
-                    '\n'.join(noDNS))
+                    'Required FQDN(s) that failed DNS lookup:\n%s' %
+                        '\n'.join(noDNS))
 
             # Since this is Corporate IT, use the known value.
             kludge_network = self.network
