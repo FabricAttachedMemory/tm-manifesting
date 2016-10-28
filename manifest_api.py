@@ -312,22 +312,27 @@ def start_dnsmasq(config):
 
     # This is configured to daemonize so a p.poll() should be zero (RTFM
     # dnsmasq, section EXIT CODES).
-    p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True,
-        stdout='/dev/null', stderr='/dev/null')
+    p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
+        # stdout='/dev/null', stderr='/dev/null')
     while True:
         time.sleep(1.0)     # Chance to daemonize on busy system
         tmp = p.poll()      # Exit code if it finished.
         if tmp is not None:
             break
+    stdout, stderr = p.communicate()	# empty strings on success
     if tmp == 0:
+        assert not (stdout or stderr), \
+            'dnsmasq unexpected output % %s' % (stdout, stderr)
         mainapp.logger.info('dnsmasq started successfully')
         return True
-    if tmp == 1:
-        msg = 'Bad dnsmasq configuration'
+    stderr = stderr.decode().strip()
+    if tmp == 1:	# Bad config file(s)
+        msg = stderr
     elif tmp == 2:
         msg = 'dnsmasq failed to start: address in use'
     else:
-        msg = 'dnsmasq failure, return code = %d' % tmp
+        msg = 'dnsmasq failure, return code = %d: %s' % (tmp, stderr)
+    print(msg, file=sys.stderr)
     mainapp.logger.critical(msg)
     return False
 
