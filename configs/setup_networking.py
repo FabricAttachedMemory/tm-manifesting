@@ -319,7 +319,7 @@ class TMgrub(object):
             except (RES.NXDOMAIN, AssertionError) as e:
                 noDNS.append(FQDN)
             try:
-                FQDN = 'firewall'	# of default domain of ToRMS
+                FQDN = 'firewall.' + self.tmdomain
                 answer = RES.query(FQDN, 'A')
                 assert len(answer) == 1
                 self.dnsmasq_defaultroute = 'dhcp-option=option:router,%s' % (
