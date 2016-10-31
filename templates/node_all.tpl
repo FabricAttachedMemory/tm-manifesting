@@ -95,7 +95,9 @@
 <div class="container" style="
 -webkit-box-shadow: 0px 0px 9px -1px rgba(0,0,0,0.75);
 -moz-box-shadow: 0px 0px 9px -1px rgba(0,0,0,0.75);
-box-shadow: 0px 0px 9px -1px rgba(0,0,0,0.75);">
+box-shadow: 0px 0px 9px -1px rgba(0,0,0,0.75);
+margin-top:1%;
+">
 
 <table class="table table-hover" style="">
     <thead>
