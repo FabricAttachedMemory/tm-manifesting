@@ -16,15 +16,53 @@
 <nav class="navbar navbar-inverse navbar-static-top" style="margin-bottom: 0;">
     <div class="container-fluid">
         <div class="navbar-header">
-            <!-- <a class="navbar-brand" href="#">
-                TMMS
-            </a> -->
             <a class="navbar-brand" href="#" style="text-align:center; margin:auto; padding-top: 5px;">
                 <img alt="Brand" src="/static/banner.jpg">
             </a>
-            <a class="navbar-brand" href="#" style="padding-top: 12px;">
-                TMMS
-            </a>
+          <ul class="nav navbar-nav">
+
+            <li class="active">
+                <a href="{{url_base}}">
+                    <span class="glyphicon glyphicon-globe" aria-hidden="true">
+                        TMMS
+                    <span class="sr-only">(current)</span>
+                    </span>
+                </a>
+            </li>
+
+            <li>
+                <a href="{{url_base}}node/">
+                    <span class="glyphicon glyphicon-king" aria-hidden="true">
+                        Nodes
+                    </span>
+                </a>
+            </li> <!-- nodes menu btn -->
+
+            <li>
+                <a href="{{url_base}}manifest/">
+                    <span class="glyphicon glyphicon-tower" aria-hidden="true">
+                        Manifests
+                    </span>
+                </a>
+            </li> <!-- manifests menu btn -->
+
+            <li>
+                <a href="{{url_base}}tasks/">
+                    <span class="glyphicon glyphicon-bishop" aria-hidden="true">
+                        Tasks
+                    </span>
+                </a>
+            </li> <!-- tasks menu btn -->
+
+            <li>
+                <a href="{{url_base}}packages/">
+                    <span class="glyphicon glyphicon-pawn" aria-hidden="true">
+                        Packages
+                    </span>
+                </a>
+            </li> <!-- packages menu btn -->
+
+          </ul> <!-- Navbar menu buttons -->
         </div>
     </div>
 </nav>
@@ -95,6 +133,7 @@
         and downloaded from the TMMS and the list of available manifests queried.
         </div>
     </div>
+            <n class="glyphicon glyphicon-tower" aria-hidden="true"></span>/li>
 
 </div> <!-- row -->
 
