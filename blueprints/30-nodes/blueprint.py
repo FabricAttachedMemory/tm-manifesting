@@ -32,6 +32,13 @@ BP = Blueprint(_ERS_element, __name__)
 
 @BP.route('/%s/' % _ERS_element)
 def web_node_all():
+    nodes_info = BP.nodes
+    for node in nodes_info:
+        status = get_node_status(node.coordinate)
+        if status:
+            node.manifest = status['manifest']
+            node.status = status['status']
+
     return render_template(
         _ERS_element + '_all.tpl',
         label=__doc__,
