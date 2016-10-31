@@ -31,7 +31,7 @@
             </li>
 
             <li>
-                <a href="{{url_base}}node/">
+                <a href="{{url_base}}../node/">
                     <span class="glyphicon glyphicon-king" aria-hidden="true">
                         Nodes
                     </span>
@@ -39,7 +39,7 @@
             </li> <!-- nodes menu btn -->
 
             <li>
-                <a href="{{url_base}}manifest/">
+                <a href="{{url_base}}../manifest/">
                     <span class="glyphicon glyphicon-tower" aria-hidden="true">
                         Manifests
                     </span>
@@ -47,7 +47,7 @@
             </li> <!-- manifests menu btn -->
 
             <li>
-                <a href="{{url_base}}tasks/">
+                <a href="{{url_base}}../tasks/">
                     <span class="glyphicon glyphicon-bishop" aria-hidden="true">
                         Tasks
                     </span>
@@ -55,7 +55,7 @@
             </li> <!-- tasks menu btn -->
 
             <li class="active">
-                <a href="{{url_base}}packages/">
+                <a href="{{url_base}}../packages/">
                     <span class="glyphicon glyphicon-pawn" aria-hidden="true">
                         Packages
                     <span class="sr-only">(current)</span>
