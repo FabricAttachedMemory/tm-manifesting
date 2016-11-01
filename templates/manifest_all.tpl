@@ -111,8 +111,6 @@ box-shadow: -1px -5px 49px -16px rgba(0,0,0,0.75);
 
 <hr><!-------------------------------------------------------------------->
 <div class="container">
-
-
     <h3>Upload new manifest</h3>
     <form class='form-inline' action='' method="POST" enctype="multipart/form-data">
         <div class='form-group'>
