@@ -74,7 +74,7 @@
 <div class="row" id="headerBg" style="background-image: url('/static/header_bg1.jpg');">
        <!-- <img SRC='/static/manifest.jpg' align='middle'> -->
     <div class="col-md-11 text-center" style='font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif'>
-        <h2>Node: "{{node.hostname}}"</h2>
+        <h2>Configure Node: "{{node.hostname}}"</h2>
     </div>
 
     <div class="col-md-2"></div>

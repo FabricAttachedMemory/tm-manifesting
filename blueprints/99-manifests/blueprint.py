@@ -42,12 +42,21 @@ def webpage(name=None):
     if name is None:
         return render_all()     # Is this still showing "key"?
 
+    if name not in _data:
+        return render_template(
+            _ERS_element + '_all.tpl',
+            label=__doc__,
+            keys=sorted(_data.keys()),
+            base_url=request.url.split(name)[0])
+
     this = _data[name]
     return render_template(
         _ERS_element + '.tpl',
         label=__doc__,
         name=name,
-        itemdict=this.thedict,  # FIXME: just pass "this"
+        itemdict=this.thedict,
+        base_url=request.url,
+        data=this,
         rawtext=this.raw)
 
 
