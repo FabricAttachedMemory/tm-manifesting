@@ -107,7 +107,6 @@ the TMMS and the list of available manifests queried.
         {% endfor %}
         </table>
     </div>
-
 </div>
 
 <div class="row">
@@ -123,15 +122,6 @@ the TMMS and the list of available manifests queried.
         </div>
     </div>
 </div>
-
-
-<!-- dl>
-    {% for key, value in itemdict.items() %}
-        <dt>{{ key }}</dt>
-        <dd>{{ value }}</dd>
-	<p>
-    {% endfor %}
-<dl -->
 
 </BODY>
 </HTML>

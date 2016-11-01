@@ -31,6 +31,7 @@ def webpage(name=None):
         _ERS_element + '.tpl',
         label=__doc__,
         name=name,
+        base_url=request.url,
         itemdict=_data[name])
 
 ###########################################################################
