@@ -8,6 +8,11 @@
 <link rel="stylesheet" href="{{url_for('static', filename='plugins/bootstrap/css/bootstrap.min.css')}}">
 <link rel="stylesheet" href="{{url_for('static', filename='plugins/local/css/layout.css')}}">
 
+{% set page_autorefresh = 5 %}
+{% if status.status == 'building' %} <!-- autorefresh page during the image build process -->
+<meta http-equiv="refresh" content="{{page_autorefresh}}" >
+{% endif %}
+
 </head>
 
 <body>
@@ -21,7 +26,7 @@
           <ul class="nav navbar-nav">
 
             <li>
-                <a href="{{url_base}}../">
+                <a href="{{base_url}}../">
                     <span class="glyphicon glyphicon-globe" aria-hidden="true">
                         TMMS
                     </span>
@@ -29,7 +34,7 @@
             </li>
 
             <li class="active">
-                <a href="{{url_base}}">
+                <a href="{{base_url}}">
                     <span class="glyphicon glyphicon-king" aria-hidden="true">
                         Nodes
                     </span>
@@ -38,7 +43,7 @@
             </li> <!-- nodes menu btn -->
 
             <li>
-                <a href="{{url_base}}../manifest/">
+                <a href="{{base_url}}../manifest/">
                     <span class="glyphicon glyphicon-tower" aria-hidden="true">
                         Manifests
                     </span>
@@ -46,7 +51,7 @@
             </li> <!-- manifests menu btn -->
 
             <li>
-                <a href="{{url_base}}../tasks/">
+                <a href="{{base_url}}../tasks/">
                     <span class="glyphicon glyphicon-bishop" aria-hidden="true">
                         Tasks
                     </span>
@@ -54,7 +59,7 @@
             </li> <!-- tasks menu btn -->
 
             <li>
-                <a href="{{url_base}}../packages/">
+                <a href="{{base_url}}../packages/">
                     <span class="glyphicon glyphicon-pawn" aria-hidden="true">
                         Packages
                     </span>
@@ -69,7 +74,7 @@
 <div class="row" id="headerBg" style="background-image: url('/static/header_bg1.jpg');">
        <!-- <img SRC='/static/manifest.jpg' align='middle'> -->
     <div class="col-md-11 text-center" style='font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif'>
-        <h2>Node: "{{node.hostname}}"</h2>
+        <h2>Configure Node: "{{node.hostname}}"</h2>
     </div>
 
     <div class="col-md-2"></div>
@@ -104,8 +109,9 @@ determined, we’ll list those here.
     {% set action = 'bind' %}
 {% elif status.status == 'building' %}
     {% set alert_type = 'warning'  %}
-    {% set alert_msg = 'Building image for manifest "status.manifest" : "status.message"' %}
+    {% set alert_msg = 'Building image for manifest [' + status.manifest + '] : ' + '[' + status.message + ']' %}
     {% set action = 'NADA' %}
+
 {% elif status.status == 'error' %}
     {% set alert_type = 'danger'  %}
     {% set alert_msg = 'Binding to <label class="label label-default">' +
@@ -126,11 +132,15 @@ determined, we’ll list those here.
 
     <div class="alert alert-{{alert_type}} col-md-7" role="alert" style="text-align:center;">
             <h4>{{alert_msg}}</h4>
-    </div>
+    {% if status.status == 'building' %}
+        Page autorefresh is set to {{page_autorefresh}} seconds (during the binding process only).
+    {% endif %}
+    </div> <!-- alert field -->
+
 </div>
 
 
-<div class="row">
+<div class="row">   <!-- FS Image download and status field.-->
     <div class="col-md-2"></div>
     {% if ESPURL is none %}
             <div class="alert alert-warning col-md-7" role="alert" style="text-align:center;">
