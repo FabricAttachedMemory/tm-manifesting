@@ -1,3 +1,13 @@
+tm-manifesting (2.0-0+l4tm1) catapult; urgency=low
+
+   * New updated web UI
+   * Fixing bugs
+   * Error handling
+   * Updating documentation (man pages)
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 1 November 2016 16:52:07 -0600
+
+
 tm-manifesting (1.8-0+l4tm1) catapult; urgency=low
 
    * Do not exit on errors for one-off packages loaded via URL

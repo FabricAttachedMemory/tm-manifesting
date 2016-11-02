@@ -13,59 +13,72 @@
 </head>
 
 <body>
-<nav class="navbar navbar-inverse navbar-static-top" style="margin-bottom: 0;">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <a class="navbar-brand" href="#" style="text-align:center; margin:auto; padding-top: 5px;">
-                <img alt="Brand" src="/static/banner.jpg">
-            </a>
-          <ul class="nav navbar-nav">
-
-            <li class="active">
-                <a href="{{url_base}}">
-                    <span class="glyphicon glyphicon-globe" aria-hidden="true">
-                        TMMS
-                    <span class="sr-only">(current)</span>
-                    </span>
+<div class="row">
+    <nav class="navbar navbar-inverse navbar-static-top" style="margin-bottom: 0%;">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#" style="text-align:center; margin:auto; padding-top: 5px;">
+                    <img alt="Brand" src="/static/banner.jpg">
                 </a>
-            </li>
+              <ul class="nav navbar-nav">
 
-            <li>
-                <a href="{{url_base}}node/">
-                    <span class="glyphicon glyphicon-king" aria-hidden="true">
-                        Nodes
+                <li class="active">
+                    <a href="{{url_base}}">
+                        <span class="glyphicon glyphicon-globe" aria-hidden="true">
+                            TMMS
+                        <span class="sr-only">(current)</span>
+                        </span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{{url_base}}node/">
+                        <span class="glyphicon glyphicon-king" aria-hidden="true">
+                            Nodes
+                        </span>
+                    </a>
+                </li> <!-- nodes menu btn -->
+
+                <li>
+                    <a href="{{url_base}}manifest/">
+                        <span class="glyphicon glyphicon-tower" aria-hidden="true">
+                            Manifests
+                        </span>
+                    </a>
+                </li> <!-- manifests menu btn -->
+
+                <li>
+                    <a href="{{url_base}}tasks/">
+                        <span class="glyphicon glyphicon-bishop" aria-hidden="true">
+                            Tasks
+                        </span>
+                    </a>
+                </li> <!-- tasks menu btn -->
+
+                <li>
+                    <a href="{{url_base}}packages/">
+                        <span class="glyphicon glyphicon-pawn" aria-hidden="true">
+                            Packages
+                        </span>
+                    </a>
+                </li> <!-- packages menu btn -->
+              </ul> <!-- Navbar menu buttons -->
+
+            </div>
+
+            <div class="navbar-right" style="margin-right:1%;">
+                <ul class="nav navbar-nav">
+                <li>
+                    <span class="glyphicon glyphicon-leaf navbar-text" aria-hidden="true">
+                        API:{{api_version}}
                     </span>
-                </a>
-            </li> <!-- nodes menu btn -->
+                </li>
+            </ul>
+            </div>
 
-            <li>
-                <a href="{{url_base}}manifest/">
-                    <span class="glyphicon glyphicon-tower" aria-hidden="true">
-                        Manifests
-                    </span>
-                </a>
-            </li> <!-- manifests menu btn -->
-
-            <li>
-                <a href="{{url_base}}tasks/">
-                    <span class="glyphicon glyphicon-bishop" aria-hidden="true">
-                        Tasks
-                    </span>
-                </a>
-            </li> <!-- tasks menu btn -->
-
-            <li>
-                <a href="{{url_base}}packages/">
-                    <span class="glyphicon glyphicon-pawn" aria-hidden="true">
-                        Packages
-                    </span>
-                </a>
-            </li> <!-- packages menu btn -->
-
-          </ul> <!-- Navbar menu buttons -->
         </div>
-    </div>
-</nav>
+    </nav>
+</div>
 
 <div class="row" id="headerBg" style="background-image: url('/static/header_bg1.jpg');">
        <!-- <img SRC='/static/manifest.jpg' align='middle'> -->
@@ -87,16 +100,12 @@
         </p>
     </div>
 
-    <div class="col-md-8" style="margin-bottom:-1%;">
-        <h5><span class="label label-default">API Version: 1.0</span></h5>
-    </div>
-    <div class="col-md-8">
-        <h4><span class="label label-default">Location: {{ coordinate }}</span></h4>
+    <div class="col-md-11 shadowText" style="text-align:center;">
+        <h3>Location: {{ coordinate }}</h3>
     </div>
   <!-- Add the extra clearfix for only the required viewport -->
   <div class="clearfix visible-xs-block"></div>
 </div>
-
 
 <!-- ****************** -->
 
@@ -133,7 +142,6 @@
         and downloaded from the TMMS and the list of available manifests queried.
         </div>
     </div>
-            <n class="glyphicon glyphicon-tower" aria-hidden="true"></span>/li>
 
 </div> <!-- row -->
 
