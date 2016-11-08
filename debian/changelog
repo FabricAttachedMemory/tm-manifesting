@@ -1,3 +1,12 @@
+tm-manifesting (2.1-0+l4tm1) catapult; urgency=low
+
+   * Using full coordinate path for dnsmasq hostsfile ClientID
+   * 30-nodes/blueprint.py now returns json string in response body
+   * Lock node unbinding command while node is building
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 8 November 2016 14:52:07 -0600
+
+
 tm-manifesting (2.0-0+l4tm1) catapult; urgency=low
 
    * New updated web UI
