@@ -192,12 +192,14 @@ def get_node_bind_info(nodespec=None):
     # we need to add leading /.
     node_coord = _resolve_node_coord(nodespec)
     if node_coord is None:
-        response = make_response('No such node "%s"' % nodespec, 404)
+        response_msg = jsonify({ 'status' : 'No such node "%s"' % nodespec})
+        response = make_response(response_msg,404)
         BP.logger.error(response)
         return response
     result = get_node_status(node_coord)
     if result is None:
-        response = make_response('No Content', 204)
+        response_msg = jsonify({'status' : 'No Content'})
+        response = make_response(response_msg, 204)
     else:
         response = make_response(jsonify(result), 200)
     BP.logger(response)
@@ -227,10 +229,12 @@ def delete_node_binding(nodespec):
     # we need to add leading /.
     node_coord = _resolve_node_coord(nodespec)
     if node_coord is None:
-        response = make_response('No such node "%s"' % nodespec, 404)
+        response_msg = jsonify({'status' : 'No such node "%s"' % nodespec})
+        response = make_response(response_msg, 404)
         BP.logger(response)    # chooses log level based on status code
         return response
-    response = make_response('Successful cleanup.', 204)
+    response_msg = jsonify({'status' : 'Successful cleanup.'})
+    response = make_response(response_msg, 204)
     try:
         node_image_dir = node_coord2image_dir(node_coord)
         for node_file in glob(node_image_dir + '/*'):
@@ -238,7 +242,8 @@ def delete_node_binding(nodespec):
     except AssertionError as e:     # no such dir, no such binding
         pass
     except OSError as err:
-        response = make_response('Failed to delete binding: %s' % err, 500)
+        response_msg = jsonify({'status' : 'Failed to delete binding: %s' % err})
+        response = make_response(response_msg, 500)
     BP.logger(response)    # chooses log level based on status code
     return response
 
@@ -280,10 +285,11 @@ def bind_node_to_manifest(nodespec=None):
         manifest.validate_packages_tasks()
         response = build_node(manifest, node_coord)
     except BadRequest as e:
-        response = make_response(e.get_response(), resp_status)
+        response_msg = jsonify({'status' : e.get_response()})
+        response = make_response(response_msg, resp_status)
     except (AssertionError, ValueError) as err:
-        response = make_response(str(err), resp_status)
-
+        response_msg = jsonify({'status' : str(err)})
+        response = make_response(response_msg, resp_status)
     BP.logger(response)
     return response
 
@@ -300,7 +306,8 @@ def build_node(manifest, node_coord):
     """
     golden_tar = BP.config['GOLDEN_IMAGE']
     if not os.path.exists(golden_tar):
-        return make_response('Missing "Golden Image"', 505)
+        response_msg = jsonify({'status' : 'Missing "Golden Image"!' })
+        return make_response(response_msg, 505)
 
     # Each node gets its own set of dirs.  'nodes[]' matches snippets.
     hostname = BP.nodes[node_coord][0].hostname
@@ -358,12 +365,12 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + \
         '/node_builder/customize_node.py ' + ' '.join(cmd_args)
 
-    response = make_response(
-        '%s manifest set; image build initiated.' % hostname, 201)
+    response_msg = jsonify({'status' : '%s manifest set; image build initiated.' % hostname})
+    response = make_response(response_msg, 201)
 
     if glob(tftp_dir + '/*.cpio'):
-        response = make_response(
-            'Existing manifest changed; image re-build initiated.', 200)
+        response_msg = jsonify({'status' : 'Existing manifest changed; image re-build initiated.'})
+        response = make_response(response_msg, 200)
 
     build_args = Namespace(**build_args)    # mutable
 
@@ -380,7 +387,8 @@ def build_node(manifest, node_coord):
         os.makedirs(build_dir, exist_ok=True)
         os.makedirs(tftp_dir, exist_ok=True)
     except (EnvironmentError):
-        return make_response('Failed to create "%s"!' % build_dir, 505)
+        response_msg = jsonify({'status' : 'Failed to create "%s"!' % build_dir })
+        return make_response(response_msg, 505)
 
     # Before the child, to eliminate race condition if returning from
     # here to web-based actions.
@@ -395,8 +403,8 @@ def build_node(manifest, node_coord):
     try:
         forked = os.fork()
     except OSError as err:
-        return make_response(
-            'AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err, 505)
+        response_msg = jsonify({'status' : 'AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err})
+        return make_response(response_msg, 505)
 
     if forked > 0:  # wait for the child1 to exit.
         try:
