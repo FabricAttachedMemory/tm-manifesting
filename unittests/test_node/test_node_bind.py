@@ -91,6 +91,11 @@ class BindNodeTest(unittest.TestCase):
             'Neither 200 nor 201 was returned on setnode: %s instead' % output)
 
         time.sleep(5)
+
+        output = json.loads(self.tmcmd.delete([node,]))
+        self.assertTrue('409' in output,
+                    'Deleting node while building status incorrect [%s]' % output)
+
         status = json.loads(self.tmcmd.show([node, ]))
 
         self.assertTrue('200' in status,

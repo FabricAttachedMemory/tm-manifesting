@@ -233,8 +233,15 @@ def delete_node_binding(nodespec):
         response = make_response(response_msg, 404)
         BP.logger(response)    # chooses log level based on status code
         return response
+
+    node_status = get_node_status(node_coord)
+    if node_status and node_status['status'] == 'building':
+        response_msg = jsonify({'status' : 'Cant delete binding - node is busy.'})
+        return make_response(response_msg, 409)
+
     response_msg = jsonify({'status' : 'Successful cleanup.'})
     response = make_response(response_msg, 204)
+
     try:
         node_image_dir = node_coord2image_dir(node_coord)
         for node_file in glob(node_image_dir + '/*'):
