@@ -405,9 +405,7 @@ class TMgrub(object):
         self.FAMEMACs = ['52:54:42:%02d:%02d:%02d' % ((node.node_id, ) * 3)
                          for node in self.tmconfig.allNodes]
         self.coords = [node.coordinate for node in self.tmconfig.allNodes]
-        self.coords = [ '/EncNum' + c.split('EncNum')[1]
-            for c in self.coords ]
-        print('!!!!! USING THE SHORT FORM OF CLIENT IDS !!!!!!')
+
         # MAC and ClientID must be on the same line or else dnsmasq bitches
         # about duplicate IPs and skips the second set.
         assert len(self.hostIPs) == len(self.tmconfig.allNodes), \
