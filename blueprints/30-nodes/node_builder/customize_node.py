@@ -132,7 +132,7 @@ def set_client_id(args):
     """
     update_status(args, 'Set ClientID for dhcpc')
     dhclient_conf = '%s/etc/dhcp/dhclient.conf' % args.new_fs_dir
-    clientid = '/EncNum' + args.node_coord.split('EncNum')[1]
+    clientid = args.node_coord
     try:
         with open(dhclient_conf, 'a') as f:
             f.write('\nsend dhcp-client-identifier "%s";\n' % clientid)
