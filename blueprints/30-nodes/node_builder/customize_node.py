@@ -142,6 +142,35 @@ def set_client_id(args):
 #==============================================================================
 
 
+def hack_LFS_autostart(args):
+    """
+        2016-11-10 SFW is still not supplying ACPI info for physloc but we
+    have sufficient need and confidence to require it.  Work around it.
+    This must be called before rewrite_rclocal().
+
+    :param 'new_fs_dir': [str] path to the file system location to customize.
+    :param 'node_id': [int] expanded into R:E:N.
+    :return: 'None' on success. Raise 'RuntimeError' on problems.
+    """
+    update_status(args, 'Hack LFS autostart')
+    LFS_conf = '%s/etc/default/tm-lfs' % args.new_fs_dir
+    enc = ((args.node_id - 1) // 10) + 1
+    node = ((args.node_id - 1) % 10) + 1
+    REN = '1:%d:%d' % (enc, node)
+    try:
+        with open(LFS_conf, 'a') as f:
+            f.write('\n\n# Autohack (1) for now, see /etc/rc.local\n')
+            f.write("OPT_ARGS='--nozero --physloc %s'\n" % REN)
+        if args.rclocal is None:
+            args.rclocal = ''
+        args.rclocal += '\n# Autohack (2) for now, see /etc/default/tm-lfs\n'
+        args.rclocal += 'systemctl enable tm-lfs\nsystemctl start tm-lfs\n'
+    except Exception as err:
+        raise RuntimeError('Cannot hack LFS autostart: %s' % str(err))
+
+#==============================================================================
+
+
 def set_environment(args):
     """
         Set new /etc/environment http_proxy stuff on the file system image.
@@ -310,8 +339,9 @@ def rewrite_rclocal(args):
     with open(rclocal, 'w') as f:
         f.write('#!/bin/bash\n\n# Rewritten via manifest %s\n\n' %
             args.manifest.namespace)
+        f.write('PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin\n\n')
         f.write('\n%s\n' % args.rclocal)
-        f.write('\nexit 0')
+        f.write('\nexit 0\n')
 
 #==============================================================================
 
@@ -610,8 +640,6 @@ def create_ESP(args, blockdev, vmlinuz, cpio):
         undo_mount = True
         update_status(args, 'SDHC GRUB DIR established at %s' % grubdir)
 
-        if args.debug:
-            set_trace()
         # The EFI directory separator is backslash, while grub is forward.
         with open(ESP_mnt + '/startup.nsh', 'w') as f:
             f.write(prefix.replace('/', '\\') + '\\%s\n' % grubbase)
@@ -837,6 +865,7 @@ def execute(args):
         # FINALLY! Add packages, tasks, and script(let)s from manifest.
         cleanup_sources_list(args)
         install_packages(args)
+        hack_LFS_autostart(args)    # Temporary; must come before...
         rewrite_rclocal(args)
 
         # Was there a custom kernel?  Note that it will probably only
