@@ -1,8 +1,9 @@
 tm-manifesting (2.1-1+l4tm1) catapult; urgency=low
 
-   * Fixing leftovers of non full path for node coordinate
+   * Fixing leftovers of non full path for node coordinate:
+         Autostart LFS with physloc set at manifest binding
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 9 November 2016 16:49:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 November 2016 9:30:07 -0600
 
 
 tm-manifesting (2.1-0+l4tm1) catapult; urgency=low
