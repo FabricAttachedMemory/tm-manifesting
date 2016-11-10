@@ -1,3 +1,10 @@
+tm-manifesting (2.1-2+l4tm1) catapult; urgency=low
+
+   * Fixing the package. Smae changes to the source code as in 2.1-1+l4tm1 version.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 November 2016 9:30:07 -0600
+
+
 tm-manifesting (2.1-1+l4tm1) catapult; urgency=low
 
    * Fixing leftovers of non full path for node coordinate:
