@@ -10,12 +10,12 @@ tm-manifest-server \- Control the Manifesting service of an instance of The Mach
 \fBtm-manifest-server\fP is an api server that is responsible for listening to
 client's requests. Use "tm-manifest" command line tool to talk to the API.
 
-
-.SH DIRECTIVES
-
-\fP
 .SH OPTIONS
 .PP
+
+.TP
+-C, --config
+Use the specified file instead of /etc/tmms
 
 .TP
 -D, --daemon-start
@@ -35,7 +35,8 @@ Restart Manifesting Server.
 
 .TP
 --start-dnsmasq
-Restarts dnsmasq configuration based on the /etc/tmms config.
+Restarts dnsmasq configuration based on the /etc/tmms config.  The manifest
+server exits.
 
 .TP
 -?
@@ -51,13 +52,56 @@ Make it talk
 
 \fP
 .SH FILES
-Server is using \fB/etc/tmms\fR config file that is intended to be customizible
-by the user if needed per manifesting instance.
+The server reads \fB/etc/tmms\fR by default.  The default file contains
+comments to guide you in its customization.  By default the TMMS suite
+puts config files and images under /etc/tmms in the following directories:
 
-/etc/tmconfig is a core "nodes topology" config file. It usually comes from a
+.PP
+.TP
+dnsmasq
+Files for the dnsmasq assigned to the payload port declared in /etc/tmms.
+The lead file, ethX.conf, includes other files.
+
+.TP
+sys-images
+The build directory for manifested images, further broken down by node.
+
+.TP
+tftp
+The root directory of the TFTP server functionality of dnsmasq.  It
+contains the EFI boot support plus menus, kernels, and root file system
+images for each bound node.
+
+.SH  
+/etc/tmconfig is the "node topology" config file. It usually comes from a
 wonder land, but can also be generated using tm-librarian utils, which is a
-dependency for tm-manifesting.
+dependency for tm-manifesting.  This file is also used by the librarian.
 
+.SH LOG FILES
+
+Various components generate their own (possibly rotating) log files.
+
+.PP
+.TP
+/var/log/tmms.ethX.log
+The main log file driven by tm-manifest-server
+
+.TP
+/var/lib/tmms/dnsmasq/ethX.log
+From the dnsmasq providing PXE services to the nodes.
+
+.TP
+/var/lib/tmms/sys-images/golden/vmdebootstrap.log
+Created when a new golden image is generated.
+
+.TP
+/var/lib/tmms/sys-images/nodeXX/build.log
+Logs all the steps peformed when a manifest is bound to a node.
+
+.TP
+/var/lib/tmms/sys-images/nodeXX/untar/root/install.log
+Logs all the steps peformed during the chroot into the image which
+does the final customization.
 
 .SH BUGS
 None that we know of.  Today.  Between noon and 1 pm.
