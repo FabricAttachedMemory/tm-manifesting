@@ -486,16 +486,15 @@ def main(args):
     """
         Configure TFTP environment.
     """
-    manconfig = ManifestingConfiguration(args.config, autoratify=False)
-    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
-    if missing:
-        raise RuntimeError('\n'.join(missing))
-
-    grubby = TMgrub(manconfig)
-
     try:
+        manconfig = ManifestingConfiguration(args.config, autoratify=False)
+        missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
+        if missing:
+            raise RuntimeError('\n'.join(missing))
+
+        grubby = TMgrub(manconfig)
         grubby.create_tftp_environment()
-    except OSError as err:
+    except Exception as err:
         raise RuntimeError('Failed to create tftp environment! [%s]' % err)
 
     print('Master GRUB configuration in', grubby.tftp_grub_cfg)
