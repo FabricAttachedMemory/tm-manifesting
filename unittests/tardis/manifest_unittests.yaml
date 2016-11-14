@@ -31,7 +31,7 @@ blocks:
          - shell: cat /etc/apt/sources.list
          - shell: apt -y update
          - shell: apt -y upgrade
-         - shell: apt --assume-yes --force-yes install -t manifesting-catapult tm-manifesting
+         - shell: apt --assume-yes -y install -t manifesting-catapult tm-manifesting
          - shell: apt-cache show tm-manifesting
 
     generate_tmconfig:
