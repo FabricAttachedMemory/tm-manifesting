@@ -160,7 +160,7 @@ def hack_LFS_autostart(args):
     try:
         with open(LFS_conf, 'a') as f:
             f.write('\n\n# Autohack (1) for now, see /etc/rc.local\n')
-            f.write("OPT_ARGS='--nozero --physloc %s'\n" % REN)
+            f.write("OPT_ARGS='--fakezero --physloc %s'\n" % REN)
         if args.rclocal is None:
             args.rclocal = ''
         args.rclocal += '\n# Autohack (2) for now, see /etc/default/tm-lfs\n'
