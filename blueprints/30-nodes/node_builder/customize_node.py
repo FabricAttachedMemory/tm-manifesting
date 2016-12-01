@@ -535,28 +535,35 @@ fi
         ret, stdout, sterr = piper('mount -obind /proc ' + procmount)
         assert not ret, 'Cannot bind mount /proc'
 
+        umount = 'umount -fl %s' % procmount
+
         ptsmount = args.new_fs_dir + '/dev/pts'
         os.makedirs(ptsmount, exist_ok=True)
         ret, stdout, sterr = piper('mount -obind /dev/pts ' + ptsmount)
         assert not ret, 'Cannot bind mount /dev/pts'
 
-        umount = 'umount -fl %s %s' %(procmount, ptsmount)
+        umount = 'umount -fl %s %s' % (procmount, ptsmount)
 
         cmd = '/usr/sbin/chroot %s /bin/bash -c %s' % (
             args.new_fs_dir, installsh)
-        # This can take MINUTES.  "album" pulls in about 80 dependent packages.
+        # This can take MINUTES, ie, "album" pulls in about 80 more packages.
         # While running, sys-images/nodeXX/untar/root/install.log is updated.
+        # Hopefully install.sh catches its own errors
         ret, stdout, stderr = piper(cmd, use_call=True)
         if ret:
-            args.logger.error(
-                'chroot failed: errno %d: %s %s' % (
-                    ret, str(stdout), str(stderr)))
-        return not bool(ret)
+            stdouterr = ''
+            if stdout is not None:
+                stdouterr += str(stdout) + '\n'
+            if stderr is not None:
+                stdouterr += str(stderr) + '\n'
+            raise RuntimeError(
+                'chroot install.sh retval=%d: %s' % (ret, stdouterr))
+        return True     # but see finally
     except Exception as err:
         args.logger.error(str(err))
         with open(args.new_fs_dir + installog, 'r') as log:
             args.logger.debug(log.read())
-        raise RuntimeError('Couldn\'t install packages: %s' % str(err))
+        raise RuntimeError(str(err))
     finally:
         umountret, _, _ = piper(umount)
     return False
@@ -865,8 +872,6 @@ def execute(args):
         # FINALLY! Add packages, tasks, and script(let)s from manifest.
         cleanup_sources_list(args)
         install_packages(args)
-        hack_LFS_autostart(args)    # Temporary; must come before...
-        rewrite_rclocal(args)
 
         # Was there a custom kernel?  Note that it will probably only
         # boot itself and not load any modules.  I have seen a custom kernel
@@ -883,6 +888,16 @@ def execute(args):
             update_status(args, 'Replacing golden kernel %s with %s' % (
                 os.path.basename(vmlinuz_golden), os.path.basename(tmp[0])))
             vmlinuz_golden = tmp[0]
+        else:
+            update_status(args, 'No custom kernel found in manifest')
+
+        # Final customizations
+
+        hack_LFS_autostart(args)    # Temporary; must come before...
+        rewrite_rclocal(args)
+
+        #------------------------------------------------------------------
+        # Assemble the images
 
         cpio_file = create_cpio(args)
 
