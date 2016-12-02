@@ -512,6 +512,11 @@ def main(args):
         print('  dnsmasq/iptables config in %s/%s.*' % (
             grubby.dnsmasq_configs, grubby.pxe_interface))
 
+    # Eventually this message will never be emitted again.
+
+    if any([ node.DhcpClientId != node.coordinate for node in
+        grubby.tmconfig.allNodes ]):
+        print('\n   NOTE: Redfish has provided some PXE Client IDs')
 
 if __name__ == '__main__':
     # Not worth working around this
