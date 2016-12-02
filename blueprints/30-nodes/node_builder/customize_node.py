@@ -127,12 +127,12 @@ def set_client_id(args):
         Augment dhclient configuration file
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
-    :param 'node_coord': [str] full machine coordinate used as client ID.
+    :param 'DhcpClientId': [str] calculated elsewhere
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     update_status(args, 'Set ClientID for dhcpc')
     dhclient_conf = '%s/etc/dhcp/dhclient.conf' % args.new_fs_dir
-    clientid = args.node_coord
+    clientid = args.DhcpClientId
     try:
         with open(dhclient_conf, 'a') as f:
             f.write('\nsend dhcp-client-identifier "%s";\n' % clientid)
@@ -594,6 +594,7 @@ def update_status(args, message, status='building'):
     response['status'] = status
     response['message'] = message
     response['coordinate'] = args.node_coord    # Troubleshooting and QA
+    response['DhcpClientId'] = args.DhcpClientId
     response['node_id'] = args.node_id
     response['hostname'] = args.hostname
 

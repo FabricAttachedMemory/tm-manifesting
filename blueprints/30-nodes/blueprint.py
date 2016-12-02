@@ -334,6 +334,8 @@ def build_node(manifest, node_coord):
     else:
         tasks = None     # sentinel for following loop
 
+    DhcpClientId = BP.config['tmconfig'].allNodes[node_coord][0].DhcpClientId
+
     # Optional manifest fields not in the ERS but useful during bringup
     l4tm_privkey = manifest.thedict.get('l4tm_privkey', None)
     l4tm_pubkey = manifest.thedict.get('l4tm_pubkey', None)
@@ -343,6 +345,7 @@ def build_node(manifest, node_coord):
     build_args = {
         'hostname':     hostname,
         'node_coord':   node_coord,
+        'DhcpClientId': DhcpClientId,
         'node_id':      node_id,
         'manifest':     manifest,
         'tmconfig':     BP.config['TMCONFIG'],      # the file name

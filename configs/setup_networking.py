@@ -34,7 +34,7 @@ from tm_librarian.tmconfig import TMConfig
 # Python path "tmms" may not exist yet.
 
 from configs.build_config import ManifestingConfiguration
-from utils.utils import basepath, piper
+from utils.utils import basepath, piper, setDhcpClientId
 from utils.file_utils import make_symlink, make_dir
 
 ###########################################################################
@@ -198,6 +198,9 @@ class TMgrub(object):
         if self.tmconfig.FTFY:
             print('!!! %s has these annoyances (defaults were used):\n%s' % (
                 manconfig['TMCONFIG'], '\n'.join(self.tmconfig.FTFY)))
+
+        for node in self.tmconfig.allNodes:
+            setDhcpClientId(node)
 
         # Begin movement of /etc/tmms values to /etc/tmconfig.
         TMDOMAIN = None
@@ -404,7 +407,8 @@ class TMgrub(object):
         # will trigger lfs_fuse.py to extract the node_id at invocation.
         self.FAMEMACs = ['52:54:42:%02d:%02d:%02d' % ((node.node_id, ) * 3)
                          for node in self.tmconfig.allNodes]
-        self.coords = [node.coordinate for node in self.tmconfig.allNodes]
+
+        self.clientIds = [ n.DhcpClientId for n in self.tmconfig.allNodes ]
 
         # MAC and ClientID must be on the same line or else dnsmasq bitches
         # about duplicate IPs and skips the second set.
@@ -413,7 +417,7 @@ class TMgrub(object):
                 len(self.hostIPs), len(self.tmconfig.allNodes))
 
         zipped = zip(self.FAMEMACs,
-                     self.coords,
+                     self.clientIds,
                      self.hostIPs,
                      self.hostnames)
         with open(self.dnsmasq_hostsfile, 'w') as f:
