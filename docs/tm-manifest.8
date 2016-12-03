@@ -32,13 +32,13 @@ to use, then keep it "None" and run the setup routine. But be ware, when PXE_INT
 is not set - your server is not capable of booting the nodes, even though all the
 API functionality is still available to use.
 
-Documentation of the "/etc/tmms" config file is in itself.
+Documentation of the "/etc/tmms" config file is in the file itself.
 
 ALSO, NOTE: every time you change networking related parameters you must run
 "tm-manifest setup networking" to get your changes applied. Same goes for the
 environment parameters (TMCONFIG, MANIFESTING_ROOT and etc) and will require
-rerun of "tm-manifest setup envrionment" and "tm-manifest setup golden_image" as
-well.
+rerun of "tm-manifest setup envrionment" and "tm-manifest setup golden_image"
+as well.
 
 
 .PP
@@ -73,10 +73,39 @@ Generate a golden image that will be used for all the custom images as a base,
 to save a significant amount of time. However, it might take more than 10 minutes
 to complete.
 
-By default, golden image will be placed under /var/lib/tmms/sys-images/golden/
-and should not be messed with, unless you know what you doing.
+The golden image will be placed under /var/lib/tmms/sys-images/golden/
+and should not be modified by any other means than re-creation.
 
+.PP
+.TP
+tmconfig
+This step should only be run on a real ToRMS (ie, it's not for FAME).
+The complex MP (Management Processor) IP space (10.254.x.y) will be scanned.
+Other info will be gleaned from DNS records expected from HPE IT.  All the
+data will be used to create an INI file template.   This template, after
+any edits, can be used with the Librarian's "book_register.py -j" to
+create the official, authoritative copy of /etc/tmconfig.
 
+The complex must be minimally powered for the node and fabric MPs to 
+appear.  Furthermore, the FAM must be powered on to glean the NVM size.
+This presents a paradox with a totally new Machine, as the nodes can't
+be turned on until the Assembly Agent has /etc/tmconfig, but that can't
+be automatically created until the nodes are powered on.
+
+In that case, a sufficient minimum NVM size is assumed and a warning
+is printed.   For a brand new complex,
+
+ 1. Power up the rack manually.
+ 2. Run "tm-manifest setup tmconfig > tmconfig.ini".
+    Expect warnings.
+ 3. book_register.py -j | tee /etc/tmconfig
+ 4. Run the Assembly Agent and power on FAM for every node
+ 5. Re-run "tm-manifest setup tmconfig > tmconfig.ini".
+    Expect NO warnings.
+ 6. Re-run "book_register.py -j | tee /etc/tmconfig"
+ 7. Now you can run the manifesting full setup sequence,
+    configure the Librarian, and re-start Assembly Agent.
+    
 .SS Packages
 \fBtm-manifest\fP needs an L4TM repo from which to pull (Debian) packages.
 These directives allow you to peruse that repo.
@@ -179,18 +208,33 @@ Make it talk
 The global config file for the manifesting service on the ToRMS is at
 "/etc/tmms".  Comments should make it self-documenting.
 
-   Source code
+    Source code
         /usr/lib/python3/dist-packages/tmms/
         All the source code located here, including the test suites.
 
     Build directories
-         /var/lib/tmms/
-        All the artifacts to boot Nodes are here: manifests, pxe server, golden image
-        and node images and etc.
+        /var/lib/tmms/
+        All the artifacts to boot nodes are here: manifests, PXE (DHCP/TFTP)
+        configs, golden image and node images, SDHC images, and status files.
 
     Systemd files
         /usr/default/tm-manifest-server
         /lib/systemd/system/tm-manifest-server.service
 
+    /etc/default/bupxefix
+        The presence of this file will cause "setup networking"
+        to scan the node MPs for the DHCP Client ID, rather than
+        using the calculated formal node coordinate.   This fixes
+        the disconnect between temporary bringup values and the
+        formal specification.  The file contents are not actually
+        read so it may be zero-length.
+
+        At some point the Assembly Agent will properly program the
+        value of SetRackCoordinate, and the retrieved value will
+        match the calculated value.   The presence of the sentinel
+        is superfluous and it may optionally be removed.
+
+        This won't work on a FAME environment, don't create the file.
+
 .SH BUGS
-None that we know of.  Today.  Between noon and 1 pm.
+None that we know of.  Today.  Between noon and 1 pm Moscow Standard Time.
