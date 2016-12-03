@@ -32,7 +32,8 @@ MAX_NODES_PER_ENCLOSURE = 10
 
 _global_template = '''# TMConfig INI file {timestamp}
 # You can change Datacenter, Rack, and Domain in the [global] section.
-# Or leave them alone if you like.
+# Or leave them alone if you like.  When you are satisfied, run
+# book_register.py -j <filename> to create the real "tmconfig" file.
 
 [global]
 Datacenter = {Datacenter}
@@ -111,6 +112,8 @@ def main(args):
             print('\n[node%02d]\nnode_id = %d' % (node_id, node_id))
             print('nvm_size = %dB' % 128)
 
+    trace('\nRedirect stdout to a file ("myconfig.ini"), then edit the file.')
+    trace('Following directions in the comments at the top of the file .\n')
 
 if __name__ == '__main__':
     # Not worth working around this
