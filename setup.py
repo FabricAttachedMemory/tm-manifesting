@@ -158,8 +158,9 @@ if __name__ == '__main__':
         if not args.extra or 'all' in args.extra:
             actions = legal
         else:
-            assert args.extra[0] in legal, 'Illegal action "%s"' % a
             actions = args.extra
+            assert actions[0] in ('tmconfig',) + legal, \
+                'Illegal action "%s"' % actions[0]
         for a in actions:
             if a == 'environment':
                 from configs import setup_environment
@@ -170,6 +171,9 @@ if __name__ == '__main__':
             elif a == 'golden_image':
                 from configs import setup_golden_image
                 setup_golden_image.main(args)
+            elif a == 'tmconfig':
+                from configs import setup_tmconfig
+                setup_tmconfig.main(args)
         raise SystemExit(0)
     except ImportError as err:
         errmsg = 'import failed: %s\nTry "setup.py all" or "setup.py environment"' % str(err)
