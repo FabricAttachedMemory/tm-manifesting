@@ -139,7 +139,7 @@ def getNodeFAM(hdr):
                     mcdata = get(URL + '/FAM/MediaControllers/%d' % mc)
                     if mcdata['MemoryState'] != 'On':
                         hdr.needsReview = True
-                        nbooks = -1
+                        nbooks = 4  # Minimum legal size for an INI file
                         break
                     nbooks += (mcdata['DimmCount'] * mcdata['DimmSize']) // 8
                 trace('BINGO! FAM = %d books' % nbooks)
