@@ -1,39 +1,30 @@
 #!/usr/bin/python3
 """
-    Scan the complex and create an INI template for consumption by
-the Librarian's "book_register.py -j".
+Running on ToRMS, scan the complex and create an INI template for consumption
+by the Librarian's "book_register.py -j".  Automatic determination of values
+depends on adherence to the host naming standard, DNS, and FAM and SoC power
+state (On :-) of all desired nodes.  Hints are given on stderr, the INI file
+comes to stdout.
 """
 
-import argparse
-import os
 import requests as HTTP_REQUESTS
 import sys
 import time
 from types import SimpleNamespace as GenericObject
 
-import dns.resolver as RES
-from netaddr import IPNetwork, iter_iprange, IPAddress
-import netifaces as NIF
-
 from pdb import set_trace
 
-# Imports are relative to parent directory with setup.py because implicit
-# Python path "tmms" may not exist yet.
+import dns.resolver as RES
 
-from configs.build_config import ManifestingConfiguration
-from utils.utils import basepath, piper, setDhcpClientId
-from utils.file_utils import make_symlink, make_dir
-
-MAX_ENCLOSURES = 4
-MAX_NODES_PER_ENCLOSURE = 10
+_MAX_ENCLOSURES = 4
+_MAX_NODES_PER_ENCLOSURE = 10
 
 ###########################################################################
 # Templates for pieces of the INI file
 
 _global_template = '''# TMConfig INI file {timestamp}
-# You can change Datacenter, Rack, and Domain in the [global] section.
-# Or leave them alone if you like.  When you are satisfied, run
-# book_register.py -j <filename> to create the real "tmconfig" file.
+# {ReviewHint}  When you are satisfied, run
+# "book_register.py -j <filename>" to create the final tmconfig file.
 
 [global]
 Datacenter = {Datacenter}
@@ -48,7 +39,17 @@ _enclosure_template = '''[enclosure%d]
 U = U%d
 '''
 
+_node_template = '''[{hostname}]
+node_id = {node_id}
+nvm_size = {nbooks}B
+'''
+
+###########################################################################
+
+
 def get(URL):
+    '''A wrapper around requests.get, it expects JSON from Redfish.'''
+
     try:
         resp = HTTP_REQUESTS.get(URL, timeout=0.3)
         assert resp.status_code == 200, \
@@ -57,43 +58,78 @@ def get(URL):
         return None
     return resp.json()
 
+###########################################################################
+
 
 def makeURL(IPaddrstr, subURI=''):
+    '''From an IP address and optional suffix, create a Redfish query URL.'''
     tmp =  'http://%s:8081/redfish/v1/MgmtService' % IPaddrstr
     if subURI:
         tmp += subURI
     return tmp
 
+###########################################################################
+
+
 def trace(msg, EOL=True):
+    '''Typing convenience wrapper for output to stderr.'''
     print(msg, end='\n' if EOL else '', file=sys.stderr)
 
+###########################################################################
 
-def main(args):
-    """
-        scan and emit
-    """
-    hdr = GenericObject()
-    hdr.node_count = 0
-    hdr.Datacenter = 'OnTheMoon'
-    hdr.Rack = 'FtC99'
-    hdr.Domain = 'have.it.your.way'
-    hdr.timestamp = 'auto-generated on %s' % (time.ctime())
 
-    # Enclosures
-    enclosures = []
-    for enc in range(1, MAX_ENCLOSURES + 1):
-        trace('Scanning for enclosure %d ' % enc, False)
+def getHeader():
+    '''Fill an object with global values gleaned from DNS.'''
+    hdr = GenericObject(
+        needsReview=False,     # Or did all fields get calculated?
+        timestamp='auto-generated on %s' % (time.ctime())
+    )
+    try:
+        res = RES.query('torms', 'A')   # If this is a real ToRMS, this works
+        FQDN = str(res.qname)
+        assert FQDN.endswith('.mft.labs.hpecorp.net.'), 'Bad suffix'
+        elems = FQDN[:-1].split('.')
+        assert len(elems) == 6, 'Bad length'
+        assert elems[0] == 'torms', 'Not torms'
+        DC, rack = elems[1].split('-')   # XYZp-abcde
+        assert len(DC) == 4 and DC[-1] == 'p', 'Bad DC'
+        hdr.Datacenter = DC[:3].upper()
+        hdr.Rack = rack
+        hdr.Domain = '.'.join(elems[1:])
+    except Exception as e:
+        hdr.needsReview = True
+        hdr.Datacenter = 'OnTheMoon'
+        hdr.Rack = 'FtC99'
+        hdr.Domain = 'have.it.your.way'
+    return hdr
+
+###########################################################################
+
+
+def getEnclosures(hdr):
+    '''Scan the MP space for Zswitch MPs (just the first one).'''
+    hdr.enclosures = []
+    for enc in range(1, _MAX_ENCLOSURES + 1):
+        trace('Probing for enclosure %d ' % enc, False)
         alive = get(makeURL('10.254.%d.101' % enc))     # Just the first SMP
         trace('BINGO!' if alive else '')
         if alive:
-            enclosures.append(enc)
+            hdr.enclosures.append(enc)
 
-    nodes = {}
-    for enc in enclosures:
+###########################################################################
+
+
+def getNodeFAM(hdr):
+    '''Scan the known enclosures for nodes, then probe the MCs for FAM.'''
+    hdr.node_count = 0
+    hdr.enc2nodeFAM = {}
+    for enc in hdr.enclosures:
         trace('')
-        nodes[enc] = []
-        for node in range(1, MAX_NODES_PER_ENCLOSURE + 1):
-            trace('Scanning for enclosure %d node %2d ' % (enc, node), False)
+        hdr.enc2nodeFAM[enc] = []
+        for node in range(1, _MAX_NODES_PER_ENCLOSURE + 1):
+            hostname = 'node%02d' % (((enc - 1) * 10) + node)
+            trace('Probing for enc %d node %2d (%s) ' % (enc, node, hostname),
+                  False)
             URL = makeURL('10.254.%d.%d' % (enc, 200 + node))
             alive = get(URL)
             if alive:
@@ -102,28 +138,65 @@ def main(args):
                 for mc in range(1, 5):
                     mcdata = get(URL + '/FAM/MediaControllers/%d' % mc)
                     if mcdata['MemoryState'] != 'On':
+                        hdr.needsReview = True
                         nbooks = -1
                         break
                     nbooks += (mcdata['DimmCount'] * mcdata['DimmSize']) // 8
                 trace('BINGO! FAM = %d books' % nbooks)
-                nodes[enc].append(( node, nbooks ))
+                hdr.enc2nodeFAM[enc].append(( node, nbooks ))
             else:
                 trace('')
 
-    trace('\nThe INI output starts now, redirect stdout to a file.\n')
+###########################################################################
 
+
+def emitINI(hdr):
+    '''Dump everything to stdout.'''
     print(_global_template.format(**vars(hdr)))
-    for enc in enclosures:
+
+    # U-values for the "/Enclosure/Ux" substring of the full coordinate
+    for enc in hdr.enclosures:
         print(_enclosure_template % (enc, ((enc - 1) * 10) + 1))
 
-    for enc in enclosures:
-        for node, nbooks in nodes[enc]:     # It's a tuple
+    # Nodes
+    for enc in hdr.enclosures:
+        for node, nbooks in hdr.enc2nodeFAM[enc]:     # It's a tuple
             node_id = ((enc -1 ) * 10) + node
-            print('\n[node%02d]\nnode_id = %d' % (node_id, node_id))
-            print('nvm_size = %dB' % nbooks)
+            outdata = GenericObject(
+                hostname='node%02d' % node_id,
+                node_id=node_id,
+                nbooks=nbooks)
+            print(_node_template.format(**vars(outdata)))
 
-    trace('\nRedirect stdout to a file ("tmconfig.ini"), then edit the file.')
-    trace('Follow the directions in the comments at the top of the file .\n')
+###########################################################################
+
+
+def main(cmdlineArgsNotUsed):
+    '''Called by top-level setup.py. Gather data and emit an INI file.'''
+    hdr = getHeader()
+
+    getEnclosures(hdr)
+    if not hdr.enclosures:
+        trace('\nNo enclosures found.')
+        return False
+
+    getNodeFAM(hdr)
+    if not hdr.node_count:
+        trace('\nNo nodes found.')
+        return False
+
+    if hdr.needsReview:
+        hdr.ReviewHint = 'NOT ALL VALUES COULD BE DETERMINED!'
+    else:
+        hdr.ReviewHint = 'All values were resolved properly.'
+
+    trace('\nThe INI output starts now, redirect stdout to a file.\n')
+    emitINI(hdr)
+    trace('After redirecting stdout to a file ("tmconfig.ini"), edit it.')
+    trace('Follow the directions in the comments at the top of the file.')
+    trace(hdr.ReviewHint + '\n')
+    return not hdr.needsReview
+
 
 if __name__ == '__main__':
     # Not worth working around this
