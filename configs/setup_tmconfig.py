@@ -50,7 +50,7 @@ U = U%d
 
 def get(URL):
     try:
-        resp = HTTP_REQUESTS.get(URL, timeout=0.1)
+        resp = HTTP_REQUESTS.get(URL, timeout=0.3)
         assert resp.status_code == 200, \
                 'Bad response code %d' % resp.status_code
     except Exception as e:
@@ -94,26 +94,36 @@ def main(args):
         nodes[enc] = []
         for node in range(1, MAX_NODES_PER_ENCLOSURE + 1):
             trace('Scanning for enclosure %d node %2d ' % (enc, node), False)
-            alive = get(makeURL('10.254.%d.%d' % (enc, 200 + node)))
-            trace('BINGO!' if alive else '')
+            URL = makeURL('10.254.%d.%d' % (enc, 200 + node))
+            alive = get(URL)
             if alive:
-                nodes[enc].append(node)
                 hdr.node_count += 1
+                nbooks = 0
+                for mc in range(1, 5):
+                    mcdata = get(URL + '/FAM/MediaControllers/%d' % mc)
+                    if mcdata['MemoryState'] != 'On':
+                        nbooks = -1
+                        break
+                    nbooks += (mcdata['DimmCount'] * mcdata['DimmSize']) // 8
+                trace('BINGO! FAM = %d books' % nbooks)
+                nodes[enc].append(( node, nbooks ))
+            else:
+                trace('')
 
-    trace('\nThe desired output starts now, redirect stdout to a file.\n')
+    trace('\nThe INI output starts now, redirect stdout to a file.\n')
 
     print(_global_template.format(**vars(hdr)))
     for enc in enclosures:
-        print(_enclosure_template % (enc, enc))
+        print(_enclosure_template % (enc, ((enc - 1) * 10) + 1))
 
     for enc in enclosures:
-        for node in nodes[enc]:
+        for node, nbooks in nodes[enc]:     # It's a tuple
             node_id = ((enc -1 ) * 10) + node
             print('\n[node%02d]\nnode_id = %d' % (node_id, node_id))
-            print('nvm_size = %dB' % 128)
+            print('nvm_size = %dB' % nbooks)
 
-    trace('\nRedirect stdout to a file ("myconfig.ini"), then edit the file.')
-    trace('Following directions in the comments at the top of the file .\n')
+    trace('\nRedirect stdout to a file ("tmconfig.ini"), then edit the file.')
+    trace('Follow the directions in the comments at the top of the file .\n')
 
 if __name__ == '__main__':
     # Not worth working around this
