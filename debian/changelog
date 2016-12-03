@@ -1,3 +1,12 @@
+tm-manifesting (2.3-0+l4tm1) catapult; urgency=low
+
+   * Add sentinel /etc/default/bupxefix to scan node MPs for DHCP Client ID
+   * Add "setup tmconfig" to scan complex and create tmconfig.ini
+   * Update man pages
+
+ -- Rocky Craig <rocky.craig@hpe.com>  Sat, 3 December 2016 12:32:42 -0700
+
+
 tm-manifesting (2.2-0+l4tm1) catapult; urgency=low
 
    * Change lfs_fuse startup option
