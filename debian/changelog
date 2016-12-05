@@ -4,7 +4,7 @@ tm-manifesting (2.3-0+l4tm1) catapult; urgency=low
    * Add "setup tmconfig" to scan complex and create tmconfig.ini
    * Update man pages
 
- -- Rocky Craig <rocky.craig@hpe.com>  Sat, 3 December 2016 12:32:42 -0700
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Sun, 4 December 2016 21:33:07 -0600
 
 
 tm-manifesting (2.2-0+l4tm1) catapult; urgency=low
