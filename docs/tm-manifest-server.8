@@ -54,13 +54,15 @@ Make it talk
 .SH FILES
 The server reads \fB/etc/tmms\fR by default.  The default file contains
 comments to guide you in its customization.  By default the TMMS suite
-puts config files and images under /etc/tmms in the following directories:
+(both "tm-manifest setup" and the server) puts config files and images
+under /etc/tmms in the following directories:
 
 .PP
 .TP
 dnsmasq
 Files for the dnsmasq assigned to the payload port declared in /etc/tmms.
-The lead file, ethX.conf, includes other files.
+The primary file ethX.conf includes other files.  The DHCP Client ID to
+hostname assignments are in ethX.hostsfile.
 
 .TP
 sys-images
@@ -69,13 +71,29 @@ The build directory for manifested images, further broken down by node.
 .TP
 tftp
 The root directory of the TFTP server functionality of dnsmasq.  It
-contains the EFI boot support plus menus, kernels, and root file system
-images for each bound node.
+contains the EFI (GRUB) boot support plus menus, kernels, and root file
+system images for each bound node.
 
-.SH  
-/etc/tmconfig is the "node topology" config file. It usually comes from a
-wonder land, but can also be generated using tm-librarian utils, which is a
-dependency for tm-manifesting.  This file is also used by the librarian.
+.TP  
+/etc/tmconfig
+This is the authoritatve "node topology" config file. It has been known
+to come from Wonderland, but a directive now exists in "tm-manifest"
+to assist in its creation.  This file is also used by the Librarian and
+the Assembly Agent.
+
+.TP
+/etc/default/bupxefix
+The presence of this file will cause the node image builder to scan the node
+MP for the DHCP Client ID, rather than using the calculated formal node
+coordinate in /etc/tmconfig.   This fixes the disconnect between temporary
+bringup scripts and the formal specification.  The file contents are not
+actually read so it may be zero-length.
+
+At some point the Assembly Agent will properly program the value of
+SetRackCoordinate, and the retrieved value will match the calculated value.
+The presence of the sentinel is superfluous and it may optionally be removed.
+
+This won't work in a FAME environment, don't create the file.
 
 .SH LOG FILES
 
@@ -84,11 +102,11 @@ Various components generate their own (possibly rotating) log files.
 .PP
 .TP
 /var/log/tmms.ethX.log
-The main log file driven by tm-manifest-server
+The main log file driven by tm-manifest-server.
 
 .TP
 /var/lib/tmms/dnsmasq/ethX.log
-From the dnsmasq providing PXE services to the nodes.
+From the dnsmasq processes providing DHCP service to the nodes.
 
 .TP
 /var/lib/tmms/sys-images/golden/vmdebootstrap.log
@@ -104,4 +122,4 @@ Logs all the steps peformed during the chroot into the image which
 does the final customization.
 
 .SH BUGS
-None that we know of.  Today.  Between noon and 1 pm.
+None that we know of.  Today.  Between noon and 1 pm Moscow Standard Time.

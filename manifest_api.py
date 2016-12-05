@@ -27,7 +27,7 @@ from tm_librarian.tmconfig import TMConfig
 # installation will also do the right thing.
 try:
     from tmms.setup import parse_cmdline_args
-    from tmms.utils.utils import piper, create_loopback_files
+    from tmms.utils.utils import piper, create_loopback_files, setDhcpClientId
     from tmms.utils.logging import tmmsLogger
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
@@ -46,6 +46,9 @@ try:
     tmconfig = TMConfig(manconfig['TMCONFIG'])
 except Exception as e:
     raise SystemExit('Bad config file(s): %s' % str(e))
+
+for node in tmconfig.allNodes:  # Hack around broken BU scripts
+    setDhcpClientId(node)
 
 # mainapp is needed as decorator base so it comes early.
 # Flask sets mainapp.root_path to cwd.  Set that now; it's also needed

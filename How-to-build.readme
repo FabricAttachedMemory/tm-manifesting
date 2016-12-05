@@ -1,45 +1,47 @@
-1) Update debian/changelog file with the appropriate version, description, name
-   and timestamp.
+1) Update debian/changelog file with the appropriate version, description,
+   name and timestamp.
 
 2) Commit the changes made in changelog and push to origin master.
 
 3) run: git log
-    to get the commit id you want to build package off (usually the latest you
-    just pushed in step 2).
+    to get the commit id you want to build package off (usually the latest
+    you just pushed in step 2).
 
-4) Tag the commit, where name of the tag must match the latest changelog version
-(e.g. 2.1-3+l4tm1) and sign this tag:
-    git tag -s 2.1-3+l4tm1 1bd5846b48c3293283b4241827c15ef7b1a5348c
+4) Tag the commit, where name of the tag must match the latest changelog
+   version (e.g. 2.1-3+l4tm1) and sign this tag:
+
+   git tag -s 2.1-3+l4tm1 1bd5846b48c3293283b4241827c15ef7b1a5348c
 
 5) Push the tag to the origin:
-    git push origin 2.1-3+l4tm1
 
-This will trigger a Jenkins job to build a package:
+   git push origin 2.1-3+l4tm1
+
+   This push of a tag will trigger a Jenkins job to build a package 
+   from the master branch, be sure the master branch is ready before
+   tagging and pushing.
+
+6) Log into Jenkins using your corporate LDAP credentials:
+
 https://hlinux-jenkins.us.rdlabs.hpecorp.net/job/manifesting-sources-metabuild/
 
-Use LDAP cridentials to login to Jenkins interface.
-NOTE: Jenkins will build from master branch by default, and pushing new tag is
-basically a trigger to start the build. This, make sure master branch is pushed
-first, before the Tag is.
+7) On Jenkins navigate to manifesting-binaries-metabuild:
 
-6) On tm-manifesting Jenkins job navigate to manifesting-binaries-metabuild:
 https://hlinux-jenkins.us.rdlabs.hpecorp.net/job/manifesting-binaries-metabuild/
 
-where you can get your package files.
+   where you can get your package files when Jenkins finishes the build.
 
-7) When Jenkins is finished building, navigate to "Configuration Matrix"
-amd64 and arm64 green circles.
-There, unders the Workspace section, you can download package files to your
-workstation. Get all of them from amd64 workspace and only .deb and .changes
-from arm64 (or vise versa - doesn't matter).
-
+8) When Jenkins is finished building, navigate to "Configuration Matrix"
+   amd64 and arm64 green circles.  Under the Workspace section you can
+   download the package files to your workstation. Get all of them from
+   amd64 workspace and only .deb and .changes from arm64 (or vice verse).
 
 --- Upload created package to Incoming. ----
 
-8) Login to incoming and navigate to:
-cd /var/foreign/l4tm/pool/main/t/tm-manifesting/
+9) Login to hpelinux-incoming.us.rdlabs.hpecorp.net and navigate to:
 
-9) Update the package by removing all the files in there and upload generated
-(in step 7) ones.
+   cd /var/foreign/l4tm/pool/main/t/tm-manifesting/
 
-10) Wait for the next repo roll and Life is good.
+10) Update the package by removing all files present, then upload
+    the new version of files generated on Jenkins.
+
+11) Wait for the next repo roll and Life is good.

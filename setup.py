@@ -13,7 +13,7 @@ import sys
 from pdb import set_trace
 
 
-def link_into_python(git_repo_path):
+def link_into_python(args, git_repo_path):
     """
         Create a symlink to THIS manifesting source tree under the known
     Python hierarchy so that user could import manifesting libraries like
@@ -34,7 +34,7 @@ def link_into_python(git_repo_path):
             'Can\'t find suitable path in python environment to link tmms!')
 
 
-def link_into_usrlocalbin(git_repo_path):
+def link_into_usrlocalbin(args, git_repo_path):
     """
         Create a symlink to THIS manifesting source tree tm_cmd for
     /usr/local/bin/tm-manifest as specified by ERS.
@@ -44,15 +44,15 @@ def link_into_usrlocalbin(git_repo_path):
         make_symlink(
             git_repo_path + '/tm_cmd/tm_manifest.py',
             '/usr/local/bin/tm-manifest')
-    else:
-        print ('path to tm-manifest exists(%s/tm-manifest)! Skipping...' % (symlink_path))
+    elif args.verbose:
+        print('%s/tm-manifest already exists' % (symlink_path))
 
     if not os.path.exists('%s/tm-manifest-server' % (symlink_path)):
         make_symlink(
             git_repo_path + '/manifest_api.py',
             '/usr/local/bin/tm-manifest-server')
-    else:
-        print ('path to tm-manifest-server exists(%s/tm-manifest-server)! Skipping...' % (symlink_path))
+    elif args.verbose:
+        print('%s/tm-manifest-server already exists' % (symlink_path))
 
 
 def try_dh_helper(argv):
@@ -151,15 +151,16 @@ if __name__ == '__main__':
 
         setup_file = os.path.realpath(__file__)
         git_repo_path = os.path.dirname(setup_file)
-        link_into_python(git_repo_path)
-        link_into_usrlocalbin(git_repo_path)
+        link_into_python(args, git_repo_path)
+        link_into_usrlocalbin(args, git_repo_path)
 
         legal = ('environment', 'networking', 'golden_image')  # order matters
         if not args.extra or 'all' in args.extra:
             actions = legal
         else:
-            assert args.extra[0] in legal, 'Illegal action "%s"' % a
             actions = args.extra
+            assert actions[0] in ('tmconfig',) + legal, \
+                'Illegal action "%s"' % actions[0]
         for a in actions:
             if a == 'environment':
                 from configs import setup_environment
@@ -170,6 +171,9 @@ if __name__ == '__main__':
             elif a == 'golden_image':
                 from configs import setup_golden_image
                 setup_golden_image.main(args)
+            elif a == 'tmconfig':
+                from configs import setup_tmconfig
+                setup_tmconfig.main(args)
         raise SystemExit(0)
     except ImportError as err:
         errmsg = 'import failed: %s\nTry "setup.py all" or "setup.py environment"' % str(err)

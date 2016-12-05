@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 import errno
 import os
+import requests as HTTP_REQUESTS
 import shlex
 import shutil
 import sys
@@ -130,3 +131,25 @@ def create_loopback_files():
         fname = '/dev/loop%d' % i
         mknod(fname, 'block', 7, i)
         chgrp(fname, 'disk')
+
+###########################################################################
+# The theoretical client ID is the full node coordinate but Bring Up has
+# something else going on :-(.  However, when AA is finally real this will
+# just retrieve the value that was originally taken from /etc/tmconfig in
+# a giant circle of life and this routine can NOOP.  No blood no foul.
+
+
+def setDhcpClientId(node):
+    node.DhcpClientId = node.coordinate
+    if not os.path.exists('/etc/default/bupxefix'):
+        return
+    URL = node.nodeMp.mfwApiUri + '/MgmtService/Mgmt/Hardware'
+    try:
+        resp = HTTP_REQUESTS.get(URL)
+        assert resp.status_code == 200, \
+            'Bad response code %d' % resp.status_code
+        mpCoord = resp.json()['Coordinate']
+        node.DhcpClientId = mpCoord.split('/SocBoard')[0]
+    except Exception as e:
+        pass
+
