@@ -15,8 +15,8 @@ grub.cfg evaluates the hostname of the running node to choose a menu file.
 That menu specifies the precise kernel file (vmlinuz) and customized FS image
 (.cpio file) for the node.
 """
-
 import argparse
+from jinja2 import Environment, FileSystemLoader
 import os
 import requests as HTTP_REQUESTS
 import sys
@@ -37,8 +37,14 @@ from configs.build_config import ManifestingConfiguration
 from utils.utils import basepath, piper, setDhcpClientId
 from utils.file_utils import make_symlink, make_dir
 
+
 ###########################################################################
 # Templates for config files
+
+
+_jinja_env = Environment(loader=FileSystemLoader('./templates/'))
+_jinja_env.trim_blocks = True
+_grub_menu_template = _jinja_env.get_template('grub_menu.template')
 
 # /boot/grub.cfg ----------------------------------------------------------
 # bootnetaa64.efi is compiled with most modules, such as all_video.   A few
@@ -79,8 +85,8 @@ configfile  "(tftp){menudir}/${{net_efinet1_hostname}}.menu"
 # claims / is type rootfs.  As it turns out, specifying neither root= or
 # rootfstype= works just fine.
 
-_grub_menu_template = '''
-set default=0
+'''_grub_menu_template = '''
+'''set default=0
 set menu_color_highlight=white/brown
 
 # FAME and TMAS jack this X10.  The global in grub.cfg should work, but if not, uncomment this.
@@ -466,16 +472,25 @@ class TMgrub(object):
         self.configure_dnsmasq()
         self.configure_iptables()
 
-    def compose_grub_menu(self, hostname):
+
+    def compose_grub_menu(self, hostname, append=None):
         """Return grub menu content keyed on hostname."""
         # Node binding places {hostname}.vmlinuz and {hostname}.cpio here
         images_dir = '%s/%s' % (self.chroot_images_dir, hostname)
-        return _grub_menu_template.format(
-            hostname=hostname,
-            images_dir=images_dir,
+        if append is None:
             append='rw nosmp earlycon=pl011,0x402020000 ignore_loglevel'
-            )
             # append='rw console=ttyAMA0 acpi=force'    # FAME/TMAS
+
+        return _grub_menu_template.render(
+                                        hostname=hostname,
+                                        images_dir=images_dir,
+                                        append=append
+                                        )
+        #return _grub_menu_template.format(
+        #    hostname=hostname,
+        #    images_dir=images_dir,
+        #    append=append
+        #    )
 
     def compose_grub_cfg(self):
         """
