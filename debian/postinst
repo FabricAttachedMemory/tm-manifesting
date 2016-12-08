@@ -57,6 +57,12 @@ if [ "$IsConfigure" == true ]; then
         echo " --- tmms config backup found ${TMMS_CFG}.purge. Just FYI. Doing nothing... --- "
         echo " --- /etc/tmms config file exists. Skipping... --- "
     fi
+
+    [ -f /tmp/tm-manifest-server.restart ] && tm-manifest-server -D \
+                                           && rm /tmp/tm-manifest/server.restart
+    [ -f /tmp/tm-manifest-server.restart-service ] && bin/systemctrl tm-manifest-server \
+                                                   && rm /tmp/tm-manifest/server.restart-service
+
 fi
 
 if [ "$IsUpgrade" == true ]; then
