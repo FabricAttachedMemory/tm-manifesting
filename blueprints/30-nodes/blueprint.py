@@ -348,7 +348,6 @@ def build_node(manifest, node_coord):
         'DhcpClientId': DhcpClientId,
         'node_id':      node_id,
         'manifest':     manifest,
-        'bp_config':    BP.config,
         'tmconfig':     BP.config['TMCONFIG'],      # the file name
         'repo_mirror':  BP.config['L4TM_MIRROR'],
         'repo_release': BP.config['L4TM_RELEASE'],

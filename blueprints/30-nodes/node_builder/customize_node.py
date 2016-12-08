@@ -112,8 +112,9 @@ def cleanup_sources_list(args):
         content = [
             '# Created by TMMS for %s on %s' % (args.hostname, time.ctime()),
             '# a.k.a. %s' % args.node_coord,
-            'deb %s %s %s' % (
-                args.repo_mirror, args.repo_release, ' '.join(args.repo_areas))
+            'deb %s %s %s' % (args.bp_config['L4TM_MIRROR'],
+                                args.bp_config['L4TM_RELEASE'],
+                                ' '.join(args.bp_config['L4TM_AREAS']))
         ]
         write_to_file(sources_list, '\n'.join(content))
     except RuntimeError as err:
@@ -429,7 +430,7 @@ def install_packages(args):
     update_status(args, msg)
 
     # Some packages need this (python-mon-agent)
-    shutil.copy(args.tmconfig, args.new_fs_dir + '/etc/tmconfig')
+    shutil.copy(args.bp_config['TMCONFIG'], args.new_fs_dir + '/etc/tmconfig')
 
     # Fill out the install script.  Everything goes at root $HOME.
     installsh = '/root/install.sh'
@@ -583,9 +584,10 @@ def customize_grub(args):
     except ImportError as err:
         raise RuntimeError('Failed to import TMGrub from setup_networking.py!')
     grub_menu = networking.grub_menu.render(hostname=args.hostname,
-                                images_dir=args.bp_config['TFTP_IMAGES'],
+                                images_dir='/images/' + args.hostname,
                                 append=kernel_cmd)
-    destination = args.bp_config['TFTP_GRUB'] + '/menus/' + args.hostname + '.menu'
+    #destination = args.bp_config['TFTP_GRUB'] + '/menus/' + args.hostname + '.menu'
+    destination = args.tftp_dir + '/../../grub/menus/' + args.hostname + '.menu'
     with open(destination, 'w') as file_obj:
         file_obj.write(grub_menu)
 
