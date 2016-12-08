@@ -568,6 +568,27 @@ fi
         umountret, _, _ = piper(umount)
     return False
 
+
+def customize_grub(args):
+    """
+        COnfigure grub's config entry with a custom kernel command line (if
+    presented in the manifest).
+    """
+    set_trace()
+    kernel_cmd = args.manifest.thedict.get('kernel_append', None)
+    if (kernel_cmd is None):
+        kernel_cmd = 'rw nosmp earlycon=pl011,0x402020000 ignore_loglevel'
+    try:
+        from tmms.templates import networking
+    except ImportError as err:
+        raise RuntimeError('Failed to import TMGrub from setup_networking.py!')
+    grub_menu = networking.grub_menu.render(hostname=args.hostname,
+                                images_dir=args.bp_config['TFTP_IMAGES'],
+                                append=kernel_cmd)
+    destination = args.bp_config['TFTP_GRUB'] + '/menus/' + args.hostname + '.menu'
+    with open(destination, 'w') as file_obj:
+        file_obj.write(grub_menu)
+
 #==============================================================================
 
 
@@ -851,6 +872,8 @@ def execute(args):
     # is done inside those functions that throw RuntimeError.
     # When some of them fail they'll handle last update_status themselves.
     try:
+        customize_grub(args)
+
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir, args.golden_tar)
         tmp = extract_bootfiles(args)
@@ -913,6 +936,7 @@ def execute(args):
         manifest_tftp_file = args.manifest.namespace.replace('/', '.')
         copy_target_into(args.manifest.fullpath,
                          args.tftp_dir + '/' + manifest_tftp_file)
+
 
         response['message'] = 'PXE files ready to boot'
         status = 'ready'
