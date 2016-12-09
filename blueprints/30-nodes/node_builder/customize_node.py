@@ -577,11 +577,11 @@ def customize_grub(args):
     """
     kernel_cmd = args.manifest.thedict.get('kernel_append', None)
     if (kernel_cmd is None):
-        kernel_cmd = 'rw nosmp earlycon=pl011,0x402020000 ignore_loglevel'
+        kernel_cmd = 'rw earlycon=pl011,0x402020000 ignore_loglevel'
     try:
         from tmms.templates import networking
     except ImportError as err:
-        raise RuntimeError('Failed to import TMGrub from setup_networking.py!')
+        raise RuntimeError('Failed to import grub template for networking configs!')
     grub_menu = networking.grub_menu.render(hostname=args.hostname,
                                 images_dir='/images/' + args.hostname,
                                 append=kernel_cmd)
