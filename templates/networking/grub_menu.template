@@ -1,0 +1,27 @@
+# /grub/menus/nodeXX.menu
+# First cut was "root=/dev/ram0" but that invokes (old, inflexible) ramfs
+# behavior.  "mount" claims that / is type rootfs (a special kind of tmpfs)
+# but "df /" is nothing but zeroes.  From 2013:
+# https://lwn/net/Articles/559176/ says don't specify root= but DO specify
+# rootfstype=tmpfs (assumes CONFIG_TMPFS). df is now happy, although mount
+# claims / is type rootfs.  As it turns out, specifying neither root= or
+# rootfstype= works just fine.
+
+set default=0
+set menu_color_highlight=white/brown
+# FAME and TMAS jack this X10.  The global in grub.cfg should work, but if not, uncomment this.
+set timeout=8
+# Originally for SNBU but worth keeping
+set debug=linux,linuxefi,efi
+set pager=1
+
+{% if set_params -%}
+    {% for param in set_params -%}
+        set {{param}}
+    {%- endfor %}
+{%- endif %}
+
+menuentry '{{hostname}} L4TM ARM64' {{ '{{' }}
+    linux (tftp){{images_dir}}/{{hostname}}.vmlinuz.gz {{append}}
+    initrd (tftp){{images_dir}}/{{hostname}}.cpio.gz
+{{ '}}' }}
