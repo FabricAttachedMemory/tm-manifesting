@@ -872,8 +872,6 @@ def execute(args):
     # is done inside those functions that throw RuntimeError.
     # When some of them fail they'll handle last update_status themselves.
     try:
-        customize_grub(args)
-
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir, args.golden_tar)
         tmp = extract_bootfiles(args)
@@ -937,6 +935,8 @@ def execute(args):
         copy_target_into(args.manifest.fullpath,
                          args.tftp_dir + '/' + manifest_tftp_file)
 
+        update_status(args, 'Updating grub menu for the node.')
+        customize_grub(args)
 
         response['message'] = 'PXE files ready to boot'
         status = 'ready'
