@@ -8,7 +8,6 @@ import glob
 import netifaces as NIF
 import os
 import psutil
-import signal
 import sys
 import time
 
@@ -28,6 +27,7 @@ from tm_librarian.tmconfig import TMConfig
 try:
     from tmms.setup import parse_cmdline_args
     from tmms.utils.utils import piper, create_loopback_files, setDhcpClientId
+    from tmms.utils.utils import kill_pid
     from tmms.utils.logging import tmmsLogger
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
@@ -236,29 +236,6 @@ def set_iptables(config):
         if ret:
             raise RuntimeError('%s failed: %s' % (cmd, stderr))
     return action_format
-
-
-def kill_pid(pid, procname='', daemon=True):      # FIXME: utils?
-    if pid not in psutil.pids():
-        return False
-    for p in psutil.process_iter():
-        if p.pid != pid:
-            continue
-        if procname and p.name() != procname:
-            continue
-        if daemon and p.ppid() != 1:
-            continue
-        mainapp.logger.info('Killing PID %d' % pid)
-        os.kill(pid, signal.SIGTERM)
-        time.sleep(0.5)
-        if pid in psutil.pids():    # SIGTERM needs a boost
-            try:
-                os.kill(pid, signal.SIGKILL)
-                time.sleep(0.5)
-            except ProcessLookupError:  # SIGTERM was enough after all
-                pass
-        return True
-    return False
 
 
 def kill_dnsmasq(config):

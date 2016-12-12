@@ -17,7 +17,7 @@ from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
 from utils.file_utils import remove_target
-from utils.utils import piper, create_loopback_files
+from utils.utils import piper, create_loopback_files, kill_chroot_daemons
 
 
 def main(args):
@@ -70,7 +70,20 @@ def main(args):
     remove_target(destdir + '/debootstrap.log')
     remove_target(vmdlog)
     ret, _, _ = piper(cmd, use_call=True)     # Watch it all go by
-    assert not ret, 'vmdebootstrap failed: %s:' % (errno.errorcode[ret])
+
+    # Get the directory which was the chroot populating the loopback mount.
+    # Match a stanza in the deboostrap command line.
+    pat = '%s /tmp/' % manconfig['L4TM_RELEASE']
+    contents = open(vmdlog).readlines()
+    tmp = [ t for t in contents if pat in t ]
+    if len(tmp):
+        tmp = '/tmp/' + tmp[-1].split('/tmp/')[1].split()[0]
+        kill_chroot_daemons(tmp)
+    if not ret:
+        return True
+    errors = [ e for e in contents if 'WARN' in e or 'ERROR' in e ]
+    print(''.join(errors), file=sys.stderr)    # They already have newlines
+    raise RuntimeError('vmdebootstrap failed, consult %s' % vmdlog)
 
 
 if __name__ == '__main__':

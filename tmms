@@ -40,8 +40,9 @@ L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
 # (usually something like ethX).  If the interface cannot be found (or is
 # 'None') PXE services will NOT be started.  The manifesting API will
 # still work, you just can't boot any images.  After changing this value
-# you need to (re)-run "tm-manifest setup networking".
-PXE_INTERFACE = 'None'
+# you need to (re)-run "tm-manifest setup networking".  eth4 is the 
+# default for a standard real ToRMS in a TM complex.
+PXE_INTERFACE = 'eth4'
 
 # Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
 # in their place.  Values are "None" (user has powerful iptables fu),
