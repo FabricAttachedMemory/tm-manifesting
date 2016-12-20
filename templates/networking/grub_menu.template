@@ -21,7 +21,7 @@ set pager=1
     {%- endfor %}
 {%- endif %}
 
-menuentry '{{hostname}} L4TM ARM64' {{ '{{' }}
+menuentry '{{hostname}} L4TM ARM64' {{ '{' }}
     linux (tftp){{images_dir}}/{{hostname}}.vmlinuz.gz {{append}}
     initrd (tftp){{images_dir}}/{{hostname}}.cpio.gz
-{{ '}}' }}
+{{ '}' }}
