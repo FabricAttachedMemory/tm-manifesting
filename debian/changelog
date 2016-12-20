@@ -1,3 +1,14 @@
+tm-manifesting (2.4-0+l4tm1) catapult; urgency=low
+
+   * Kill daemons that survive a chroot; update the default golden image
+   * Update the default golden image template
+   * Use new kill_chroot_daemons()
+   * Use eth4 as default PXE_INTERFACE
+   * And other minor fixes
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 19 December 2016 17:00:07 -0600
+
+
 tm-manifesting (2.3-0+l4tm1) catapult; urgency=low
 
    * Add sentinel /etc/default/bupxefix to scan node MPs for DHCP Client ID
