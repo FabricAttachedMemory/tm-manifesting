@@ -1,3 +1,10 @@
+tm-manifesting (2.4-1+l4tm1) catapult; urgency=low
+
+   * Hotfix typo in grub menu template with double {
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 20 December 2016 17:05:07 -0600
+
+
 tm-manifesting (2.4-0+l4tm1) catapult; urgency=low
 
    * Kill daemons that survive a chroot; update the default golden image
