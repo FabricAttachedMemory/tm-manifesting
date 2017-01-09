@@ -1,3 +1,10 @@
+tm-manifesting (2.4-1+l4tm2) catapult; urgency=low
+
+   * Packaging bug fix - couldnt properly remove the package.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 9 January 2016 11:01:07 -0600
+
+
 tm-manifesting (2.4-1+l4tm1) catapult; urgency=low
 
    * Hotfix typo in grub menu template with double {

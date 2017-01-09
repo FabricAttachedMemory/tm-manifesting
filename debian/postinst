@@ -60,7 +60,7 @@ if [ "$IsConfigure" == true ]; then
 
     [ -f /tmp/tm-manifest-server.restart ] && tm-manifest-server -D \
                                            && rm /tmp/tm-manifest/server.restart
-    [ -f /tmp/tm-manifest-server.restart-service ] && bin/systemctrl tm-manifest-server \
+    [ -f /tmp/tm-manifest-server.restart-service ] && bin/systemctl tm-manifest-server \
                                                    && rm /tmp/tm-manifest/server.restart-service
 
 fi

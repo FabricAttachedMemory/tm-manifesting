@@ -44,7 +44,9 @@ done
 
 if [ "$IsRemove" ]; then
     echo " --- postrm remove: doing nothing... --- "
+    echo " !!!-- postrm remove: Keeping /var/lib/tmms/. Remove it manually. -- !!!"
 fi # if IsRemove
+
 
 if [ "$IsPurge" == true ]; then
     if [ -e "$TMMS_CFG" ]; then
@@ -53,13 +55,16 @@ if [ "$IsPurge" == true ]; then
     fi
 fi # if IsRemove
 
+
 if [ "$IsUpgrade" == true ]; then
     echo "postrm upgrade doing nothing... Next."
 fi
 
+
 if [ "$IsFailedUpgrade" == true ]; then
     echo "postrm failed-upgrade is not handeled... Next."
 fi
+
 
 if [ "$IsAbortUpgrade" == true ]; then
     echo " --- postrm abort-upgrade... --- "
