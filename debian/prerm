@@ -71,8 +71,8 @@ if [ "$IsRemove" == true ]; then
 
     # Remove restart file, since it is not needed due to the full remove of
     # the package
-    [ -f /tmp/tm-manifest-server.restart ] $$ rm /tmp/tm-manifest-server.restart
-    [ -f /tmp/tm-manifest-server.restart-service ] $$ rm /tmp/tm-manifest-server.restart-service
+    [ -f /tmp/tm-manifest-server.restart ] && rm /tmp/tm-manifest-server.restart
+    [ -f /tmp/tm-manifest-server.restart-service ] && rm /tmp/tm-manifest-server.restart-service
 fi
 
 
