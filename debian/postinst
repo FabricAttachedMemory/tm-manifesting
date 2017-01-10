@@ -59,9 +59,9 @@ if [ "$IsConfigure" == true ]; then
     fi
 
     [ -f /tmp/tm-manifest-server.restart ] && tm-manifest-server -D \
-                                           && rm /tmp/tm-manifest/server.restart
+                                           && rm /tmp/tm-manifest-server.restart
     [ -f /tmp/tm-manifest-server.restart-service ] && bin/systemctl tm-manifest-server \
-                                                   && rm /tmp/tm-manifest/server.restart-service
+                                                   && rm /tmp/tm-manifest-server.restart-service
 
 fi
 
