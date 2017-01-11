@@ -98,14 +98,14 @@ is printed.   For a brand new complex,
  1. Power up the rack manually.
  2. Run "tm-manifest setup tmconfig > tmconfig.ini".
     Expect warnings.
- 3. book_register.py -j | tee /etc/tmconfig
+ 3. book_register.py -j tmconfig.ini | sudo tee /etc/tmconfig
  4. Run the Assembly Agent and power on FAM for every node
  5. Re-run "tm-manifest setup tmconfig > tmconfig.ini".
     Expect NO warnings.
  6. Re-run "book_register.py -j | tee /etc/tmconfig"
  7. Now you can run the manifesting full setup sequence,
     configure the Librarian, and re-start Assembly Agent.
-    
+
 .SS Packages
 \fBtm-manifest\fP needs an L4TM repo from which to pull (Debian) packages.
 These directives allow you to peruse that repo.
