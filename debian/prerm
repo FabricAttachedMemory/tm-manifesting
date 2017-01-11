@@ -44,14 +44,19 @@ done
 ps -ef | grep tm-manifest-server | grep -v grep
 if [ $? -eq "0" ]; then
     # Will flag the restart of the service later on during the update
-    touch /tmp/tm-manifest-server.restart
+    #touch /tmp/tm-manifest-server.restart
+    echo " --- !!! WARNING !!! --- "
+    echo " --- Shutting down manifesting daemon.... it will not be restarted on update! --- "
+    echo " --- A systemctl service of the manifesting server will be started instead! --- "
     tm-manifest-server --daemon-stop
 fi
 
 # Flag to indicate server is running as systemctl service
 bin/systemctl status tm-manifest-server | grep running
 if [ $? -eq "0" ]; then
-    touch /tmp/tm-manifest-server.restart-service
+    #touch /tmp/tm-manifest-server.restart-service
+    echo " --- !!! WARNING !!! --- "
+    echo " --- systemctl service will be stopped and restarted on update! --- "
     bin/systemctl stop tm-manifest-server
 fi
 
@@ -71,8 +76,8 @@ if [ "$IsRemove" == true ]; then
 
     # Remove restart file, since it is not needed due to the full remove of
     # the package
-    [ -f /tmp/tm-manifest-server.restart ] && rm /tmp/tm-manifest-server.restart
-    [ -f /tmp/tm-manifest-server.restart-service ] && rm /tmp/tm-manifest-server.restart-service
+    #[ -f /tmp/tm-manifest-server.restart ] && rm /tmp/tm-manifest-server.restart
+    #[ -f /tmp/tm-manifest-server.restart-service ] && rm /tmp/tm-manifest-server.restart-service
 fi
 
 

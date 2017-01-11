@@ -36,8 +36,9 @@ done
 
 
 if [ "$IsConfigure" == true ]; then
-    systemctl daemon-reload
     echo " --- postinst configure --- "
+
+    systemctl daemon-reload
     IsTMMSBackup=false
     if [ -e "${TMMS_CFG}.purge" ]; then
         IsTMMSBackup=true
@@ -58,10 +59,13 @@ if [ "$IsConfigure" == true ]; then
         echo " --- /etc/tmms config file exists. Skipping... --- "
     fi
 
-    [ -f /tmp/tm-manifest-server.restart ] && tm-manifest-server -D \
-                                           && rm /tmp/tm-manifest/server.restart
-    [ -f /tmp/tm-manifest-server.restart-service ] && bin/systemctl tm-manifest-server \
-                                                   && rm /tmp/tm-manifest/server.restart-service
+    tm-manifest setup networking
+
+    #[ -f /tmp/tm-manifest-server.restart ] && tm-manifest-server -D \
+    #                                       && rm /tmp/tm-manifest-server.restart
+    #[ -f /tmp/tm-manifest-server.restart-service ] && bin/systemctl tm-manifest-server \
+    #                                               && rm /tmp/tm-manifest-server.restart-service
+    bin/systemctl start tm-manifest-server
 
 fi
 
@@ -84,6 +88,8 @@ if [ "$IsAbortInstall" == true ]; then
             echo " --- !!! WARNING !!! --- "
             echo " --- Moving back the old tmms config file --- "
         fi
+        # Could be a problem, since a system might already have had .purge file...
+        # or maybe just paranoia.
         mv ${TMMS_CFG}.purge ${TMMS_CFG}
     fi
 fi

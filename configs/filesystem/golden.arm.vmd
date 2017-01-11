@@ -35,8 +35,7 @@ owner =
 
 # minbase only does "Required", keyrings are only "Important".
 # debian-archive-keyring is handled manually by debootstrap.
-# package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,net-tools,nfs-common,pciutils,psmisc,psutils,ssh,tcpdump,tm-zbridge,tm-flush,fam-atomic-driver,tm-fuse-4.7.2,tm-libfuse,tm-librarian,tm-node-config,vim
-package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,net-tools,nfs-common,pciutils,psmisc,psutils,ssh,tcpdump,tm-zbridge,tm-flush,fam-atomic-driver,tm-fuse-4.7.2,tm-libfuse,tm-librarian,vim
+package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,net-tools,nfs-common,pciutils,psmisc,psutils,ssh,tcpdump,tm-zbridge,tm-flush,fam-atomic-driver,tm-fuse-4.7.2,tm-libfuse,tm-librarian,vim,acpid
 custom-package =
 
 # L4TM doesn't follow simple name generation, must do this manually (above)
