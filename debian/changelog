@@ -1,3 +1,10 @@
+tm-manifesting (2.4-1+l4tm3) catapult; urgency=low
+
+   * Packaging fix - systemctl, setup networking on update and other.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 January 2016 15:15:07 -0600
+
+
 tm-manifesting (2.4-1+l4tm2) catapult; urgency=low
 
    * Packaging bug fix - couldnt properly remove the package.
