@@ -50,13 +50,18 @@ nvm_size = {nbooks}B
 def get(URL):
     '''A wrapper around requests.get, it expects JSON from Redfish.'''
 
-    try:
-        resp = HTTP_REQUESTS.get(URL, timeout=0.3)
-        assert resp.status_code == 200, \
+    timeout = 0.2
+    while timeout < 1.0:    # three tries
+        try:
+            resp = HTTP_REQUESTS.get(URL, timeout=timeout)
+            assert resp.status_code == 200, \
                 'Bad response code %d' % resp.status_code
-    except Exception as e:
-        return None
-    return resp.json()
+            return resp.json()
+        except HTTP_REQUESTS.exceptions.ConnectTimeout as e:
+            timeout *= 2
+        except Exception as e:
+            break
+    return None
 
 ###########################################################################
 
@@ -137,7 +142,7 @@ def getNodeFAM(hdr):
                 nbooks = 0
                 for mc in range(1, 5):
                     mcdata = get(URL + '/FAM/MediaControllers/%d' % mc)
-                    if mcdata['MemoryState'] != 'On':
+                    if mcdata is None or mcdata['MemoryState'] != 'On':
                         hdr.needsReview = True
                         nbooks = 4  # Minimum legal size for an INI file
                         break
