@@ -59,6 +59,7 @@ if [ "$IsConfigure" == true ]; then
         echo " --- /etc/tmms config file exists. Skipping... --- "
     fi
 
+    tm-manifest setup environment --packaging
     tm-manifest setup networking
 
     #[ -f /tmp/tm-manifest-server.restart ] && tm-manifest-server -D \
