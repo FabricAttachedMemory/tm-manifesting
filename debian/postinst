@@ -55,8 +55,10 @@ if [ "$IsConfigure" == true ]; then
         fi
     else
         echo " --- !!! WARNING !!! --- "
-        echo " --- tmms config backup found ${TMMS_CFG}.purge. Just FYI. Doing nothing... --- "
-        echo " --- /etc/tmms config file exists. Skipping... --- "
+        #echo " --- tmms config backup found ${TMMS_CFG}.purge. Just FYI. Doing nothing... --- "
+        echo " --- /etc/tmms config file exists. Moving it to /etc/tmms.purge --- "
+        echo " --- A new /etc/tmms will be generated. ---
+        mv /etc/tmms/ /etc/tmms.purge
     fi
 
     tm-manifest setup environment --packaging
