@@ -89,10 +89,12 @@ if [ "$IsAbortInstall" == true ]; then
     if [ -e "/etc/tmms.purge" ]; then
         if [ -e "/etc/tmms" ]; then
             echo " --- !!! WARNING !!! --- "
-            echo " --- Moving back the old tmms config file --- "
+            echo " --- You have both /etc/tmms and /etc/tmm.purge configs on your system --- "
+            echo " --- Doing nothing, since the state of the system is undefined to make any automated changes. --- "
+        else
+            echo " --- !!! WARNING !!! --- "
+            echo " --- Moving /etc/tmms.purge to /etc/tmms --- "
+            mv ${TMMS_CFG}.purge ${TMMS_CFG}
         fi
-        # Could be a problem, since a system might already have had .purge file...
-        # or maybe just paranoia.
-        mv ${TMMS_CFG}.purge ${TMMS_CFG}
     fi
 fi
