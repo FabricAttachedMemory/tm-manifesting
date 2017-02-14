@@ -55,20 +55,40 @@ if [ "$IsConfigure" == true ]; then
         fi
     else
         echo " --- !!! WARNING !!! --- "
-        #echo " --- tmms config backup found ${TMMS_CFG}.purge. Just FYI. Doing nothing... --- "
         echo " --- /etc/tmms config file exists. Moving it to /etc/tmms.purge --- "
-        echo " --- A new /etc/tmms will be generated. ---
-        mv /etc/tmms/ /etc/tmms.purge
+        echo " --- Package will try to generate a new /etc/tmms ... --- "
+        mv /etc/tmms /etc/tmms.purge
     fi
 
-    tm-manifest setup environment --packaging
-    tm-manifest setup networking
+    if [ ! -d /var/lib/tmms/ ]; then
+        echo " --- /var/lib/tmms/ directory is not found. ---- "
+        echo " --- running 'tm-manifest-setup environment' --- "
+        echo " --- NOTE: this will not install all dependence the packages! --- "
+        tm-manifest setup environment --packaging
+    fi
 
-    #[ -f /tmp/tm-manifest-server.restart ] && tm-manifest-server -D \
-    #                                       && rm /tmp/tm-manifest-server.restart
-    #[ -f /tmp/tm-manifest-server.restart-service ] && bin/systemctl tm-manifest-server \
-    #                                               && rm /tmp/tm-manifest-server.restart-service
-    bin/systemctl start tm-manifest-server
+    if [ -f /etc/tmconfig ]; then
+        echo " --- /etc/tmconfig file was found... --- "
+        echo " --- Running 'tm-manifest setup netwroking' --- "
+        tm-manifest setup networking
+    else
+        echo " --- !!! WARNING !!! --- "
+        echo " --- /etc/tmconfig was NOT found! --- "
+        echo " --- Create manually /etc/tmconfig and run (manually) 'tm-manifest setup networking' --- "
+        if [ -f /etc/tmms.purge ] && [ ! -f /etc/tmms ]; then
+            echo " --- /etc/tmms.purge was found, but no /etc/tmms ..."
+            echo " --- reversing back /etc/tmms.purge. --- "
+            mv /etc/tmms.purge /etc/tmms
+        fi
+    fi
+
+    if [ -f /etc/tmconfig ] && [ -f /var/lib/tmms/sys-images/golden/golden.arm.tar ]; then
+        echo " --- Trying to start 'tm-manifest-server' systemctl service.... --- "
+        bin/systemctl start tm-manifest-server
+    else
+        echo " --- !!! WARNING !!! --- "
+        echo " --- Cant start 'tm-manifest-server' systemctl service: manifesting environment is either missing /etc/tmconfig or golden image was not generated --- "
+    fi
 
 fi
 
