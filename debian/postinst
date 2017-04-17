@@ -64,13 +64,13 @@ if [ "$IsConfigure" == true ]; then
         echo " --- /var/lib/tmms/ directory is not found. ---- "
         echo " --- running 'tm-manifest-setup environment' --- "
         echo " --- NOTE: this will not install all dependence the packages! --- "
-        tm-manifest setup environment --packaging
+        tm-manifest setup environment --packaging || :
     fi
 
     if [ -f /etc/tmconfig ]; then
         echo " --- /etc/tmconfig file was found... --- "
         echo " --- Running 'tm-manifest setup netwroking' --- "
-        tm-manifest setup networking
+        tm-manifest setup networking || :
     else
         echo " --- !!! WARNING !!! --- "
         echo " --- /etc/tmconfig was NOT found! --- "
@@ -84,7 +84,7 @@ if [ "$IsConfigure" == true ]; then
 
     if [ -f /etc/tmconfig ] && [ -f /var/lib/tmms/sys-images/golden/golden.arm.tar ]; then
         echo " --- Trying to start 'tm-manifest-server' systemctl service.... --- "
-        bin/systemctl start tm-manifest-server
+        bin/systemctl start tm-manifest-server || :
     else
         echo " --- !!! WARNING !!! --- "
         echo " --- Cant start 'tm-manifest-server' systemctl service: manifesting environment is either missing /etc/tmconfig or golden image was not generated --- "
