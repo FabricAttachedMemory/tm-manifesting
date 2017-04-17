@@ -1,3 +1,12 @@
+tm-manifesting (2.4-1+l4tm5) catapult; urgency=low
+
+   * Overriding $? of posinst script from a non 0 value if it failes
+      configuring manifesting server. This is needed to allow installation
+      of the tasksel with the manifesting package. Otherwise - it will fail and
+      cry and complain.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 17 April 2016 15:04:07 -0600
+
 tm-manifesting (2.4-1+l4tm4) catapult; urgency=low
 
    * Fixing package fail to do clean install. Adding environment setup routine
