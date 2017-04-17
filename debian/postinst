@@ -64,6 +64,8 @@ if [ "$IsConfigure" == true ]; then
         echo " --- /var/lib/tmms/ directory is not found. ---- "
         echo " --- running 'tm-manifest-setup environment' --- "
         echo " --- NOTE: this will not install all dependence the packages! --- "
+        # use " || :" to prevent return status of tm-manifest setup set return
+        # status code ($?) of this bash script to non 0.
         tm-manifest setup environment --packaging || :
     fi
 
