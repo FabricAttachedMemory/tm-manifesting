@@ -255,7 +255,8 @@ class ManifestDestiny(object):
 
         molegal = legal.union(frozenset((    # Optional
             'comment', '_comment', 'l4tm_privkey', 'l4tm_pubkey',
-            'postinst', 'rclocal')))
+            'postinst', 'rclocal', 'kernel_append')))
+
         illegal = list(keys - molegal - frozenset((_UPFROM, )))
         assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
 

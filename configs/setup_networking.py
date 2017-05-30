@@ -52,7 +52,7 @@ _grub_cfg_template = '''
 # so "insmod videoinfo" just works.  Both TMAS and FAME have a countdown
 # multiplier of about ten, but since we're on real hardware now...
 # timeout doesn't seem to work here, see the menu template.
-# set timeout=10	
+# set timeout=10
 
 set gfxmode=auto
 set gfxmodepayload=text

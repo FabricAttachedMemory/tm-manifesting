@@ -27,7 +27,7 @@ from pdb import set_trace
 from tmms.utils.logging import tmmsLogger
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
 from tmms.utils.file_utils import write_to_file, workdir
-from tmms.utils.utils import find, piper, untar
+from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
 
 #==============================================================================
 
@@ -112,8 +112,9 @@ def cleanup_sources_list(args):
         content = [
             '# Created by TMMS for %s on %s' % (args.hostname, time.ctime()),
             '# a.k.a. %s' % args.node_coord,
-            'deb %s %s %s' % (
-                args.repo_mirror, args.repo_release, ' '.join(args.repo_areas))
+            'deb %s %s %s' % (args.repo_mirror,
+                                args.repo_release,
+                                ' '.join(args.repo_areas))
         ]
         write_to_file(sources_list, '\n'.join(content))
     except RuntimeError as err:
@@ -469,6 +470,8 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
         install.write('\n# Packages: %s\n' % packages)
         if packages is not None:
             for pkg in packages:
+                install.write(
+                    '\necho -e "\\n---------- Installing %s\\n"\n' % pkg)
                 cmd = 'apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
                 install.write(cmd)
                 # Things from the repo OUGHT to work.
@@ -479,6 +482,8 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
         install.write('\n# Tasks: %s\n' % args.tasks)
         if args.tasks is not None:
             for task in args.tasks.split(','):
+                install.write(
+                    '\necho -e "\\n---------- Executing task  %s\\n"\n' % task)
                 cmd = 'tasksel install %s\n' % task
                 install.write(cmd)
                 # Things from the repo OUGHT to work.
@@ -490,6 +495,8 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
         if downloads is not None:
             install.write('\n# Show me the Debians! (%d)\n' % len(downloads))
             for pkg in downloads:
+                install.write(
+                    '\necho -e "\\n---------- Download/install %s\\n"\n' % pkg)
                 deb = pkg.split('/')[-1]
                 install.write('# %s\n' % pkg)
                 pkgresp = HTTP_REQUESTS.get(pkg, verify=False)
@@ -520,10 +527,12 @@ fi
 
         if args.postinst is not None:
             install.write('\n# "postinst" scriptlet from manifest\n\n')
-            install.write(args.postinst)
+            install.write(args.postinst + '\n')
 
         # Release cache space (megabytes).  DON'T use autoclean, it increases
         # the used space (new indices?)
+        install.write('\necho systemctl status says...\n')
+        install.write('\nsystemctl status\n')
         install.write('\necho chroot installer complete at `date`\n')
         install.write('\nexec apt-get clean\n')     # Final exit value
 
@@ -566,7 +575,28 @@ fi
         raise RuntimeError(str(err))
     finally:
         umountret, _, _ = piper(umount)
+        kill_chroot_daemons(args.build_dir)
     return False
+
+
+def customize_grub(args):
+    """
+        COnfigure grub's config entry with a custom kernel command line (if
+    presented in the manifest).
+    """
+    kernel_cmd = args.manifest.thedict.get('kernel_append', None)
+    if (kernel_cmd is None):
+        kernel_cmd = 'rw earlycon=pl011,0x402020000 ignore_loglevel'
+    try:
+        from tmms.templates import networking
+    except ImportError as err:
+        raise RuntimeError('Failed to import grub template for networking configs!')
+    grub_menu = networking.grub_menu.render(hostname=args.hostname,
+                                images_dir='/images/' + args.hostname,
+                                append=kernel_cmd)
+    destination = args.tftp_dir + '/../../grub/menus/' + args.hostname + '.menu'
+    with open(destination, 'w') as file_obj:
+        file_obj.write(grub_menu)
 
 #==============================================================================
 
@@ -913,6 +943,9 @@ def execute(args):
         manifest_tftp_file = args.manifest.namespace.replace('/', '.')
         copy_target_into(args.manifest.fullpath,
                          args.tftp_dir + '/' + manifest_tftp_file)
+
+        update_status(args, 'Updating grub menu for the node.')
+        customize_grub(args)
 
         response['message'] = 'PXE files ready to boot'
         status = 'ready'

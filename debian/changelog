@@ -1,3 +1,52 @@
+tm-manifesting (2.4-1+l4tm5) catapult; urgency=low
+
+   * Overriding $? of posinst script from a non 0 value if it failes
+      configuring manifesting server. This is needed to allow installation
+      of the tasksel with the manifesting package. Otherwise - it will fail and
+      cry and complain.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 17 April 2016 15:04:07 -0600
+
+tm-manifesting (2.4-1+l4tm4) catapult; urgency=low
+
+   * Fixing package fail to do clean install. Adding environment setup routine
+      for the postinst script.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 9 February 2016 15:30:07 -0600
+
+
+tm-manifesting (2.4-1+l4tm3) catapult; urgency=low
+
+   * Packaging fix - systemctl, setup networking on update and other.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 January 2016 15:15:07 -0600
+
+
+tm-manifesting (2.4-1+l4tm2) catapult; urgency=low
+
+   * Packaging bug fix - couldnt properly remove the package.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 9 January 2016 11:01:07 -0600
+
+
+tm-manifesting (2.4-1+l4tm1) catapult; urgency=low
+
+   * Hotfix typo in grub menu template with double {
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 20 December 2016 17:05:07 -0600
+
+
+tm-manifesting (2.4-0+l4tm1) catapult; urgency=low
+
+   * Kill daemons that survive a chroot; update the default golden image
+   * Update the default golden image template
+   * Use new kill_chroot_daemons()
+   * Use eth4 as default PXE_INTERFACE
+   * And other minor fixes
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 19 December 2016 17:00:07 -0600
+
+
 tm-manifesting (2.3-0+l4tm1) catapult; urgency=low
 
    * Add sentinel /etc/default/bupxefix to scan node MPs for DHCP Client ID
