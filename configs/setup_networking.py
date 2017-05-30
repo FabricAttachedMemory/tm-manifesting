@@ -473,7 +473,7 @@ class TMgrub(object):
         return _grub_menu_template.format(
             hostname=hostname,
             images_dir=images_dir,
-            append='rw nosmp earlycon=pl011,0x402020000 ignore_loglevel'
+            append='rw earlycon=pl011,0x402020000 ignore_loglevel'
             )
             # append='rw console=ttyAMA0 acpi=force'    # FAME/TMAS
 
