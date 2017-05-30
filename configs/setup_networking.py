@@ -473,7 +473,7 @@ class TMgrub(object):
         return _grub_menu_template.format(
             hostname=hostname,
             images_dir=images_dir,
-            append='rw nosmp earlycon=pl011,0x402020000 ignore_loglevel'
+            append='rw earlycon=pl011,0x402020000 ignore_loglevel'
             )
             # append='rw console=ttyAMA0 acpi=force'    # FAME/TMAS
 
@@ -490,15 +490,16 @@ def main(args):
     """
         Configure TFTP environment.
     """
-    try:
-        manconfig = ManifestingConfiguration(args.config, autoratify=False)
-        missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
-        if missing:
-            raise RuntimeError('\n'.join(missing))
+    manconfig = ManifestingConfiguration(args.config, autoratify=False)
+    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
+    if missing:
+        raise RuntimeError('\n'.join(missing))
 
-        grubby = TMgrub(manconfig)
+    grubby = TMgrub(manconfig)
+
+    try:
         grubby.create_tftp_environment()
-    except Exception as err:
+    except OSError as err:
         raise RuntimeError('Failed to create tftp environment! [%s]' % err)
 
     print('Master GRUB configuration in', grubby.tftp_grub_cfg)
