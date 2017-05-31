@@ -1,3 +1,9 @@
+tm-manifesting (2.4-2+l4tm1) catapult; urgency=low
+
+   * Remove nosmp option from grub's kernel command line.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 31 May 2017 09:33:07 -0600
+
 tm-manifesting (2.4-1+l4tm5) catapult; urgency=low
 
    * Overriding $? of posinst script from a non 0 value if it failes
