@@ -111,8 +111,10 @@ class ManifestingConfiguration(object):
         self._settings['DNSMASQ_LOGFILE'] = '%s.log' % (
             self._settings['DNSMASQ_PREPATH'])
 
-        if self._settings['PXE_INTERFACE'].lower() == 'none':
-            self._settings['PXE_INTERFACE'] = None
+        # Convert all "None" strings to an actual None python type.
+        for key, val in self._settings.items():
+            if isinstance(val, str) and val.lower() == 'none':
+                self._settings[key] = None
 
         if autoratify:
             errors = self.ratify()

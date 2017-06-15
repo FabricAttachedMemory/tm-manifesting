@@ -1,0 +1,11 @@
+TMCONFIG='./tmconfig'
+HOST = '0.0.0.0'    # 0.0.0.0 means all interfaces in the system
+PORT = 31178        # listen on this port
+MANIFESTING_ROOT = '/tmp/tmms-test'
+TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
+L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm-pushed'
+L4TM_RELEASE = 'catapult'
+L4TM_AREAS = ('main', 'contrib', 'non-free' )
+PXE_INTERFACE = 'None'
+PXE_FIREWALL = 'DHCP'
+PXE_SUBNET = 'None'     # 'None' falls back to external DNS
