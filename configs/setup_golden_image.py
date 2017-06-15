@@ -5,6 +5,12 @@ modified for the needs of manifesting. Modified vmdebootstrap is in
 ./configs/ folder.  Note: "normal" vmdebootstrap must also be installed
 on the system to satisfy package dependencies.
 """
+__author__ = "Zakhar Volchak, Rocky Craig"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Zakhar Volchak, Rocky Craig"
+__email__ = "zach.bender@tutanota.com, rocky.craig@hpe.com"
+
+
 import argparse
 import errno
 import os

@@ -1,4 +1,6 @@
 #!/usr/bin/python3 -tt
+# DEPRECATED and\or NEVER USED
+
 import os
 import urllib
 import requests

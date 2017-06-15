@@ -12,21 +12,21 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 
-# DOCS
-# Implement The Machine Manifesting API per the software ERS.  Human-readable
-# web pages are also provided for the bulk of the official APIs.
+""" DOCS
+ Implement The Machine Manifesting API per the software ERS.  Human-readable
+ web pages are also provided for the bulk of the official APIs.
 
-# This is the Runner script that starts flask server using the blueprints/ for
-# handling routes. Though, before flask can be started, several "environment"
-# configuration taking place based of the ./tmms (or /etc/tmms) config file.
-# In particular, manifesting server must know Port, subnet, debian mirror and
-# other serveral other environment paramenters that are configured by "setup.py"
-# routine.
-
+ This is the Runner script that starts flask server using the blueprints/ for
+ handling routes. Though, before flask can be started, several "environment"
+ configuration taking place based of the ./tmms (or /etc/tmms) config file.
+ In particular, manifesting server must know Port, subnet, debian mirror and
+ other serveral other environment paramenters that are configured by "setup.py"
+ routine.
+"""
 __author__ = "Zakhar Volchak, Rocky Craig"
 __copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
 __maintainer__ = "Zakhar Volchak, Rocky Craig"
-__email__ = "zach.bender@tutanota.com"
+__email__ = "zach.bender@tutanota.com, rocky.craig@hpe.com"
 
 
 import argparse

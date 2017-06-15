@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# DEPRECATED and\or NEVER USED
 '''System images'''
 
 # This is NOT in the ERS but would be useful if we ever deliver multiple

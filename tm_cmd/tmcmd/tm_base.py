@@ -1,4 +1,14 @@
 #/usr/bin/python3
+"""
+ This is a Base class for the tmcmd scripts and should be used Only for inheritance.
+The main purpose of this class is to provide mechanism of handling HTTP requests,
+such as get, post, delete and etc.
+"""
+__author__ = "Zakhar Volchak, Rocky Craig"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Zakhar Volchak, Rocky Craig"
+__email__ = "zach.bender@tutanota.com, rocky.craig@hpe.com"
+
 
 import json
 import os

@@ -1,5 +1,14 @@
 #!/usr/bin/python3
-'''L4TM packages'''
+"""L4TM packages
+ This blueprint handles "packages" routines to allow users to list packages and
+its metadata based of the manifesting-server api Mirror value.
+"""
+__author__ = "Zakhar Volchak, Rocky Craig"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Zakhar Volchak, Rocky Craig"
+__email__ = "zach.bender@tutanota.com, rocky.craig@hpe.com"
+
+
 from collections import defaultdict
 import gzip
 import os

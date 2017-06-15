@@ -1,4 +1,14 @@
 #!/usr/bin/python3 -tt
+"""
+  This class inherits from tm_base.py class and is used to handle "manifest"
+related operations, such as list, create, download manifests and etc.
+"""
+__author__ = "Zakhar Volchak, Rocky Craig"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Zakhar Volchak, Rocky Craig"
+__email__ = "zach.bender@tutanota.com, rocky.craig@hpe.com"
+
+
 from pdb import set_trace
 import json
 import os

@@ -1,9 +1,15 @@
 #!/usr/bin/python3 -tt
+"""
+  This script can be called directly (for use after git clone) or indirectly
+ during dh_helper package builds.  Defer local imports until last moment
+ as there are order dependencies.  Grab all possible arguments for all
+ possible sub-scripts and do them (all).
+"""
+__author__ = "Zakhar Volchak, Rocky Craig"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Zakhar Volchak, Rocky Craig"
+__email__ = "zach.bender@tutanota.com, rocky.craig@hpe.com"
 
-# This script can be called directly (for use after git clone) or indirectly
-# during dh_helper package builds.  Defer local imports until last moment
-# as there are order dependencies.  Grab all possible arguments for all
-# possible sub-scripts and do them (all).
 
 import argparse
 import os
