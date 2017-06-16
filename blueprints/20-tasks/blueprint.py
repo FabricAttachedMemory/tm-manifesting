@@ -4,10 +4,10 @@
 tasks provided by the manifesting-server api. Quering individual task will list
 its metadata: name, list of packages, manifest and etc.
 """
-__author__ = "Zakhar Volchak, Rocky Craig"
+__author__ = "Rocky Craig, Zakhar Volchak"
 __copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
-__maintainer__ = "Zakhar Volchak, Rocky Craig"
-__email__ = "zakhar.volchak@hpe.com, rocky.craig@hpe.com"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 import os

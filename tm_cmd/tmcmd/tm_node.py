@@ -3,10 +3,10 @@
   This class inherits from tm_base.py class and is used to handle "node" related
 operations, such as list available nodes, bind\unbind and etc.
 """
-__author__ = "Zakhar Volchak, Rocky Craig"
+__author__ = "Rocky Craig, Zakhar Volchak"
 __copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
-__maintainer__ = "Zakhar Volchak, Rocky Craig"
-__email__ = "zakhar.volchak@hpe.com, rocky.craig@hpe.com"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 from pdb import set_trace
