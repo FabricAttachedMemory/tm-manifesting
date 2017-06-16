@@ -6,7 +6,7 @@ related to the configuration of the manifesting api.
 __author__ = "Zakhar Volchak, Rocky Craig"
 __copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
 __maintainer__ = "Zakhar Volchak, Rocky Craig"
-__email__ = "zach.bender@tutanota.com, rocky.craig@hpe.com"
+__email__ = "zakhar.volchak@hpe.com, rocky.craig@hpe.com"
 
 
 import os
