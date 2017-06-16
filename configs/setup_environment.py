@@ -1,4 +1,13 @@
 #!/usr/bin/python3 -tt
+"""
+  This script sets up the environment for the manifesting to be functional based
+of the tmms (/etc/tmms) values. It will also install several required packages.
+"""
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 import errno
 import json

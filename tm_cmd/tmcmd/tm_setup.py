@@ -1,4 +1,13 @@
 #!/usr/bin/python3 -tt
+"""
+  This class inherits from tm_base.py class and is used to handle "setup" routines
+related to the configuration of the manifesting api.
+"""
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 import os
 import shlex
@@ -32,6 +41,5 @@ class TmSetup(tm_base.TmCmd):
         assert os.path.isfile(setup), '"setup" directive only valid on ToRMS'
 
         # Just do an exec, but only from batteries included
-       
         cmdlist = shlex.split('%s %s' % (setup, ' '.join(arg_list)))
         raise SystemExit(subprocess.call(cmdlist))

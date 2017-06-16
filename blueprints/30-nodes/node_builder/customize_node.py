@@ -1,14 +1,17 @@
 #!/usr/bin/python3
 """
-- Copyright 2016 Hewlett Packard Enterprise Development Company LP
-
-    Script that performs a basic set of customizations of a golden image:
- - Move kernel from [filesystem_image]/boot/ (not needed for diskless boot)
- - Set correct symbolic link for /init file
- - Set /etc/hostname
- - Set /etc/hosts
- - and some other operations.
+  Script that performs a basic set of customizations of a golden image:
+- Move kernel from [filesystem_image]/boot/ (not needed for diskless boot)
+- Set correct symbolic link for /init file
+- Set /etc/hostname
+- Set /etc/hosts
+- and some other operations.
 """
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 import argparse
 import contextlib

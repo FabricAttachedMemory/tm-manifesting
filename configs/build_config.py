@@ -17,6 +17,11 @@
     automated fashion (example: setup script would use "manifest env" set to
     create all necessary directories used in it)
 """
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 from collections import namedtuple
 import inspect

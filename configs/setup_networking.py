@@ -15,6 +15,11 @@ grub.cfg evaluates the hostname of the running node to choose a menu file.
 That menu specifies the precise kernel file (vmlinuz) and customized FS image
 (.cpio file) for the node.
 """
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 import argparse
 import os

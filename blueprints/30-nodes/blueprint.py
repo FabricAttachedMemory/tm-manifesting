@@ -1,5 +1,14 @@
 #!/usr/bin/python3
-'''TM Nodes'''
+"""TM Nodes
+ This blueprint handles "nodes" related routines to allow users to list all available
+nodes in the manifesting-server network (defined by tmms config file), bind images
+to nodes or unbind them.
+"""
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 import errno
 import json

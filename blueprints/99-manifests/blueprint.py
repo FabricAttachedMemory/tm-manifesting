@@ -1,5 +1,15 @@
 #!/usr/bin/python3
-'''TM Manifests'''
+"""TM Manifests
+ This blueprint handles "manifest" related routines to allow users to upload
+manifests, delete, list and download. Uploaded manifest are validated to be a
+valid json string with required fields and will terminate if manifest is invalid.
+"""
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
+
 import json
 import os
 from glob import glob

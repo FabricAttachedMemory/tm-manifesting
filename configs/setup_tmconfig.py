@@ -6,6 +6,11 @@ depends on adherence to the host naming standard, DNS, and FAM and SoC power
 state (On :-) of all desired nodes.  Hints are given on stderr, the INI file
 comes to stdout.
 """
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 import requests as HTTP_REQUESTS
 import sys

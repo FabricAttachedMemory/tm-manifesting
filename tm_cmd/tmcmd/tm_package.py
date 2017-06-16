@@ -1,4 +1,15 @@
 #!/usr/bin/python3 -tt
+"""
+  This class inherits from tm_base.py class and is used to handle "packages"
+related operations, such as list and getting metadata of available packages based
+of the Mirror set in the tmms config.
+"""
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
+
 from pdb import set_trace
 from . import tm_base
 

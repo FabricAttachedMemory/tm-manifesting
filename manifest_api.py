@@ -1,7 +1,33 @@
 #!/usr/bin/python3 -tt
 
-# Implement The Machine Manifesting API per the software ERS.  Human-readable
-# web pages are also provided for the bulk of the official APIs.
+# Legal Note
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+
+""" DOCS
+ Implement The Machine Manifesting API per the software ERS.  Human-readable
+ web pages are also provided for the bulk of the official APIs.
+
+ This is the Runner script that starts flask server using the blueprints/ for
+ handling routes. Though, before flask can be started, several "environment"
+ configuration taking place based of the ./tmms (or /etc/tmms) config file.
+ In particular, manifesting server must know Port, subnet, debian mirror and
+ other serveral other environment paramenters that are configured by "setup.py"
+ routine.
+"""
+__author__ = "Rocky Craig, Zakhar Volchak"
+__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__maintainer__ = "Rocky Craig, Zakhar Volchak"
+__email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
+
 
 import argparse
 import glob
