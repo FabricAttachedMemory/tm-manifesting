@@ -131,6 +131,7 @@ def _filter(packages):    # Maybe it's time for a class
     return [ pkg for pkg in packages if (
         not pkg.startswith('http://') and
         not pkg.startswith('https://') and
+        not pkg.startswith('file:///') and	# yes three slashes
         pkg not in _data)]
 
 

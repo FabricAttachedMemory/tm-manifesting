@@ -404,6 +404,21 @@ def create_cpio(args):
 # apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
 
 
+_dpkgItemplate = '''
+dpkg -i {0}
+RET=$?
+if [ $RET -eq 0 ]; then
+    [ "False" = "{1}" ] && rm {0}   # "False" = "--debug flag"
+else
+    # Most likely: dependencies for {0}
+    echo "dpkg -i {0} had problems, return value = $RET" >&2
+    apt-get -f -y install
+    RET=$?
+    [ $RET -ne 0 ] && echo "Cleanup {0} problems, return value = $RET" >&2
+fi
+'''
+
+
 def install_packages(args):
     """
         Install list of packages into the filesystem image.
@@ -425,11 +440,13 @@ def install_packages(args):
         msg = 'Updating/upgrading packages from golden image'
     else:
         pkglist = args.packages.split(' ')
+        localdebs = [p for p in pkglist if p.startswith('file://') ]
         downloads = [p for p in pkglist if
             (p.startswith('http://') or p.startswith('https://'))]
-        packages = [p for p in pkglist if p not in downloads]
-        msg = 'Installing %d packages and %d URL downloads' % (
-            len(packages), len(downloads))
+        debs = localdebs + downloads
+        packages = [p for p in pkglist if p not in debs]
+        msg = 'Installing %d packages plus %d URL downloads and %d local debs' % (
+            len(packages), len(downloads), len(localdebs))
     update_status(args, msg)
 
     # Some packages need this (python-mon-agent)
@@ -501,7 +518,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                 install.write(
                     '\necho -e "\\n---------- Download/install %s\\n"\n' % pkg)
                 deb = pkg.split('/')[-1]
-                install.write('# %s\n' % pkg)
+                install.write('# %s\n' % deb)
                 pkgresp = HTTP_REQUESTS.get(pkg, verify=False)
                 if pkgresp.status_code != 200:
                     msg = 'Status %d: could not download "%s"' % (
@@ -509,23 +526,26 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     args.logger.error(msg)
                     install.write('# %s\n\n' % msg)
                     continue
+
                 with open(args.new_fs_dir + '/root/' + deb, 'wb') as debian:
                     debian.write(pkgresp.content)
 
                 # Log the failures but don't abort the image build.
-                dpkgIstr = '''
-dpkg -i {0}
-RET=$?
-if [ $RET -eq 0 ]; then
-    [ "False" = "{1}" ] && rm {0}   # "False" = "--debug flag"
-else
-    # Most likely: dependencies for {0}
-    echo "dpkg -i {0} had problems, return value = $RET" >&2
-    apt-get -f -y install
-    RET=$?
-    [ $RET -ne 0 ] && echo "Cleanup {0} problems, return value = $RET" >&2
-fi
-'''.format(deb, str(bool(args.debug)))
+                dpkgIstr = _dpkgItemplate.format(deb, str(bool(args.debug)))
+                install.write(dpkgIstr)
+
+        if debs is not None:
+            install.write('\n# Even MORE Debians! (%d)\n' % len(downloads))
+            targetdir = args.new_fs_dir + '/root'
+            for pkg in debs:
+                install.write(
+                    '\necho -e "\\n---------- Local copy of %s\\n"\n' % pkg)
+                install.write('# %s\n' % pkg)
+                src = pkg.split('file://')[-1]
+                deb = pkg.split('/')[-1]
+                install.write('# %s\n' % deb)
+                shutil.copy(src, targetdir)
+                dpkgIstr = _dpkgItemplate.format(deb, str(bool(args.debug)))
                 install.write(dpkgIstr)
 
         if args.postinst is not None:
