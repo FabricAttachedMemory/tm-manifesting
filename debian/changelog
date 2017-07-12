@@ -1,3 +1,10 @@
+tm-manifesting (2.4-3+l4tm1) catapult; urgency=low
+
+   * Smarter MP redfish scan for powered nodes; refactor names for clarity
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 12 July 2017 07:50:07 -0600
+
+
 tm-manifesting (2.4-2+l4tm1) catapult; urgency=low
 
    * Remove nosmp option from grub's kernel command line.
