@@ -71,7 +71,7 @@ def get(URL):
 ###########################################################################
 
 
-def makeURL(IPaddrstr, subURI=''):
+def redfishURI(IPaddrstr, subURI=''):
     '''From an IP address and optional suffix, create a Redfish query URL.'''
     tmp =  'http://%s:8081/redfish/v1/MgmtService' % IPaddrstr
     if subURI:
@@ -121,7 +121,7 @@ def getEnclosures(hdr):
     hdr.enclosures = []
     for enc in range(1, _MAX_ENCLOSURES + 1):
         trace('Probing for enclosure %d ' % enc, False)
-        alive = get(makeURL('10.254.%d.101' % enc))     # Just the first SMP
+        alive = get(redfishURI('10.254.%d.101' % enc))     # Just the first SMP
         trace('BINGO!' if alive else '')
         if alive:
             hdr.enclosures.append(enc)
@@ -130,7 +130,7 @@ def getEnclosures(hdr):
 
 
 def getNodeFAM(hdr):
-    '''Scan the known enclosures for nodes, then probe the MCs for FAM.'''
+    '''Scan the known enclosures for powered nodes, then probe MCs for FAM.'''
     hdr.node_count = 0
     hdr.enc2nodeFAM = {}
     for enc in hdr.enclosures:
@@ -138,15 +138,18 @@ def getNodeFAM(hdr):
         hdr.enc2nodeFAM[enc] = []
         for node in range(1, _MAX_NODES_PER_ENCLOSURE + 1):
             hostname = 'node%02d' % (((enc - 1) * 10) + node)
+            IPaddr = '10.254.%d.%d' % (enc, 200 + node)
             trace('Probing for enc %d node %2d (%s) ' % (enc, node, hostname),
                   False)
-            URL = makeURL('10.254.%d.%d' % (enc, 200 + node))
+            URL = redfishURI(IPaddr, subURI='/Fabric')
             alive = get(URL)
-            if alive:
+            if alive and alive['PowerState'] == 'On':
                 hdr.node_count += 1
                 nbooks = 0
                 for mc in range(1, 5):
-                    mcdata = get(URL + '/FAM/MediaControllers/%d' % mc)
+                    mcdata = get(
+                        redfishURI(
+                            IPaddr, subURI='/FAM/MediaControllers/%d' % mc))
                     if mcdata is None or mcdata['MemoryState'] != 'On':
                         hdr.needsReview = True
                         nbooks = 4  # Minimum legal size for an INI file
