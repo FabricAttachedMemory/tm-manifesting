@@ -241,14 +241,8 @@ class TMgrub(object):
         self.dnsmasq_dnslookupfile = self.dnsmasq_prepath + '.dnslookup'
         self.dnsmasq_defaultroute = '# dhcp-option=option:router,1.2.3.4'
         self.pxe_interface = manconfig['PXE_INTERFACE']
+        self.pxe_subnet = manconfig['PXE_SUBNET']
         self.tmdomain = manconfig['TMDOMAIN']
-
-        if 'PXE_SUBNET' not in manconfig:
-            self.pxe_subnet = None
-        else:
-            self.pxe_subnet = manconfig['PXE_SUBNET']
-            if self.pxe_subnet.lower() == 'none':
-                self.pxe_subnet = None
 
         # Relative to TFTP, these supply content to the files.
         self.tftp_root = manconfig['TFTP_ROOT']
