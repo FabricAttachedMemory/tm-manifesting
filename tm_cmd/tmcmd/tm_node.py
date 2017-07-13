@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -tt
 """
   This class inherits from tm_base.py class and is used to handle "node" related
-operations, such as list available nodes, bind\unbind and etc.
+operations, such as list available nodes, bind/unbind and etc.
 """
 __author__ = "Rocky Craig, Zakhar Volchak"
 __copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
