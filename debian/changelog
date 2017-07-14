@@ -1,3 +1,11 @@
+tm-manifesting (2.4-4+l4tm1) catapult; urgency=low
+
+   * Do not reprocess config variables for "None" value.
+   * Unicode slash bug fix
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Fri, 14 July 2017 07:57:07 -0600
+
+
 tm-manifesting (2.4-3+l4tm1) catapult; urgency=low
 
    * Smarter MP redfish scan for powered nodes; refactor names for clarity
