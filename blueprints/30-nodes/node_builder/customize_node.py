@@ -443,8 +443,8 @@ def install_packages(args):
         localdebs = [p for p in pkglist if p.startswith('file://') ]
         downloads = [p for p in pkglist if
             (p.startswith('http://') or p.startswith('https://'))]
-        debs = localdebs + downloads
-        packages = [p for p in pkglist if p not in debs]
+        _debs = localdebs + downloads
+        packages = [p for p in pkglist if p not in _debs]
         msg = 'Installing %d packages plus %d URL downloads and %d local debs' % (
             len(packages), len(downloads), len(localdebs))
     update_status(args, msg)
@@ -458,10 +458,11 @@ def install_packages(args):
     script_file = args.new_fs_dir + installsh
     log_file = args.new_fs_dir + installog
 
-    # In case the script never runs
+    # In case the script never gets built properly
     with open(log_file, 'w') as prelog:
         prelog.write(
-            'Syntax errors in %s kept it from ever running' % installsh)
+            'Logic errors in customization kept %s from being created' %
+        installsh)
 
     # Don't use "-e" (exit on error).  It always does "exit 1" which gets
     # treated as EPERM, masking the real error.  It's also inherited by
@@ -534,10 +535,10 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                 dpkgIstr = _dpkgItemplate.format(deb, str(bool(args.debug)))
                 install.write(dpkgIstr)
 
-        if debs is not None:
-            install.write('\n# Even MORE Debians! (%d)\n' % len(downloads))
+        if localdebs is not None:
+            install.write('\n# Even MORE Debians! (%d)\n' % len(localdebs))
             targetdir = args.new_fs_dir + '/root'
-            for pkg in debs:
+            for pkg in localdebs:
                 install.write(
                     '\necho -e "\\n---------- Local copy of %s\\n"\n' % pkg)
                 install.write('# %s\n' % pkg)
@@ -575,6 +576,11 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
         assert not ret, 'Cannot bind mount /dev/pts'
 
         umount = 'umount -fl %s %s' % (procmount, ptsmount)
+
+        # In case the script never gets to run.
+        with open(log_file, 'w') as prelog:
+            prelog.write(
+                'Syntax errors in %s kept it from ever running' % installsh)
 
         cmd = '/usr/sbin/chroot %s /bin/bash -c %s' % (
             args.new_fs_dir, installsh)
