@@ -1,3 +1,11 @@
+tm-manifesting (2.4-5+l4tm1) catapult; urgency=low
+
+   * Fixing packaging "configuration" routine to no to remove /etc/tmms
+   * Use correct variables for local packages; better error messages
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 24 July 2017 13:30:07 -0600
+
+
 tm-manifesting (2.4-4+l4tm1) catapult; urgency=low
 
    * Do not reprocess config variables for "None" value.
