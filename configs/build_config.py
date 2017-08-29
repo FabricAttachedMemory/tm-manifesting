@@ -51,6 +51,7 @@ class ManifestingConfiguration(object):
         'L4TM_MIRROR',
         'L4TM_RELEASE',
         'L4TM_AREAS',
+        'OTHER_MIRRORS',
         'PXE_INTERFACE',
         'PXE_FIREWALL'
     )

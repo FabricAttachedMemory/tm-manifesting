@@ -119,6 +119,10 @@ def cleanup_sources_list(args):
                                 args.repo_release,
                                 ' '.join(args.repo_areas))
         ]
+
+        if args.other_mirrors:
+            content.append('\n'.join(args.other_mirrors))
+
         write_to_file(sources_list, '\n'.join(content))
     except RuntimeError as err:
         raise RuntimeError('clean_sources_list() failed: %s' % str(err))

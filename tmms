@@ -36,6 +36,11 @@ L4TM_RELEASE = 'catapult'
 # you will be working with a partial package set.
 L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
 
+# Additional mirrors to use for the image building process, besides the L4TM_MIRROR.
+# It is a full string as it would appear in sources.list, e.g:
+# ['deb http://hlinux-deejay.us.rdlabs.hpecorp.net/ l4fame main contrib non-free']
+OTHER_MIRRORS = []
+
 # NIC connected to the node network on which DHCP and TFTP will be served
 # (usually something like ethX).  If the interface cannot be found (or is
 # 'None') PXE services will NOT be started.  The manifesting API will

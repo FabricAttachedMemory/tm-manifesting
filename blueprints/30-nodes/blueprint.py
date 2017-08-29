@@ -352,28 +352,29 @@ def build_node(manifest, node_coord):
     rclocal = manifest.thedict.get('rclocal', None)
 
     build_args = {
-        'hostname':     hostname,
-        'node_coord':   node_coord,
-        'DhcpClientId': DhcpClientId,
-        'node_id':      node_id,
-        'manifest':     manifest,
-        'tmconfig':     BP.config['TMCONFIG'],      # the file name
-        'repo_mirror':  BP.config['L4TM_MIRROR'],
-        'repo_release': BP.config['L4TM_RELEASE'],
-        'repo_areas':   BP.config['L4TM_AREAS'],
-        'packages':     packages,
-        'tasks':        tasks,
-        'l4tm_privkey': l4tm_privkey,
-        'l4tm_pubkey':  l4tm_pubkey,
-        'postinst':     postinst,
-        'rclocal':      rclocal,
-        'golden_tar':   golden_tar,
-        'build_dir':    build_dir,
-        'tftp_dir':     tftp_dir,
-        'status_file':  tftp_dir + '/status.json',
-        'verbose':      BP.VERBOSE,
-        'debug':        BP.DEBUG,
-        'logger':       BP.logger   # will get replaced in execute()
+        'hostname':      hostname,
+        'node_coord':    node_coord,
+        'DhcpClientId':  DhcpClientId,
+        'node_id':       node_id,
+        'manifest':      manifest,
+        'tmconfig':      BP.config['TMCONFIG'],      # the file name
+        'repo_mirror':   BP.config['L4TM_MIRROR'],
+        'repo_release':  BP.config['L4TM_RELEASE'],
+        'repo_areas':    BP.config['L4TM_AREAS'],
+        'other_mirrors': BP.config.get('OTHER_MIRRORS', None), #NEW (08-28-17)
+        'packages':      packages,
+        'tasks':         tasks,
+        'l4tm_privkey':  l4tm_privkey,
+        'l4tm_pubkey':   l4tm_pubkey,
+        'postinst':      postinst,
+        'rclocal':       rclocal,
+        'golden_tar':    golden_tar,
+        'build_dir':     build_dir,
+        'tftp_dir':      tftp_dir,
+        'status_file':   tftp_dir + '/status.json',
+        'verbose':       BP.VERBOSE,
+        'debug':         BP.DEBUG,
+        'logger':        BP.logger   # will get replaced in execute()
     }
     # Legacy technique called this as a subprocess.  Construct the command
     # for verbose output and manual invocation for development.
