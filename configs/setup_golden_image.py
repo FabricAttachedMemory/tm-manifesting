@@ -42,7 +42,7 @@ def main(args):
         if not vmdconfig.startswith('/'):
             vmdconfig = sampleVMDs + vmdconfig
     except IndexError:
-        vmdconfig = sampleVMDs + 'golden.arm.vmd'
+        vmdconfig = sampleVMDs + 'golden.arm.duo.vmd'
     assert os.path.isfile(vmdconfig), 'Cannot find ' + vmdconfig
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
@@ -55,10 +55,13 @@ def main(args):
 
     vmdlog = destdir + '/vmdebootstrap.log'
     vmdimage = destdir + '/golden.arm.img'
+    #--image=%s
+
     cmd = '''%s --no-default-configs
+             --grub
+             --use-uefi
              --config=%s
              --log=%s
-             --image=%s
              --tarball=%s
              --mirror=%s
              --distribution=%s
@@ -66,7 +69,7 @@ def main(args):
         vmdebootstrap,
         vmdconfig,
         vmdlog,
-        vmdimage,
+    #    vmdimage,
         destfile,
         manconfig['L4TM_MIRROR'],
         manconfig['L4TM_RELEASE'])
