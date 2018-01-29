@@ -28,16 +28,15 @@ dump-memory-profile = none
 memory-dump-interval = 300
 
 sparse = False
-size = 3072M
+size = 3G
 bootsize = 0
 boottype = ext2
+roottype = ext4
 #owner =
 
 # minbase only does "Required", keyrings are only "Important".
 # debian-archive-keyring is handled manually by debootstrap.
-package = apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,\
-        iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,net-tools,\
-        nfs-common,pciutils,psmisc,psutils,ssh,tcpdump,vim,acpid
+package = apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,libmagic1,locales,net-tools,nfs-common,pciutils,psmisc,psutils,ssh,tcpdump,vim,acpid,initramfs-tools
 #custom-package =
 
 # L4TM doesn't follow simple name generation, must do this manually (above)
@@ -45,6 +44,7 @@ no-kernel = True
 sudo = True
 
 enable-dhcp = True
+systemd-networkd = False
 root-password = iforgot
 
 #customize =
@@ -58,8 +58,9 @@ serial-console-command = /sbin/getty -L ttyAM0 115200 vt100
 # /etc/apt/sources.list.d/base.conf with the real info but it
 # may collide with or duplicate sources.list.  YMMV but elimination of
 # sources.list is probably a good idea.
-configure-apt = True
+configure-apt = False
 
 extlinux = False
 mbr = False
-grub = False
+grub = True
+use-uefi = True

@@ -58,8 +58,6 @@ def main(args):
     #--image=%s
 
     cmd = '''%s --no-default-configs
-             --grub
-             --use-uefi
              --config=%s
              --log=%s
              --tarball=%s
