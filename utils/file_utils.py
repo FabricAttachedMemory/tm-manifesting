@@ -130,7 +130,7 @@ def workdir(path):
         os.chdir(orig_dir)
 
 
-def write_to_file(target, content):
+def write_to_file(target, content, is_append=False):
     """
         Overwrite file in the targeted location with a new content.
 
@@ -139,9 +139,11 @@ def write_to_file(target, content):
     """
     try:
         _fs_sanity_check(target)
-        with open(target, 'w+') as file_obj:
-            file_content = '%s\n' % str(content)
-            file_obj.write(file_content)
+        file_content = ''
+        write_mode = 'a' if is_append else 'w+'
+        with open(target, write_mode) as file_obj:
+            content_to_write = '%s\n' % (content)
+            file_obj.write(content_to_write)
     except Exception as e:
         raise RuntimeError('Write "%s" failed: %s' % (target, str(e)))
 

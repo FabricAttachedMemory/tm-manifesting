@@ -122,7 +122,6 @@ def register_blueprints(mainapp):
     if not paths:
         raise SystemExit('Cannot find any blueprints')
     ngood = 0
-
     for p in paths:
         try:
             modspec = p.replace('/', '.') + '.blueprint'

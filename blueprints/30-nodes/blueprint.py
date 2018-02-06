@@ -27,7 +27,7 @@ from werkzeug.exceptions import BadRequest
 
 from tmms.utils.utils import piper
 from tmms.utils.logging import tmmsLogger
-from .node_builder import customize_node
+from tmms.utils import customize_node
 
 _ERS_element = 'node'
 

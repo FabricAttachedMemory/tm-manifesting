@@ -12,6 +12,7 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 import argparse
+from collections import namedtuple
 import errno
 import os
 import sys
@@ -24,6 +25,37 @@ from pdb import set_trace
 from configs.build_config import ManifestingConfiguration
 from utils.file_utils import remove_target
 from utils.utils import piper, create_loopback_files, kill_chroot_daemons
+from tmms.utils import customize_node
+
+
+def customize_golden(golden_tar, build_dir):
+    arg_values = {
+        'hostname' : 'golden',
+        'node_coord' : 'golden_l4mdc',
+        'node_id' : None,
+        'tftp_dir' : build_dir + '/golden_l4mdc.arm.tar',
+        'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net',
+        'repo_release' : 'jessie',
+        'repo_areas' : ('main', 'contrib', 'non-free'),
+        'other_mirrors' : 'deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fame/ catapult main contrib non-free',
+        'packages' : 'l4tm-archive-keyring, linux-image-arm64-l4tm',
+        'golden_tar' : golden_tar,
+        'build_dir' : build_dir,
+        'status_file' : build_dir + '/status.json',
+        'verbose' : True,
+        'debug' : True,
+        'logger' : None
+    }
+    set_trace()
+    #Convert dict to namedtuple to be passed to customize_node.execute
+    #args = namedtuple('args', arg_values.keys())(**arg_values)
+    try:
+        customize_node.execute(argparse.Namespace(**arg_values))
+    except Exception as err:
+        _, _, exc_tb = sys.exc_info()
+        raise RuntimeError('%s:%s\n %s\n' %\
+                            (os.path.basename(__file__), exc_tb.tb_lineno, err))
+
 
 
 def main(args):
@@ -32,6 +64,11 @@ def main(args):
         vmdebootstrap.  Return None or raise error.
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
+
+    customize_golden('/var/lib/tmms/sys-images/golden/golden.arm.tar',
+                    '/var/lib/tmms/sys-images/golden_l4mdc/')
+    return
+
     create_loopback_files()     # LXC containers don't have them on restart.
 
     whereami = os.path.dirname(os.path.realpath(__file__))
