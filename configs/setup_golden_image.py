@@ -33,7 +33,7 @@ def customize_golden(golden_tar, build_dir):
         'hostname' : 'golden',
         'node_coord' : 'golden_l4mdc',
         'node_id' : None,
-        'tftp_dir' : build_dir + '/golden_l4mdc.arm.tar',
+        'tftp_dir' : build_dir,
         'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net',
         'repo_release' : 'jessie',
         'repo_areas' : ('main', 'contrib', 'non-free'),
@@ -46,9 +46,6 @@ def customize_golden(golden_tar, build_dir):
         'debug' : True,
         'logger' : None
     }
-    set_trace()
-    #Convert dict to namedtuple to be passed to customize_node.execute
-    #args = namedtuple('args', arg_values.keys())(**arg_values)
     try:
         customize_node.execute(argparse.Namespace(**arg_values))
     except Exception as err:

@@ -20,6 +20,7 @@ import json
 import os
 import requests as HTTP_REQUESTS
 import shutil   # explicit namespace differentiates from our custom FS routines
+import magic  # to get file type and check if gzipped
 import sys
 import tarfile
 import time
@@ -880,7 +881,15 @@ def create_SNBU_image(args, vmlinuz, cpio):
             args.logger.warning('kpartx -d returned %d: %s' % (ret, stderr))
 
     if do_copy:
-        shutil.copy(ESP_img, args.tftp_dir)
+        try:
+            shutil.copy(ESP_img, args.tftp_dir)
+        except OSError:
+            return
+        except Exception as err:
+            msg = ' - ERROR - Unexpected error duing create_SNBU_image:'
+            msg += '\n -- last step duing shutil.copy: %s' % err;
+            update_status(args, msg)
+            return
 
 #=============================================================================
 # This is just as fast as gzip standalone program and gives better error
@@ -898,9 +907,15 @@ def create_SNBU_image(args, vmlinuz, cpio):
 
 
 def _is_gzipped(fname):
+    '''
+        Check "gzip" word in file's type string using python3-magic module.
+    Source: https://stackoverflow.com/questions/25286176/how-to-use-python-magic-5-19-1
+    '''
     try:
-        with gzip.open(fname, mode='rb') as test:
-            return test._read_gzip_header()
+        magic_obj = magic.open(magic.MAGIC_NONE)
+        magic_obj.load()
+        file_type_str = magic_obj.file(fname).lower()
+        return 'gzip' in file_type_str
     except OSError:
         return False
     except Exception as err:
@@ -909,7 +924,7 @@ def _is_gzipped(fname):
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
     update_status(args, 'Compressing kernel and file system')
-
+    set_trace()
     vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
     if _is_gzipped(vmlinuz_file):
         shutil.copy(vmlinuz_file, vmlinuz_gzip)
@@ -1011,8 +1026,8 @@ def execute(args):
         install_packages(thing)
 
         tmp = extract_bootfiles(args)
-        assert tmp, 'Golden image %s had no kernel' % args.golden_tar
-        assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
+        #assert tmp, 'Golden image %s had no kernel' % args.golden_tar
+        #assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
         vmlinuz_golden = tmp[0]
         update_status(args, 'Found golden kernel %s' %
                       os.path.basename(vmlinuz_golden))
@@ -1061,6 +1076,7 @@ def execute(args):
 
         vmlinuz_gzip, cpio_gzip = compress_bootfiles(
             args, vmlinuz_golden, cpio_file)
+        set_trace()
         create_SNBU_image(args, vmlinuz_gzip, cpio_gzip)
 
         # Free up space someday, but not during active development
