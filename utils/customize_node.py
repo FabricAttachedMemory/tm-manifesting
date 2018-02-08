@@ -22,7 +22,6 @@ import requests as HTTP_REQUESTS
 import shutil   # explicit namespace differentiates from our custom FS routines
 import magic  # to get file type and check if gzipped
 import sys
-import tarfile
 import time
 
 from glob import glob
@@ -30,7 +29,7 @@ from pdb import set_trace
 
 from tmms.utils.logging import tmmsLogger
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
-from tmms.utils.file_utils import write_to_file, workdir
+from tmms.utils.file_utils import write_to_file, workdir, make_dir
 from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
 
 #==============================================================================
@@ -924,7 +923,6 @@ def _is_gzipped(fname):
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
     update_status(args, 'Compressing kernel and file system')
-    set_trace()
     vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
     if _is_gzipped(vmlinuz_file):
         shutil.copy(vmlinuz_file, vmlinuz_gzip)
@@ -962,6 +960,8 @@ def execute(args):
     # logging.basicConfig(filename=args.build_dir + '/build.log',
     #   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     #   level=logging.INFO)
+    if not os.path.exists(args.build_dir):
+        make_dir(args.build_dir)
 
     #set defaults
     if getattr(args, 'debug', None) is None:
@@ -1076,7 +1076,6 @@ def execute(args):
 
         vmlinuz_gzip, cpio_gzip = compress_bootfiles(
             args, vmlinuz_golden, cpio_file)
-        set_trace()
         create_SNBU_image(args, vmlinuz_gzip, cpio_gzip)
 
         # Free up space someday, but not during active development

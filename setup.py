@@ -109,6 +109,13 @@ def parse_cmdline_args(extra_args_msg):
         help='Only (re)start dnsmasq and exit',
         action='store_true')
 
+    # ---- Golden Image ---
+    parser.add_argument('--skip-bootstrap', action='store_true',
+                        help='Skip bootstrap image build stage of golden image setup')
+    parser.add_argument('--golden', nargs=1, default=False,
+                        help='Path to golden image to be coppied from either '\
+                            ' local path or url.')
+
     parser.add_argument(
         '--debug',
         help='Turn on flask debugging.',
@@ -127,6 +134,7 @@ def parse_cmdline_args(extra_args_msg):
         '-v', '--verbose',
         help='Make me talk more.',
         action='store_true')
+
     parser.add_argument(
         'extra', nargs='*',
         help=extra_args_msg,

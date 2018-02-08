@@ -11,11 +11,11 @@
 #log =
 #image =
 #tarball =
-#mirror =
+mirror = "http://seedy.us.rdlabs.hpecorp.net"
+distribution = jessie
 
 arch = arm64
-#distribution =
-debootstrapopts="variant=buildd"
+debootstrapopts = "variant=buildd"
 foreign = /usr/bin/qemu-aarch64-static
 
 verbose = True
