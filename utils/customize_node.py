@@ -61,9 +61,19 @@ def extract_bootfiles(args):
             if '/vmlinuz' in copy_into:
                 vmlinuzes.append(copy_into)
             remove_target(source)
-        return vmlinuzes
+
+        # Vmlinuz files where found and moved. Good to return.
+        if vmlinuzes:
+            return vmlinuzes
     except Exception as err:
         raise RuntimeError('extract_bootfiles() failed: %s' % str(err))
+
+    update_status(args, ' - No vmlinuz and initrd in unter/boot/')
+    update_status(args, '   - Checking build_dir for those files...')
+    # No vmlinuz found in untar/boot/. Check if they are already in the build_dir
+    vmlinuz = glob('%s/vmlinuz*' % (args.build_dir))      # one list
+    return vmlinuz
+
 
 #=============================================================================
 # MAGIC: turn a transient initrd into a persistent rootfs with two corrective

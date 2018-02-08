@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import errno
 import logging
 import os
+import glob
 import psutil
 import requests as HTTP_REQUESTS
 import shlex
@@ -128,7 +129,12 @@ def compress(source, destination):
         Compress folder into destination using tarfile library.
     """
     with tarfile.open(destination, 'w') as tar:
-        tar.add(source, arcname=os.path.basename(source))
+        if os.path.isfile(source):
+            tar.add(source, arcname=os.path.basename(source))
+        else:
+            # to avoid creating a folder of itself inside of the compressed file.
+            for to_compress in glob.glob(source + '/*'):
+                tar.add(to_compress, arcname=os.path.basename(to_compress))
 
 
 def create_loopback_files():
