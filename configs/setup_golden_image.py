@@ -185,7 +185,6 @@ def main(args):
 
     # -- Build 'raw' golden image using vmdebootstrap --
     if not getattr(args, 'skip_bootstrap', False):
-        return
         vmd_path = args.extra[1] if len(args.extra) >= 2 else None
         debootstrap_image(args.config, vmd_path=vmd_path)
     else:
