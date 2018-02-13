@@ -111,8 +111,8 @@ def _load_data():
     _data = {}
     for area in BP.config['L4TM_AREAS']:
         for arch in ('binary-all', 'binary-arm64'):
-            BP.logger.info('Loading/processing %s/%s/Packages.gz...' % (
-                area, arch))
+            BP.logger.info('Loading/processing %s/%s/Packages.gz...' %\
+                            (area, arch))
             pkgarea = repo % (area, arch)
             pkgresp = HTTP_REQUESTS.get(pkgarea)
             if pkgresp.status_code != 200:

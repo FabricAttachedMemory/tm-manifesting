@@ -518,8 +518,12 @@ def install_packages(args):
             (p.startswith('http://') or p.startswith('https://'))]
         _debs = localdebs + downloads
         packages = [p for p in pkglist if p not in _debs]
+
         msg = 'Installing %d packages plus %d URL downloads and %d local debs' % (
             len(packages), len(downloads), len(localdebs))
+        msg += '\n - pkgs: %s\n - downloads: %s\n - localdebs: %s' %\
+                (packages, downloads, localdebs)
+
     update_status(args, msg)
 
     # Some packages need this (python-mon-agent)
@@ -549,7 +553,7 @@ cd /root
 exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get upgrade -q --assume-yes
+apt-get upgrade -q --assume-yes -y --force-yes
 # apt-get dist-upgrade -q --assume-yes
 
 echo "en_US UTF-8" > /etc/locale.gen
@@ -1036,9 +1040,7 @@ def execute(args):
         cleanup_sources_list(args)
         add_mirror(args)
 
-        thing = args
-        thing.packages = 'linux-image-arm64-l4tm'
-        install_packages(thing)
+        install_packages(args)
 
         tmp = extract_bootfiles(args)
         #assert tmp, 'Golden image %s had no kernel' % args.golden_tar

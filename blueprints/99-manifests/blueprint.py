@@ -276,7 +276,8 @@ class ManifestDestiny(object):
         '''Defer until binding time'''
         man = self.thedict
         nosuch = BP.mainapp.blueprints['package'].filter(man['packages'])
-        assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
+        #FIXME: Validate PACKAGE exist in mirror!
+        #assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
 
         nosuch = BP.mainapp.blueprints['task'].filter(man['tasks'])
         assert not nosuch, 'no such task(s): ' + ', '.join(nosuch)
