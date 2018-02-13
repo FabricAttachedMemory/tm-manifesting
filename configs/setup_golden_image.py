@@ -45,6 +45,7 @@ def customize_golden(golden_tar, build_dir):
         'status_file' : build_dir + '/status.json',
         'verbose' : True,
         'debug' : True,
+        'keep_kernel' : True,
         'logger' : None
     }
 

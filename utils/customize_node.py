@@ -60,7 +60,11 @@ def extract_bootfiles(args):
             copy_target_into(source, copy_into)
             if '/vmlinuz' in copy_into:
                 vmlinuzes.append(copy_into)
-            remove_target(source)
+
+            if getattr(args, 'keep_kernel', True):
+                remove_target(source)
+            else:
+                update_status(args, ' - Kernel files not removed from boot. (param: --keep-kernel)')
 
         # Vmlinuz files where found and moved. Good to return.
         if vmlinuzes:
@@ -68,10 +72,11 @@ def extract_bootfiles(args):
     except Exception as err:
         raise RuntimeError('extract_bootfiles() failed: %s' % str(err))
 
+    golden_dir = os.path.dirname(args.golden_tar)
     update_status(args, ' - No vmlinuz and initrd in unter/boot/')
-    update_status(args, '   - Checking build_dir for those files...')
+    update_status(args, '   - Checking golden dir for those files at %s...' % golden_dir)
     # No vmlinuz found in untar/boot/. Check if they are already in the build_dir
-    vmlinuz = glob('%s/vmlinuz*' % (args.build_dir))      # one list
+    vmlinuz = glob('%s/vmlinuz*' % (golden_dir))      # one list
     return vmlinuz
 
 
@@ -1063,7 +1068,7 @@ def execute(args):
         # I suspect /etc/kernel scripts from the original golden kernel but
         # haven't actually tracked it down.  Work around it, especially with
         # this clever little context manager.
-        tmp = extract_bootfiles(args)
+        #tmp = extract_bootfiles(args)
         with contextlib.suppress(ValueError):
             tmp.remove(vmlinuz_golden)
         if tmp:

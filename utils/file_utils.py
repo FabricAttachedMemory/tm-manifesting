@@ -67,7 +67,7 @@ def move_target(target, into, verbose=False):
         Move target folder into new folder. NOTE: target will be removed!
     """
     if verbose:
-        print(' -- Preparing to moving %s into %s' % (target, into))
+        print(' -- Moving %s into %s' % (target, into))
     if target == into:
         return False
     copy_target_into(target, into, verbose=verbose)
