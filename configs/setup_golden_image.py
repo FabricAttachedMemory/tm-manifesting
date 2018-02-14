@@ -113,19 +113,21 @@ def debootstrap_image(tmms_cfg_path, vmd_path=None):
     vmdlog = destdir + '/vmdebootstrap.log'
     vmdimage = destdir + '/golden.arm.img'
 
-    cmd = '''%s --no-default-configs
-             --config=%s
-             --log=%s
-             --tarball=%s
-             --mirror=%s
-             --distribution=%s
-          ''' % (
-        vmdebootstrap,
-        vmdconfig,
-        vmdlog,
-        destfile,
-        manconfig['L4TM_MIRROR'],
-        manconfig['L4TM_RELEASE'])
+    cmd = '''{vmdebootstrap} --no-default-configs
+             --config={vmd_cfg}
+             --log={vmd_log}
+             --image={image}
+             --tarball={tarball}
+             --mirror={mirror}
+             --distribution={distro}
+          '''
+    cmd = cmd.format(vmdebootstrap=vmdebootstrap,
+                vmd_cfg=vmdconfig,
+                vmd_log=vmdlog,
+                image=vmdimage,
+                tarball=destfile,
+                mirror=manconfig['L4TM_MIRROR'],
+                distro=manconfig['L4TM_RELEASE'])
 
     os.chdir(destdir)           # location of embedded debootstrap log file
     os.unsetenv('LS_COLORS')    # this value is big, pointless and distracting
@@ -186,7 +188,8 @@ def main(args):
 
     # -- Build 'raw' golden image using vmdebootstrap --
     if not getattr(args, 'skip_bootstrap', False):
-        vmd_path = args.extra[1] if len(args.extra) >= 2 else None
+        #vmd_path = args.extra[1] if len(args.extra) >= 2 else None
+        vmd_path = getattr(args, 'vmd_cfg', None)
         debootstrap_image(args.config, vmd_path=vmd_path)
     else:
         print (' -- Skipping bootstrap stage, since --skip-bootstrap param used.')

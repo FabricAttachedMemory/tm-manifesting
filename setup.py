@@ -115,6 +115,8 @@ def parse_cmdline_args(extra_args_msg):
     parser.add_argument('--golden', nargs=1, default=False,
                         help='Path to golden image to be coppied from either '\
                             ' local path or url.')
+    parser.add_argument('--vmd-cfg', default=None,
+                        help='VMD Config to be used by golden image. (optional)')
 
     parser.add_argument(
         '--debug',
