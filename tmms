@@ -49,7 +49,7 @@ OTHER_MIRRORS = ['deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fame/ catapul
 # still work, you just can't boot any images.  After changing this value
 # you need to (re)-run "tm-manifest setup networking".  eth4 is the 
 # default for a standard real ToRMS in a TM complex.
-PXE_INTERFACE = 'eth4'
+PXE_INTERFACE = 'node_emul'
 
 # Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
 # in their place.  Values are "None" (user has powerful iptables fu),
@@ -69,4 +69,4 @@ PXE_FIREWALL = 'DHCP'
 # x.y.z.1, etc.   A FAME network created via libvirt will # probably be a
 # /24 network like 10.11.12.0/24
 
-PXE_SUBNET = 'None'     # 'None' falls back to external DNS
+PXE_SUBNET = '192.168.42.0/8'     # 'None' falls back to external DNS

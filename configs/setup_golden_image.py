@@ -101,9 +101,6 @@ def debootstrap_image(tmms_cfg_path, vmd_path=None):
     missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
 
     destfile = manconfig['GOLDEN_IMAGE']    # now I can have a KeyError
-    if not os.path.exists(destfile):
-        print(' - Destination does not exist. Creating %s' % destfile)
-        file_utils.make_dir(destfile)
 
     destdir = os.path.realpath(os.path.dirname(destfile))
     statvfs = os.statvfs(destdir)

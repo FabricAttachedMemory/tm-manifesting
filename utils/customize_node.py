@@ -509,7 +509,7 @@ def install_packages(args):
         msg = 'Updating/upgrading packages from golden image'
     else:
         if ',' in args.packages:
-            pkglist = args.replace(' ', '').packages.split(',')
+            pkglist = args.packages.replace(' ', '').packages.split(',')
         else:
             pkglist = args.packages.split(' ')
 
