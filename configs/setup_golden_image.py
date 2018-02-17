@@ -123,8 +123,8 @@ def debootstrap_image(tmms_cfg_path, vmd_path=None):
                 vmd_log=vmdlog,
                 image=vmdimage,
                 tarball=destfile,
-                mirror=manconfig['L4TM_MIRROR'],
-                distro=manconfig['L4TM_RELEASE'])
+                mirror=manconfig['DEBIAN_MIRROR'],
+                distro=manconfig['DEBIAN_RELEASE'])
 
     os.chdir(destdir)           # location of embedded debootstrap log file
     os.unsetenv('LS_COLORS')    # this value is big, pointless and distracting
@@ -134,7 +134,7 @@ def debootstrap_image(tmms_cfg_path, vmd_path=None):
 
     # Get the directory which was the chroot populating the loopback mount.
     # Match a stanza in the deboostrap command line.
-    pat = '%s /tmp/' % manconfig['L4TM_RELEASE']
+    pat = '%s /tmp/' % manconfig['DEBIAN_RELEASE']
     contents = open(vmdlog).readlines()
     tmp = [ t for t in contents if pat in t ]
     if len(tmp):

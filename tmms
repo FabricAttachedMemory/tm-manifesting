@@ -26,30 +26,27 @@ MANIFESTING_ROOT = '/var/lib/tmms'
 # served by a dnsmasq instance configured by TMMS.
 TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
 
-# L4TM repo information needed to build file system images for nodes.
-# If you run your own local mirror, use that.  This address SHOULD be
-# valid throughout the rest of 2016; if in doubt, contact the repo team.
-#L4TM_MIRROR = 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm-pushed'
-#L4TM_RELEASE = 'catapult'
-L4TM_MIRROR = 'http://seedy.us.rdlabs.hpecorp.net/Debian'
-L4TM_RELEASE = 'jessie'
+# Primary repo information needed to build file system images for nodes.
+# If you run your own local mirror, use that.
+DEBIAN_MIRROR = 'http://seedy.us.rdlabs.hpecorp.net/Debian'
+DEBIAN_RELEASE = 'jessie'
 
 # Remove 'main' for a much faster start (seconds vs tens of seconds), however
 # you will be working with a partial package set.
-L4TM_AREAS = ( 'main', 'contrib', 'non-free' )
+DEBIAN_AREAS = ( 'main', 'contrib', 'non-free' )
 
-# Additional mirrors to use for the image building process, besides the L4TM_MIRROR.
+# Additional mirrors to use for the golden image besides DEBIAN_MIRROR.
 # It is a full string as it would appear in sources.list, e.g:
-# ['deb http://hlinux-deejay.us.rdlabs.hpecorp.net/ l4fame main contrib non-free']
-OTHER_MIRRORS = ['deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fame/ catapult main contrib non-free']
+# ['deb http://server.some.where/debian/ stable main contrib non-free']
+OTHER_MIRRORS = ['deb [trusted=yes] https://downloads.linux.hpe.com/repo/l4fame/Debian/ testing main']
 
 # NIC connected to the node network on which DHCP and TFTP will be served
 # (usually something like ethX).  If the interface cannot be found (or is
 # 'None') PXE services will NOT be started.  The manifesting API will
 # still work, you just can't boot any images.  After changing this value
-# you need to (re)-run "tm-manifest setup networking".  eth4 is the 
+# you need to (re)-run "tm-manifest setup networking".  eth4 is the
 # default for a standard real ToRMS in a TM complex.
-PXE_INTERFACE = 'node_emul'
+PXE_INTERFACE = 'eth4'
 
 # Firewall rules must be set up against PXE_INTERFACE to keep DHCP packets
 # in their place.  Values are "None" (user has powerful iptables fu),
@@ -57,11 +54,10 @@ PXE_INTERFACE = 'node_emul'
 # DHCP is your best choice.
 PXE_FIREWALL = 'DHCP'
 
-# TMDOMAIN is deprecated; use TMCF "domains{publicData}" per the software ERS.
-# In the corporate bringup environments, site IT has created one subdomain
+# In the HPE MFT bringup environments, site IT has created one subdomain
 # per instance.   Each subdomain also has hostnames "torms" and "nodeXX".
 # Thus the IP addresses for local DHCP are available.  This is not true for
-# FAME, hence FAME_SUBNET = <CIDR>. Example:
+# FAME, hence PXE_SUBNET = <CIDR>. Example:
 # PXE_SUBNET = '10.11.12.64/26'
 # Assign sequential addresses starting at the indicated IP base address.
 # Honor the subnet mask (in this case, 26 bits).  If the base address matches
@@ -69,4 +65,8 @@ PXE_FIREWALL = 'DHCP'
 # x.y.z.1, etc.   A FAME network created via libvirt will # probably be a
 # /24 network like 10.11.12.0/24
 
-PXE_SUBNET = '192.168.42.0/8'     # 'None' falls back to external DNS
+PXE_SUBNET = 'None'     # 'None' falls back to external DNS
+
+# Two EFI files live here
+
+GRUB_EFI_BASE_URI = 'http://rocky42.americas.hpqcorp.net/MFT/grub/'

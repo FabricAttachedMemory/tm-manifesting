@@ -358,9 +358,9 @@ def build_node(manifest, node_coord):
         'node_id':       node_id,
         'manifest':      manifest,
         'tmconfig':      BP.config['TMCONFIG'],      # the file name
-        'repo_mirror':   BP.config['L4TM_MIRROR'],
-        'repo_release':  BP.config['L4TM_RELEASE'],
-        'repo_areas':    BP.config['L4TM_AREAS'],
+        'repo_mirror':   BP.config['DEBIAN_MIRROR'],
+        'repo_release':  BP.config['DEBIAN_RELEASE'],
+        'repo_areas':    BP.config['DEBIAN_AREAS'],
         'other_mirrors': BP.config.get('OTHER_MIRRORS', None), #NEW (08-28-17)
         'packages':      packages,
         'tasks':         tasks,

@@ -46,7 +46,7 @@ the variables and their values.  By default, all the commands (setup.py
 and manifest_api.py) will look for /etc/tmms for their configuration.
 
 You will almost certainly need to change the PXE_INTERFACE option.  You
-should also add 'main' to the L4TM_AREAS tuple.
+should also add 'main' to the DEBIAN_AREAS tuple.
 
 You may also keep a custom file in a custom place, like $HOME/mytmms.
 To use it, invoke all commands with --config.  You have to do it

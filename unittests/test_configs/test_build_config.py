@@ -19,9 +19,9 @@ class PackageTest(unittest.TestCase):
         'PORT' : 31178,
         'MANIFESTING_ROOT' : '/tmp/tmms-test',
         'TFTP_ROOT' : '/tmp/tmms-test/tftp',
-        'L4TM_MIRROR' : 'http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm-pushed',
-        'L4TM_RELEASE' : 'catapult',
-        'L4TM_AREAS' : ('main', 'contrib', 'non-free' ),
+        'DEBIAN_MIRROR' : 'http://seedy.us.rdlabs.hpecorp.net/Debian',
+        'DEBIAN_RELEASE' : 'jessie',
+        'DEBIAN_AREAS' : ('main', 'contrib', 'non-free' ),
         'PXE_INTERFACE' : None,
         'PXE_FIREWALL' : 'DHCP',
         'PXE_SUBNET' : None

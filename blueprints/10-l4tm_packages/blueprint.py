@@ -104,12 +104,12 @@ def _load_data():
     # https://github.com/raumkraut/python-debian/blob/master/README.deb822
 
     global _data
-    mirror = BP.config['L4TM_MIRROR']
-    release = BP.config['L4TM_RELEASE']
+    mirror = BP.config['DEBIAN_MIRROR']
+    release = BP.config['DEBIAN_RELEASE']
     repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (mirror, release)
 
     _data = {}
-    for area in BP.config['L4TM_AREAS']:
+    for area in BP.config['DEBIAN_AREAS']:
         for arch in ('binary-all', 'binary-arm64'):
             BP.logger.info('Loading/processing %s/%s/Packages.gz...' %\
                             (area, arch))

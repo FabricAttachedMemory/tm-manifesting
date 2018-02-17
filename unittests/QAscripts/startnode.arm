@@ -4,48 +4,59 @@
 # Reduced from manifesting/PoC/diskless.sh
 
 ###########################################################################
-# Command line processing
 
-[ $# -ne 1 -o "$1" = "-h" -o "$1" = "-?" ] && \
-	echo "usage: $0 nodenum" >&2 && exit 1
+function die() {
+        echo -e "\n$*\n" >&2
+	exit 1
+}
+
+###########################################################################
+# Command line and environment processing
+
+[ $# -ne 1 -o "$1" = "-h" -o "$1" = "-?" ] && die "usage: $0 nodenum"
 NODE=$1
-
-[ -z "$NETNAME" ] && echo "export NETNAME=something" >&1 && exit 1
-[ -z "$FAM" ] && echo "export FAM=/some/where or NONE" >&1 && exit 1
-
 set -u
+
+[ -z "$NETNAME" ] && die "export NETNAME=something"
+[ -z "$FAM" ] && die "export FAM=/some/where or NONE"
 
 [ `whoami` != root ] && SUDO=sudo || SUDO=
 $SUDO echo	# establish hysteresis
 
-# Idiot checks
+# Idiot checks.  The qemu maintainers dropped a space in the version string.
 
 QEMU=qemu-system-aarch64
-set -- `$QEMU --version`
-[ "$4" != '2.6.0' ] && echo "$4 is wrong version of QEMU" >&2 && exit 1
+set -- `$QEMU --version | tr '(' ' '`
+THISVER=${4:0:5}	# Three significant digits
+echo "QEMU version '$THISVER' available"
+VERIFIED_QEMU_VERSIONS="2.6.0 2.8.0 2.8.1"                              
+# Use regex to check the current version against VERIFIED_QEMU_VERSIONS.
+# See man page for bash, 3.2.4.2 Conditional Constructs.  No quotes.    
+[[ $VERIFIED_QEMU_VERSIONS =~ $THISVER ]] || \
+    die "qemu is not version" ${VERIFIED_QEMU_VERSIONS[*]}
 
-[ $NODE -lt 1 -o $NODE -gt 40 ] && echo "nodenum must be 1-40" >&2 && exit 1
+[ $NODE -lt 1 -o $NODE -gt 40 ] && die "nodenum must be 1-40"
 
 ip link show $NETNAME >/dev/null 2>&1
-[ $? -ne 0 ] && echo "$NETNAME does not exist" >&2 && exit 1
+[ $? -ne 0 ] && die "$NETNAME does not exist" >&2
 
 if [ "$FAM" = NONE ]; then
     FAM=
     FAMSIZE=
 else
-    [ ! -f "$FAM" ] && echo "$FAM not found" >&2 && exit 1
+    [ ! -f "$FAM" ] && die "$FAM not found"
     T=`stat -c %s "$FAM"`
     let TMP=$T/1024/1024/1024
     FAMSIZE=${TMP}G
     echo "$FAM = $FAMSIZE"
-    [ $TMP -lt 1 ] && echo "$FAM is less than 1G" >&2 && exit 1
-    [ $TMP -gt 256 ] && echo "$FAM is greater than 256G" >&2 && exit 1
+    [ $TMP -lt 1 ] && die "$FAM is less than 1G"
+    [ $TMP -gt 256 ] && die "$FAM is greater than 256G"
 fi
 
 ###########################################################################
 # Network prep
 
-ip link show $NETNAME >/dev/null || exit 1	# No such interface on stderr
+ip link show $NETNAME >/dev/null || die "No such interface $NETNAME"
 DECIMAL=`printf "%02d" $NODE`
 
 # netdev helper defaults to /usr/lib/qemu/qemu-bridge-helper.                   
@@ -53,12 +64,12 @@ DECIMAL=`printf "%02d" $NODE`
 # allow <NETNAME>                                                               
 NETACCESS=/etc/qemu/bridge.conf                                                 
 grep -Eq "^allow\s+$NETNAME" $NETACCESS                                         
-[ $? -ne 0 ] && echo "Missing 'allow' in $NETACCESS" >&2 && exit 1
+[ $? -ne 0 ] && die "Missing 'allow' in $NETACCESS"
 
 # This pattern triggers lfs_fuse to pick up its node ID from the MAC address.
 MAC="52:54:42:$DECIMAL:$DECIMAL:$DECIMAL"
 ps -ef | grep $QEMU | grep -q $MAC | grep -q $NETNAME
-[ $? -eq 0 ] && echo "Node $NODE MAC $MAC already running" >&2 && exit 1
+[ $? -eq 0 ] && die "Node $NODE MAC $MAC already running"
 
 NETDEV="-netdev bridge,br=$NETNAME,id=thisbridge"
 NIC="-device virtio-net-device,mac=$MAC,netdev=thisbridge"                      
@@ -70,7 +81,7 @@ NIC="-device virtio-net-device,mac=$MAC,netdev=thisbridge"
 BOOTTYPE='QEMU_EFI'	# maybe a cmdline arg some day
 
 MACHTYPE="-M virt"
-CPU="-cpu cortex-a57"
+CPU="-cpu cortex-a57 -smp 4"
 case "$BOOTTYPE" in
     SFW)
     	BOOTROM=$HOME/rom.bin.1.13		# Needs Vulcan model for reset
