@@ -8,18 +8,18 @@
 #    b. mv /etc/apt/sources.list.d/base.list /etc/apt/sources.list
 
 [config]
-#log =
-#image =
-#tarball =
+log =
+image =
+tarball =
 mirror = "http://seedy.us.rdlabs.hpecorp.net"
-distribution = jessie
 
 arch = arm64
-debootstrapopts = "variant=buildd"
+distribution =
+variant = buildd
 foreign = /usr/bin/qemu-aarch64-static
 
 verbose = True
-#output =
+output =
 log-level = debug
 log-max = 0
 log-keep = 10
@@ -28,11 +28,10 @@ dump-memory-profile = none
 memory-dump-interval = 300
 
 sparse = False
-size = 3G
+size = 3072M
 bootsize = 0
 boottype = ext2
-roottype = ext4
-#owner =
+owner =
 
 # minbase only does "Required", keyrings are only "Important".
 # debian-archive-keyring is handled manually by debootstrap.
@@ -44,23 +43,21 @@ no-kernel = True
 sudo = True
 
 enable-dhcp = True
-systemd-networkd = False
 root-password = iforgot
 
-#customize =
+customize =
 hostname = GOLDEN
 user = l4mdc/iforgot
 serial-console = True
 serial-console-command = /sbin/getty -L ttyAM0 115200 vt100
 
 # /etc/apt/sources.list is always set up with ftp.us.debian.org and the
-# selected suite; sometimes that even makes sense.  "True" below creates
-# /etc/apt/sources.list.d/base.conf with the real info but it
+# selected suite; sometimes that even makes sense.  "True" below creates 
+# /etc/apt/sources.list.d/base.conf with the real info but it 
 # may collide with or duplicate sources.list.  YMMV but elimination of
 # sources.list is probably a good idea.
-configure-apt = False
+configure-apt = True
 
 extlinux = False
 mbr = False
-grub = True
-use-uefi = True
+grub = False
