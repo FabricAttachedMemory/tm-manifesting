@@ -146,6 +146,32 @@ def cleanup_sources_list(args):
         raise RuntimeError('clean_sources_list() failed: %s' % str(err))
 
 
+def set_apt_conf(path, apt_cfg_content):
+    '''
+        Set etc/apt/apt.conf content. Usually, it is just PROXY.
+    @param path: path to a etc/apt/apt.conf of the build system image.
+    @param apt_cfg_content: str (or list) what should go into etc/apt/apt.conf
+    '''
+    #FIXME: No apt_cfg defaults for corp firewall!
+    if apt_cfg_content is None:
+        apt_cfg_content = 'Acquire::http::Proxy '
+        apt_cfg_content += 'http://web-proxy.corp.hpecorp.net:8080";'
+
+    # if a list was passed, just make it a string joined by new line.
+    if isinstance(apt_cfg_content, list):
+        apt_cfg_content = '\n'.join(apt_cfg_content)
+
+    #apt.conf doesnt like single quotes. It requires " instead of '.
+    #Json format doesn't like ". Thus, when building a apt.conf string in the
+    #manifest, a singe ' will be used. Replace it with " and life should be good.
+    apt_cfg_content = apt_cfg_content.replace('\'', '"')
+    try:
+        write_to_file(path, apt_cfg_content)
+    except RuntimeError as err:
+        raise RuntimeError('Coul not set apt_conf content at "%s"! [%s]' %\
+                            (path, err))
+
+
 def add_mirror(args):
     """
     @param other_mirrors:
@@ -1036,6 +1062,9 @@ def execute(args):
     try:
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir, args.golden_tar)
+
+        apt_conf_path = args.new_fs_dir + '/etc/apt/apt.conf'
+        set_apt_conf(apt_conf_path, args.manifest.get('apt_conf'))
 
         cleanup_sources_list(args)
         add_mirror(args)
