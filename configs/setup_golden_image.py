@@ -37,9 +37,8 @@ def customize_golden(golden_tar, build_dir):
         'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net',
         'repo_release' : 'jessie',
         'repo_areas' : ('main', 'contrib', 'non-free'),
-        'other_mirrors' : 'deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fame/ catapult main contrib non-free',
-        'packages' : 'l4tm-archive-keyring, linux-image-arm64-l4tm, tm-zbridge, tm-flush, fam-atomic-driver, tm-fuse-4.7.2,tm-libfuse, tm-librarian',
-        'packages' : 'l4tm-archive-keyring, linux-image-arm64-l4tm',
+        'other_mirrors' : 'deb [trusted=yes] https://downloads.linux.hpe.com/repo/l4fame/Debian/ testing main',
+        'packages' : 'linux-image-4.14.0-l4fame+, libfam-atomic2, tm-libfuse, tm-librarian',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
@@ -57,7 +56,7 @@ def customize_golden(golden_tar, build_dir):
                             (os.path.basename(__file__), exc_tb.tb_lineno, err))
 
     golden_dir = os.path.dirname(golden_tar)
-    tmms_utils.compress(build_dir + '/untar', build_dir + '/golden.arm.tar')
+    tmms_utils.make_tar(build_dir + '/golden.arm.tar', build_dir + '/untar')
     file_utils.remove_target(build_dir + '/untar')
 
     if os.path.exists(golden_dir + '.raw'):

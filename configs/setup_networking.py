@@ -257,15 +257,13 @@ class TMgrub(object):
 
         for dest in (self.tftp_grub_efi, self.sdhc_grub_efi):
             base = os.path.basename(dest)
-            # Override grubURL by manconfig value, if it is set.
-            # Otherwise, pull from mirror/dists/.../uefi/
+
+            # Grub should come from somewhere in the www. Since debian doesnt
+            # carry one, it is up to user to find a working grub.
             grubURL = manconfig.get('GRUB_EFI_BASE_URI', None)
             if grubURL:
                 grubURL += base
-            else:
-                grubURL = manconfig['DEBIAN_MIRROR'] + \
-                    '/dists/catapult/main/uefi/grub2-arm64/' +\
-                    'current/%s.signed' % base
+
             try:
                 r = HTTP_REQUESTS.get(grubURL)
                 assert r.status_code == 200, 'Cannot retrieve "%s"' % grubURL

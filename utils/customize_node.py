@@ -155,7 +155,8 @@ def set_apt_conf(path, apt_cfg_content):
     #FIXME: No apt_cfg defaults for corp firewall!
     if apt_cfg_content is None:
         apt_cfg_content = 'Acquire::http::Proxy '
-        apt_cfg_content += 'http://web-proxy.corp.hpecorp.net:8080";'
+        # NOTE: " is required around proxy URL str or apt will flipout
+        apt_cfg_content += '"http://web-proxy.corp.hpecorp.net:8080";'
 
     # if a list was passed, just make it a string joined by new line.
     if isinstance(apt_cfg_content, list):
@@ -1061,10 +1062,10 @@ def execute(args):
     # When some of them fail they'll handle last update_status themselves.
     try:
         update_status(args, 'Untar golden image')
-        args.new_fs_dir = untar(args.build_dir, args.golden_tar)
+        args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
 
         apt_conf_path = args.new_fs_dir + '/etc/apt/apt.conf'
-        set_apt_conf(apt_conf_path, args.manifest.get('apt_conf'))
+        set_apt_conf(apt_conf_path, getattr(args, 'manifest', {}).get('apt_conf', ''))
 
         cleanup_sources_list(args)
         add_mirror(args)

@@ -100,7 +100,7 @@ def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
         raise RuntimeError('"%s" failed: %s' % (cmdstr, str(e)))
 
 
-def untar(destination, source, untar_dir='untar'):
+def untar(destination, source):
     """
         Untar source file into destination folder. tar.tarfile.extractall
     will create all necessary (sub)directories.
@@ -115,7 +115,6 @@ def untar(destination, source, untar_dir='untar'):
     """
 
     try:
-        destination = destination + '/' + untar_dir
         remove_target(destination)  # succeeds even if missing
         with tarfile.open(source) as tar_obj:
             tar_obj.extractall(path=destination)
@@ -124,10 +123,8 @@ def untar(destination, source, untar_dir='untar'):
         raise RuntimeError('Error occured while untaring "%s": %s' % (source, str(err)))
 
 
-def compress(source, destination):
-    """
-        Compress folder into destination using tarfile library.
-    """
+def make_tar(destination, source):
+    """ Make a "source" folder into "tar" destination. No compression involved."""
     with tarfile.open(destination, 'w') as tar:
         if os.path.isfile(source):
             tar.add(source, arcname=os.path.basename(source))

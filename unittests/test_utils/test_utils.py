@@ -42,12 +42,13 @@ class UtilsTest(unittest.TestCase):
         self.touch_folder(uncompressed_dir)
         self.touch_file(test_file)
 
-        TmmsUtils.compress(test_dir, compressed_dir)
+        TmmsUtils.make_tar(compressed_dir, test_dir)
 
         self.assertTrue(os.path.exists(compressed_dir),
                         '%s was not compressed into %s!' % (test_dir, compressed_dir))
 
-        TmmsUtils.untar(uncompressed_dir, compressed_dir, '')
+        set_trace()
+        TmmsUtils.untar(uncompressed_dir, compressed_dir)
         self.assertTrue(os.path.exists(uncompressed_dir + '/' + test_file_name))
 
 

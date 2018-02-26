@@ -331,9 +331,9 @@ class ManifestDestiny(object):
         self.dirpath = dirpath
 
 
-    def get(self, key):
+    def get(self, key, default_value=None):
         ''' Return value of the 'key' from self.thedict. None if key not found. '''
-        return self.thedict.get(key, None)
+        return self.thedict.get(key, default_value)
 
 
     @property

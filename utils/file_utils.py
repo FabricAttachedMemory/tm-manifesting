@@ -87,14 +87,14 @@ def move_target(target, into, verbose=False):
     return True
 
 
-def make_dir(path):
+def make_dir(path, exit_ok=True):
     """
         A simple wrapper around os.makedirs that skip existing folders.
     :param 'path': [str] Leave this routine with a (new) directory at path
     :return: None or raised error
     """
     try:
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(path, exist_ok=exit_ok)
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
@@ -169,7 +169,7 @@ def write_to_file(target, content, is_append=False):
     try:
         _fs_sanity_check(target)
         file_content = ''
-        write_mode = 'a' if is_append else 'w+'
+        write_mode = 'a' if is_append else 'w'
         with open(target, write_mode) as file_obj:
             content_to_write = '%s\n' % (content)
             file_obj.write(content_to_write)
