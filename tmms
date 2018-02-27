@@ -38,7 +38,7 @@ DEBIAN_AREAS = ( 'main', 'contrib', 'non-free' )
 # Additional mirrors to use for the golden image besides DEBIAN_MIRROR.
 # It is a full string as it would appear in sources.list, e.g:
 # ['deb http://server.some.where/debian/ stable main contrib non-free']
-OTHER_MIRRORS = ['deb [trusted=yes] https://downloads.linux.hpe.com/repo/l4fame/Debian/ testing main']
+OTHER_MIRRORS = ['deb [trusted=yes] http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fame/ testing main']
 
 # NIC connected to the node network on which DHCP and TFTP will be served
 # (usually something like ethX).  If the interface cannot be found (or is

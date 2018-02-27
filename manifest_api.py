@@ -81,6 +81,7 @@ for node in tmconfig.allNodes:  # Hack around broken BU scripts
 # during blueprint scanning.
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
+'''
 mainapp = Flask('tm_manifesting', static_url_path='/static')
 mainapp.config.update(manconfig)
 mainapp.config['tmconfig'] = tmconfig
@@ -93,12 +94,33 @@ mainapp.config['auto-update'] = cmdline_args.auto_update
 mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
 mainapp.config['DRYRUN'] = cmdline_args.dry_run
 mainapp.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0     # For node ESP files
+'''
+
+def create_app():
+    mainapp = Flask('tm_manifesting', static_url_path='/static')
+    mainapp.config.update(manconfig)
+    mainapp.config['tmconfig'] = tmconfig
+
+    mainapp.config['API_VERSION'] = 1.0
+    mainapp.config['url_prefix'] = '/manifesting'
+    mainapp.config['VERBOSE'] = \
+        cmdline_args.verbose if sys.stdin.isatty() else 0
+    mainapp.config['auto-update'] = cmdline_args.auto_update
+    mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
+    mainapp.config['DRYRUN'] = cmdline_args.dry_run
+    mainapp.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0     # For node ESP files
+
+    return mainapp
+
+
+mainapp = create_app()
 
 # Flask has configured a root logger with default "DEBUG" level handler that
 # spits to stderr.  That's good enough for early work.  tmmsLogger will
 # change that behavior on first invocation.
 mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' % (
     mainapp.config['PXE_INTERFACE'])
+
 
 ###########################################################################
 # mainapp was given a logger by Flask.  Modify it based on cmdline arguments.

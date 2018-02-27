@@ -34,6 +34,8 @@ BP = Blueprint(_ERS_element, __name__)
 @BP.route('/%ss/' % _ERS_element)       # Plurar form of the element name to list all Packages
 @BP.route('/%s/<name>' % _ERS_element)  # Songular - to list one package.
 def _webpage(name=None):
+    if _data is None:
+        _load_data()
 
     if name is None:    # overloaded detection of singular rule
         return render_template(

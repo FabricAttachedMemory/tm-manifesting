@@ -8,6 +8,7 @@ import unittest
 from pdb import set_trace
 
 from tmms.tm_cmd import tmcmd
+from tmms import manifest_api
 from tmms.unittests import suite_config as config
 
 
@@ -22,6 +23,7 @@ class PackageTest(unittest.TestCase):
     def setUpClass(cls):
         cls.URL = config.MANIFESTING_SERVER
         cls.tm_cmd = tmcmd.tmpkg
+
 
 
 
