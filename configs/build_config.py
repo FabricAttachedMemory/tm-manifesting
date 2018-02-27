@@ -48,9 +48,10 @@ class ManifestingConfiguration(object):
         'TMCONFIG',
         'HOST',
         'PORT',
-        'L4TM_MIRROR',
-        'L4TM_RELEASE',
-        'L4TM_AREAS',
+        'DEBIAN_MIRROR',
+        'DEBIAN_RELEASE',
+        'DEBIAN_AREAS',
+        'OTHER_MIRRORS',
         'PXE_INTERFACE',
         'PXE_FIREWALL'
     )
@@ -126,6 +127,13 @@ class ManifestingConfiguration(object):
             if errors:
                 raise ValueError('\n'.join(errors))
 
+
+    def get(self, key, default_value):
+        ''' Same functionality as of dict.get(). Return a key if in the settings,
+        or default_value instead. '''
+        return self._settings.get(key, default_value)
+
+
     # Duck-type a dict.  It's empty before extract_flask_config().  The
     # flask routines turn the string value 'None' into Python None.
     def __getitem__(self, key):
@@ -186,11 +194,22 @@ class ManifestingConfiguration(object):
             raise RuntimeError('%s; should it be a string?' % str(e))
         self._settings = {}
         missing = []
+        # Parse required tmms config values
         for key in self._configfile_env:
             if key in flask_obj.config:
                 self._settings[key] = flask_obj.config[key]
+                flask_obj.config.pop(key) # remove key, since already parsed
             else:
                 missing.append(key)
+
+        # Get all the other values in the tmms config
+        for cfg_key, cfg_value in flask_obj.config.items():
+            if cfg_key not in self._settings:   # should always be true
+                self._settings[cfg_key] = cfg_value
+            else:
+                print(' - W - Getting tmms key that already being parsed? %s : %s' %\
+                        (cfg_key, cfg_value))
+
         if missing:
             raise ValueError('Config file missing "%s"' % ', '.join(missing))
 

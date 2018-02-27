@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import errno
 import os
+import glob
 import shutil
 import stat
 import sys
@@ -38,7 +39,7 @@ def _fs_sanity_check(target):
     #assert elems[:2] == ['var', 'lib'], 'Target is not under /var/lib'
 
 
-def copy_target_into(target, into):
+def copy_target_into(target, into, verbose=False):
     """
         Wrapper around shutil.copy* functions. Main intention is to catch a
     specific exception and raise RuntimeError with a meaningful message. Also
@@ -54,20 +55,46 @@ def copy_target_into(target, into):
             shutil.copytree(target, into)   # copy directory
         else:
             shutil.copyfile(target, into)   # copy single file
+        if verbose:
+            print(' - Copy completed: from %s into %s' % (target, into))
     except (AssertionError, RuntimeError, EnvironmentError) as err:
         raise RuntimeError('Couldn\'t copy "%s" into "%s": %s' % (
             target, into, str(err)))
 
 
-def make_dir(path):
+def move_target(target, into, verbose=False):
     """
-        FIXME: all we need is ', exists_ok=True' and we can get rid of this.
+        Move target folder into new folder. NOTE: target will be removed!
+    """
+    if verbose:
+        print(' -- Moving %s into %s' % (target, into))
+    if target == into:
+        return False
+    copy_target_into(target, into, verbose=verbose)
+    orig_content = glob.glob(target + '/*')
+    copied_content = glob.glob(into + '/*')
+
+    # verified number of files of copied files with original
+    if len(orig_content) != len(copied_content):
+        if verbose:
+            print(' - Failed to move() %s into %s! Copied content is not the same.')
+
+        remove_target(into, verbose=verbose)
+        return False
+
+    # copied and original content seems to be the same. Thus, can remove target.
+    remove_target(target, verbose=verbose)
+    return True
+
+
+def make_dir(path, exit_ok=True):
+    """
         A simple wrapper around os.makedirs that skip existing folders.
     :param 'path': [str] Leave this routine with a (new) directory at path
     :return: None or raised error
     """
     try:
-        os.makedirs(path)
+        os.makedirs(path, exist_ok=exit_ok)
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise RuntimeError('mkdir(%s) failed: %s' % (path, str(e)))
@@ -96,7 +123,7 @@ def make_symlink(source, target):
                     target, source))
 
 
-def remove_target(target):
+def remove_target(target, verbose=False):
     """
         Remove "target" file.
 
@@ -109,6 +136,8 @@ def remove_target(target):
             shutil.rmtree(target)
         elif os.path.exists(target):
             os.remove(target)
+        if verbose:
+            print(' - %s has been removed!' % target)
     except (AssertionError, EnvironmentError) as e:
         raise RuntimeError('Couldn\'t remove "%s": %s' % (target, str(e)))
 
@@ -130,7 +159,7 @@ def workdir(path):
         os.chdir(orig_dir)
 
 
-def write_to_file(target, content):
+def write_to_file(target, content, is_append=False):
     """
         Overwrite file in the targeted location with a new content.
 
@@ -139,9 +168,11 @@ def write_to_file(target, content):
     """
     try:
         _fs_sanity_check(target)
-        with open(target, 'w+') as file_obj:
-            file_content = '%s\n' % str(content)
-            file_obj.write(file_content)
+        file_content = ''
+        write_mode = 'a' if is_append else 'w'
+        with open(target, write_mode) as file_obj:
+            content_to_write = '%s\n' % (content)
+            file_obj.write(content_to_write)
     except Exception as e:
         raise RuntimeError('Write "%s" failed: %s' % (target, str(e)))
 

@@ -257,9 +257,13 @@ class TMgrub(object):
 
         for dest in (self.tftp_grub_efi, self.sdhc_grub_efi):
             base = os.path.basename(dest)
-            grubURL = manconfig['L4TM_MIRROR'] + \
-                '/dists/catapult/main/uefi/grub2-arm64/' +\
-                'current/%s.signed' % base
+
+            # Grub should come from somewhere in the www. Since debian doesnt
+            # carry one, it is up to user to find a working grub.
+            grubURL = manconfig.get('GRUB_EFI_BASE_URI', None)
+            if grubURL:
+                grubURL += base
+
             try:
                 r = HTTP_REQUESTS.get(grubURL)
                 assert r.status_code == 200, 'Cannot retrieve "%s"' % grubURL
@@ -356,7 +360,8 @@ class TMgrub(object):
             self.network = kludge_network
         else:
             assert self.network == kludge_network, \
-                'Networking mismatch between NIC and TMDOMAIN'
+                'Mismatch between PXE_INTERFACE (%s) and PXE_SUBNET (%s)' % \
+                    (str(kludge_network), str(self.network))
         if not self.hostIPs:    # enumerator properly skips Sun broadcast
             self.hostIPs = [IPAddress(first_addr.value + (node.node_id - 1))
                                 for node in self.tmconfig.allNodes]
@@ -383,10 +388,14 @@ class TMgrub(object):
                     self.pxe_interface
                 ifaceaddr = ifaceaddr.pop()
                 self.addr = ifaceaddr['addr']      # Convenience attrs
-                # Check the __doc__ string for this class.  It's AWESOME!
-                self.network = IPNetwork(
-                    self.addr + '/' + ifaceaddr['netmask'])
+                self.netmask = ifaceaddr['netmask']
                 self.torms = str(self.addr)
+                # Check the __doc__ string for this class.  It's AWESOME!
+                # Derive the network from the actual interface.  While it
+                # worked without the reduction to "first", this feels better.
+                self.network = IPNetwork(self.addr + '/' + self.netmask)
+                self.network = IPNetwork(
+                    str(IPAddress(self.network.first)) + '/' + self.netmask)
         except Exception as e:
             print(str(e))
 

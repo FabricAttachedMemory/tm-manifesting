@@ -267,8 +267,9 @@ class ManifestDestiny(object):
             'comment', '_comment', 'l4tm_privkey', 'l4tm_pubkey',
             'postinst', 'rclocal', 'kernel_append')))
 
-        illegal = list(keys - molegal - frozenset((_UPFROM, )))
-        assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
+        #NO NEED TO BE STRICT ANYMORE
+        #illegal = list(keys - molegal - frozenset((_UPFROM, )))
+        #assert not len(illegal), 'Illegal key(s): ' + ', '.join(illegal)
 
         return m
 
@@ -276,7 +277,8 @@ class ManifestDestiny(object):
         '''Defer until binding time'''
         man = self.thedict
         nosuch = BP.mainapp.blueprints['package'].filter(man['packages'])
-        assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
+        #FIXME: Validate PACKAGE exist in mirror!
+        #assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
 
         nosuch = BP.mainapp.blueprints['task'].filter(man['tasks'])
         assert not nosuch, 'no such task(s): ' + ', '.join(nosuch)
@@ -313,8 +315,11 @@ class ManifestDestiny(object):
                     'A new manifest has been created.', 201)
 
             os.makedirs(self.dirpath, exist_ok=True)
+            #Json format the content for better readability
+            formatted_content = json.dumps(self.thedict, indent=4, sort_keys=True)
+            #Save manifest content into server destination ([...]tmms/manifest/)
             with open(self.manifest_file, 'w') as f:
-                f.write(contentstr)
+                f.write(formatted_content)
             return
 
         fname = os.path.join(dirpath, basename)
@@ -324,6 +329,12 @@ class ManifestDestiny(object):
 
         self.thedict = self.validate_manifest(self.raw)
         self.dirpath = dirpath
+
+
+    def get(self, key, default_value=None):
+        ''' Return value of the 'key' from self.thedict. None if key not found. '''
+        return self.thedict.get(key, default_value)
+
 
     @property
     def fullpath(self):

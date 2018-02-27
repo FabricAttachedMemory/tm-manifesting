@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import errno
 import logging
 import os
+import glob
 import psutil
 import requests as HTTP_REQUESTS
 import shlex
@@ -114,13 +115,23 @@ def untar(destination, source):
     """
 
     try:
-        destination = destination + '/untar'
         remove_target(destination)  # succeeds even if missing
         with tarfile.open(source) as tar_obj:
             tar_obj.extractall(path=destination)
         return destination
     except (AssertionError, tarfile.ReadError, tarfile.ExtractError) as err:
         raise RuntimeError('Error occured while untaring "%s": %s' % (source, str(err)))
+
+
+def make_tar(destination, source):
+    """ Make a "source" folder into "tar" destination. No compression involved."""
+    with tarfile.open(destination, 'w') as tar:
+        if os.path.isfile(source):
+            tar.add(source, arcname=os.path.basename(source))
+        else:
+            # to avoid creating a folder of itself inside of the compressed file.
+            for to_compress in glob.glob(source + '/*'):
+                tar.add(to_compress, arcname=os.path.basename(to_compress))
 
 
 def create_loopback_files():

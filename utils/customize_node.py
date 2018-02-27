@@ -20,8 +20,8 @@ import json
 import os
 import requests as HTTP_REQUESTS
 import shutil   # explicit namespace differentiates from our custom FS routines
+import magic  # to get file type and check if gzipped
 import sys
-import tarfile
 import time
 
 from glob import glob
@@ -29,7 +29,7 @@ from pdb import set_trace
 
 from tmms.utils.logging import tmmsLogger
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
-from tmms.utils.file_utils import write_to_file, workdir
+from tmms.utils.file_utils import write_to_file, workdir, make_dir
 from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
 
 #==============================================================================
@@ -49,7 +49,7 @@ def extract_bootfiles(args):
     update_status(args, 'Extract any /boot/[vmlinuz,initrd]')
     boot_dir = '%s/boot/' % args.new_fs_dir
     vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # one list
-    if args.debug and len(vmlinuz) > 1:
+    if getattr(args, 'debug', False) and len(vmlinuz) > 1:
         set_trace()
         pass    # multiple kernels exist, probably a dependency cascade
     initrd = glob('%s/initrd.img*' % (boot_dir))    # two lists
@@ -60,10 +60,25 @@ def extract_bootfiles(args):
             copy_target_into(source, copy_into)
             if '/vmlinuz' in copy_into:
                 vmlinuzes.append(copy_into)
-            remove_target(source)
-        return vmlinuzes
+
+            if getattr(args, 'keep_kernel', True):
+                remove_target(source)
+            else:
+                update_status(args, ' - Kernel files not removed from boot. (param: --keep-kernel)')
+
+        # Vmlinuz files where found and moved. Good to return.
+        if vmlinuzes:
+            return vmlinuzes
     except Exception as err:
         raise RuntimeError('extract_bootfiles() failed: %s' % str(err))
+
+    golden_dir = os.path.dirname(args.golden_tar)
+    update_status(args, ' - No vmlinuz and initrd in unter/boot/')
+    update_status(args, '   - Checking golden dir for those files at %s...' % golden_dir)
+    # No vmlinuz found in untar/boot/. Check if they are already in the build_dir
+    vmlinuz = glob('%s/vmlinuz*' % (golden_dir))      # one list
+    return vmlinuz
+
 
 #=============================================================================
 # MAGIC: turn a transient initrd into a persistent rootfs with two corrective
@@ -108,6 +123,9 @@ def cleanup_sources_list(args):
     update_status(args, 'Set /etc/apt/sources*')
     sources_list = '%s/etc/apt/sources.list' % args.new_fs_dir
     sources_base = '%s.d/base.list' % sources_list
+    #if not os.path.exists(sources_base):
+    #    update_status(args, ' - ! - Skipping cleanup_sources_list. No based.list to clean.')
+    #    return
 
     try:
         remove_target(sources_base)
@@ -119,9 +137,55 @@ def cleanup_sources_list(args):
                                 args.repo_release,
                                 ' '.join(args.repo_areas))
         ]
+
+        #if args.other_mirrors:
+        #    content.append('\n'.join(args.other_mirrors))
+
         write_to_file(sources_list, '\n'.join(content))
     except RuntimeError as err:
         raise RuntimeError('clean_sources_list() failed: %s' % str(err))
+
+
+def set_apt_conf(path, apt_cfg_content):
+    '''
+        Set etc/apt/apt.conf content. Usually, it is just PROXY.
+    @param path: path to a etc/apt/apt.conf of the build system image.
+    @param apt_cfg_content: str (or list) what should go into etc/apt/apt.conf
+    '''
+    #FIXME: No apt_cfg defaults for corp firewall!
+    if apt_cfg_content is None:
+        apt_cfg_content = 'Acquire::http::Proxy '
+        # NOTE: " is required around proxy URL str or apt will flipout
+        apt_cfg_content += '"http://web-proxy.corp.hpecorp.net:8080";'
+
+    # if a list was passed, just make it a string joined by new line.
+    if isinstance(apt_cfg_content, list):
+        apt_cfg_content = '\n'.join(apt_cfg_content)
+
+    #apt.conf doesnt like single quotes. It requires " instead of '.
+    #Json format doesn't like ". Thus, when building a apt.conf string in the
+    #manifest, a singe ' will be used. Replace it with " and life should be good.
+    apt_cfg_content = apt_cfg_content.replace('\'', '"')
+    try:
+        write_to_file(path, apt_cfg_content)
+    except RuntimeError as err:
+        raise RuntimeError('Coul not set apt_conf content at "%s"! [%s]' %\
+                            (path, err))
+
+
+def add_mirror(args):
+    """
+    @param other_mirrors:
+    """
+    if not hasattr(args, 'other_mirrors'):
+        return
+
+    update_status(args, 'Adding other mirrors: %s' % args.other_mirrors)
+    sources_list = '%s/etc/apt/sources.list' % args.new_fs_dir
+    write_to_file(sources_list, ''.join(args.other_mirrors), is_append=True)
+    return
+
+
 
 #==============================================================================
 
@@ -134,6 +198,10 @@ def set_client_id(args):
     :param 'DhcpClientId': [str] calculated elsewhere
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
+    if getattr(args, 'DhcpClientId', None) is None:
+        update_status(args, ' - ! - Skipping "set_client_id"! "DhcpClientId" is None.')
+        return
+
     update_status(args, 'Set ClientID for dhcpc')
     dhclient_conf = '%s/etc/dhcp/dhclient.conf' % args.new_fs_dir
     clientid = args.DhcpClientId
@@ -156,8 +224,18 @@ def hack_LFS_autostart(args):
     :param 'node_id': [int] expanded into R:E:N.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
+    if getattr(args, 'node_id', None) is None:
+        update_status(args, ' - ! - Skipping "hack_lfs_autostart"! No "node_id" in "args".')
+        return
+
+    rclocal = ''
+    if getattr(args, 'rclocal', None) is not None:
+        rclocal = args.rclocal
+
     update_status(args, 'Hack LFS autostart')
     LFS_conf = '%s/etc/default/tm-lfs' % args.new_fs_dir
+
+
     enc = ((args.node_id - 1) // 10) + 1
     node = ((args.node_id - 1) % 10) + 1
     REN = '1:%d:%d' % (enc, node)
@@ -165,10 +243,11 @@ def hack_LFS_autostart(args):
         with open(LFS_conf, 'a') as f:
             f.write('\n\n# Autohack (1) for now, see /etc/rc.local\n')
             f.write("OPT_ARGS='--fakezero --physloc %s'\n" % REN)
-        if args.rclocal is None:
-            args.rclocal = ''
-        args.rclocal += '\n# Autohack (2) for now, see /etc/default/tm-lfs\n'
-        args.rclocal += 'systemctl enable tm-lfs\nsystemctl start tm-lfs\n'
+
+        rclocal += '\n# Autohack (2) for now, see /etc/default/tm-lfs\n'
+        rclocal += 'systemctl enable tm-lfs\nsystemctl start tm-lfs\n'
+
+        args.rclocal = rclocal
     except Exception as err:
         raise RuntimeError('Cannot hack LFS autostart: %s' % str(err))
 
@@ -277,15 +356,19 @@ def set_l4tm_sudo(args):
 
 def _get_userstuff(args, user):
     with workdir(args.new_fs_dir):
-        with open('etc/passwd', 'r') as f:
-            for line in f:
-                if line.startswith('%s:' % user):
-                    _, _, uid, gid, gecos, home, shell = line.split(':')
-                    uid = int(uid)
-                    gid = int(gid)
-                    return args.new_fs_dir + home, uid, gid
-            else:
-                raise RuntimeError('Cannot find user l4tm')
+        file_content = ''
+        with open('etc/passwd', 'r') as file_obj:
+            file_content = file_obj.read()
+
+        for line in file_content.split('\n'):
+            #the first non-root, created User is usually 1000
+            if '1000:1000' in line:
+                _, _, uid, gid, gecos, home, shell = line.split(':')
+                uid = int(uid)
+                gid = int(gid)
+                return args.new_fs_dir + home, uid, gid
+        else:
+            raise RuntimeError('Cannot find user l4tm')
 
 
 def set_l4tm_sshkeys(args):
@@ -304,15 +387,18 @@ def set_l4tm_sshkeys(args):
     os.makedirs(dotssh, mode=0o700, exist_ok=True)
     os.chown(dotssh, uid, gid)
 
-    if args.l4tm_pubkey is not None:
+    if getattr(args, 'l4tm_pubkey', None) is not None:
         auth = dotssh + '/authorized_keys'
         with open(auth, 'w+') as f:
             f.write('\n')
             f.write(args.l4tm_pubkey)
         os.chmod(auth, 0o644)   # pubkey doesn't work if other/world-writeable
         os.chown(auth, uid, gid)
+    else:
+        update_status(args, ' - ! - Skipping setting l4tm_pubkey! l4tm_pubkey is not set.')
 
-    if args.l4tm_privkey is not None:
+
+    if getattr(args, 'l4tm_privkey', None) is not None:
         id_rsa = dotssh + '/id_rsa'     # default, simplifies config file
         with open(id_rsa, 'w') as f:
             f.write(args.l4tm_privkey)
@@ -324,6 +410,8 @@ def set_l4tm_sshkeys(args):
             f.write('# From Manifesting\n\nStrictHostKeyChecking no\n')
         os.chmod(config, 0o400)
         os.chown(config, uid, gid)
+    else:
+        update_status(args, ' - ! - Skipping setting l4tm_privkey! l4tm_privkey is not set.')
 
 #==============================================================================
 
@@ -335,8 +423,14 @@ def rewrite_rclocal(args):
     :param 'rclocal': Full script to add, #!/bin/bash is done for you
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    if args.rclocal is None:
+    if getattr(args, 'rclocal', None) is None:
+        update_status(args, ' - ! - Skipping "rewrite_rclocal"! "rclocal" in "args" is None.')
         return
+
+    if getattr(args, 'manifest', None) is None:
+        update_status(args, ' - ! - Skipping "rewrite_rclocal"! "manifest" in "args" is None.')
+        return
+
     update_status(args, 'Rewriting /etc/rc.local')
 
     rclocal = '%s/etc/rc.local' % (args.new_fs_dir)
@@ -412,7 +506,7 @@ if [ $RET -eq 0 ]; then
 else
     # Most likely: dependencies for {0}
     echo "dpkg -i {0} had problems, return value = $RET" >&2
-    apt-get -f -y install
+    apt-get -f -y --force-yes install
     RET=$?
     [ $RET -ne 0 ] && echo "Cleanup {0} problems, return value = $RET" >&2
 fi
@@ -429,28 +523,39 @@ def install_packages(args):
     'args.new_fs_dir + "/manifesting.log"' file.
 
     :param 'args.new_fs_dir': [str] path to filesystem image to customize.
-    :param 'args.packages': [list] of packages 'apt-get install'.
+    :param 'args.packages': [str] of packages 'apt-get install'.
     :param 'args.tasks': [list] of tasks for 'tasksel'.
     :return [boolean] True if it worked, False otherwise with updated status.
     """
+    is_debug = getattr(args, 'debug', False)
+
     # Separate the space-delimited list of packages into URLs and package names
     if args.packages is None:
         downloads = None
         packages = None
         msg = 'Updating/upgrading packages from golden image'
     else:
-        pkglist = args.packages.split(' ')
+        if ',' in args.packages:
+            pkglist = args.packages.replace(' ', '').split(',')
+        else:
+            pkglist = args.packages.split(' ')
+
         localdebs = [p for p in pkglist if p.startswith('file://') ]
         downloads = [p for p in pkglist if
             (p.startswith('http://') or p.startswith('https://'))]
         _debs = localdebs + downloads
         packages = [p for p in pkglist if p not in _debs]
+
         msg = 'Installing %d packages plus %d URL downloads and %d local debs' % (
             len(packages), len(downloads), len(localdebs))
+        msg += '\n - pkgs: %s\n - downloads: %s\n - localdebs: %s' %\
+                (packages, downloads, localdebs)
+
     update_status(args, msg)
 
     # Some packages need this (python-mon-agent)
-    shutil.copy(args.tmconfig, args.new_fs_dir + '/etc/tmconfig')
+    if getattr(args, 'tmconfig', None) is not None:
+        shutil.copy(args.tmconfig, args.new_fs_dir + '/etc/tmconfig')
 
     # Fill out the install script.  Everything goes at root $HOME.
     installsh = '/root/install.sh'
@@ -475,7 +580,7 @@ cd /root
 exec > %s 2>&1
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get upgrade -q --assume-yes
+apt-get upgrade -q --assume-yes -y --force-yes
 # apt-get dist-upgrade -q --assume-yes
 
 echo "en_US UTF-8" > /etc/locale.gen
@@ -493,16 +598,17 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
             for pkg in packages:
                 install.write(
                     '\necho -e "\\n---------- Installing %s\\n"\n' % pkg)
-                cmd = 'apt-get install -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
+                cmd = 'apt-get install -q -y --force-yes -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
                 install.write(cmd)
                 # Things from the repo OUGHT to work.
                 install.write(
                     '[ $? -ne 0 ] && echo "Install %s failed" && exit 1\n' %
                     pkg)
 
-        install.write('\n# Tasks: %s\n' % args.tasks)
-        if args.tasks is not None:
-            for task in args.tasks.split(','):
+        tasks = getattr(args, 'tasks', None)
+        install.write('\n# Tasks: %s\n' % tasks)
+        if tasks is not None:
+            for task in tasks.split(','):
                 install.write(
                     '\necho -e "\\n---------- Executing task  %s\\n"\n' % task)
                 cmd = 'tasksel install %s\n' % task
@@ -532,7 +638,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     debian.write(pkgresp.content)
 
                 # Log the failures but don't abort the image build.
-                dpkgIstr = _dpkgItemplate.format(deb, str(bool(args.debug)))
+                dpkgIstr = _dpkgItemplate.format(deb, str(bool(is_debug)))
                 install.write(dpkgIstr)
 
         if localdebs is not None:
@@ -546,10 +652,10 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                 deb = pkg.split('/')[-1]
                 install.write('# %s\n' % deb)
                 shutil.copy(src, targetdir)
-                dpkgIstr = _dpkgItemplate.format(deb, str(bool(args.debug)))
+                dpkgIstr = _dpkgItemplate.format(deb, str(bool(is_debug)))
                 install.write(dpkgIstr)
 
-        if args.postinst is not None:
+        if getattr(args, 'postinst', None) is not None:
             install.write('\n# "postinst" scriptlet from manifest\n\n')
             install.write(args.postinst + '\n')
 
@@ -613,6 +719,14 @@ def customize_grub(args):
         COnfigure grub's config entry with a custom kernel command line (if
     presented in the manifest).
     """
+    if getattr(args, 'manifest', None) is None:
+        update_status(args, ' - ! - Skipping "customize_grub"! "manifest" is None.')
+        return
+
+    if getattr(args, 'tftp_dir', None) is None:
+        update_status(args, ' - ! - Skipping "customize_grub"! "tftp_dir" is None.')
+        return
+
     kernel_cmd = args.manifest.thedict.get('kernel_append', None)
     if (kernel_cmd is None):
         kernel_cmd = 'rw earlycon=pl011,0x402020000 ignore_loglevel'
@@ -649,12 +763,16 @@ def update_status(args, message, status='building'):
     args.logger(message, level=level)
 
     response = {}
-    response['manifest'] = args.manifest.namespace
+    if getattr(args, 'manifest', None) is None:
+        response['manifest'] = 'Not set'
+    else:
+        response['manifest'] = args.manifest.namespace
+
     response['status'] = status
     response['message'] = message
     response['coordinate'] = args.node_coord    # Troubleshooting and QA
-    response['DhcpClientId'] = args.DhcpClientId
-    response['node_id'] = args.node_id
+    response['DhcpClientId'] = getattr(args, 'DhcpClientId', 'Not set')
+    response['node_id'] = getattr(args, 'node_id', 'Not set')
     response['hostname'] = args.hostname
 
     # Rally DE118: make it an atomic update
@@ -808,7 +926,15 @@ def create_SNBU_image(args, vmlinuz, cpio):
             args.logger.warning('kpartx -d returned %d: %s' % (ret, stderr))
 
     if do_copy:
-        shutil.copy(ESP_img, args.tftp_dir)
+        try:
+            shutil.copy(ESP_img, args.tftp_dir)
+        except OSError:
+            return
+        except Exception as err:
+            msg = ' - ERROR - Unexpected error duing create_SNBU_image:'
+            msg += '\n -- last step duing shutil.copy: %s' % err;
+            update_status(args, msg)
+            return
 
 #=============================================================================
 # This is just as fast as gzip standalone program and gives better error
@@ -826,16 +952,23 @@ def create_SNBU_image(args, vmlinuz, cpio):
 
 
 def _is_gzipped(fname):
+    '''
+        Check "gzip" word in file's type string using python3-magic module.
+    Source: https://stackoverflow.com/questions/25286176/how-to-use-python-magic-5-19-1
+    '''
     try:
-        with gzip.open(fname, mode='rb') as test:
-            return test._read_gzip_header()
+        magic_obj = magic.open(magic.MAGIC_NONE)
+        magic_obj.load()
+        file_type_str = magic_obj.file(fname).lower()
+        return 'gzip' in file_type_str
     except OSError:
         return False
+    except Exception as err:
+        raise RuntimeError('Failed in _is_gzipped(%s)! Error: %s' % (fname, err))
 
 
 def compress_bootfiles(args, vmlinuz_file, cpio_file):
     update_status(args, 'Compressing kernel and file system')
-
     vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
     if _is_gzipped(vmlinuz_file):
         shutil.copy(vmlinuz_file, vmlinuz_gzip)
@@ -873,6 +1006,16 @@ def execute(args):
     # logging.basicConfig(filename=args.build_dir + '/build.log',
     #   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     #   level=logging.INFO)
+    if not os.path.exists(args.build_dir):
+        make_dir(args.build_dir)
+
+    #set defaults
+    if getattr(args, 'debug', None) is None:
+        args.debug = False
+    if getattr(args, 'verbose', None) is None:
+        args.verbose = False
+
+    logger = getattr(args, 'logger', None)
 
     if not args.debug:
         # Ass-u-me I am the first child in a fork-setsid-fork daemon chain
@@ -880,14 +1023,20 @@ def execute(args):
             os.chdir('/tmp')
             os.setsid()
             forked = os.fork()
-            args.logger.debug('Spawning parent PID=%s' % (forked))
+            if logger is not None:
+                args.logger.debug('Spawning parent PID=%s' % (forked))
             # Release the wait that should be done by original parent
             if forked > 0:
-                args.logger.debug('Closing parent PID=%s.' % (forked))
+                if logger is not None:
+                    args.logger.debug('Closing parent PID=%s.' % (forked))
+
                 os._exit(0)  # RTFM: this is the preferred exit after fork()
-            args.logger.debug('Rocky\'s rookie spawned a rookie')
+
+                if logger is not None:
+                    args.logger.debug('Rocky\'s rookie spawned a rookie')
         except OSError as err:
-            args.logger.critical('Failed to spawn a child: %s ' % str(err))
+            if logger is not None:
+                args.logger.critical('Failed to spawn a child: %s ' % str(err))
             raise RuntimeError(
                 'Rocky\'s rookie\'s rookie is down! Bad Luck. [%s]' % str(err))
 
@@ -899,22 +1048,33 @@ def execute(args):
 
     # Replace the logger after parent may have closed extra fds
     fname='%s/build.log' % args.build_dir
-    args.logger.info('Build details in %s' % fname)
+    if logger is not None:
+        args.logger.info('Build details in %s' % fname)
+
     logger = tmmsLogger(args.hostname, use_file=fname)
     logger.propagate = args.verbose     # always gets forced True at end
+    args.logger = None
     args.logger = logger
 
     args.logger('---------------- Starting image build for %s' % args.hostname)
-
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
     # When some of them fail they'll handle last update_status themselves.
     try:
         update_status(args, 'Untar golden image')
-        args.new_fs_dir = untar(args.build_dir, args.golden_tar)
+        args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
+
+        apt_conf_path = args.new_fs_dir + '/etc/apt/apt.conf'
+        set_apt_conf(apt_conf_path, getattr(args, 'manifest', {}).get('apt_conf', ''))
+
+        cleanup_sources_list(args)
+        add_mirror(args)
+
+        install_packages(args)
+
         tmp = extract_bootfiles(args)
-        assert tmp, 'Golden image %s had no kernel' % args.golden_tar
-        assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
+        #assert tmp, 'Golden image %s had no kernel' % args.golden_tar
+        #assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
         vmlinuz_golden = tmp[0]
         update_status(args, 'Found golden kernel %s' %
                       os.path.basename(vmlinuz_golden))
@@ -930,8 +1090,8 @@ def execute(args):
         persist_initrd(args)
 
         # FINALLY! Add packages, tasks, and script(let)s from manifest.
-        cleanup_sources_list(args)
-        install_packages(args)
+        #cleanup_sources_list(args)
+        #install_packages(args)
 
         # Was there a custom kernel?  Note that it will probably only
         # boot itself and not load any modules.  I have seen a custom kernel
@@ -940,7 +1100,7 @@ def execute(args):
         # I suspect /etc/kernel scripts from the original golden kernel but
         # haven't actually tracked it down.  Work around it, especially with
         # this clever little context manager.
-        tmp = extract_bootfiles(args)
+        #tmp = extract_bootfiles(args)
         with contextlib.suppress(ValueError):
             tmp.remove(vmlinuz_golden)
         if tmp:
@@ -969,9 +1129,10 @@ def execute(args):
         # remove_target(args.build_dir)
 
         # Leave a copy of the controlling manifest for post-mortems
-        manifest_tftp_file = args.manifest.namespace.replace('/', '.')
-        copy_target_into(args.manifest.fullpath,
-                         args.tftp_dir + '/' + manifest_tftp_file)
+        if getattr(args, 'manifest', None) is not None:
+            manifest_tftp_file = args.manifest.namespace.replace('/', '.')
+            copy_target_into(args.manifest.fullpath,
+                             args.tftp_dir + '/' + manifest_tftp_file)
 
         update_status(args, 'Updating grub menu for the node.')
         customize_grub(args)
@@ -985,8 +1146,8 @@ def execute(args):
         status = 'error'
     except Exception as err:        # Suppress Flask traceback
         response['status'] = 505
-        response['message'] = 'Unexpected error: %d: %s' % (
-            sys.exc_info()[2].tb_lineno, str(err))
+        response['message'] = '%s:%s:\nUnexpected error: %s' %\
+            (os.path.basename(__file__), sys.exc_info()[2].tb_lineno, str(err))
         status = 'error'
 
     args.logger.propagate = True   # push final messages to root logger
@@ -1008,10 +1169,10 @@ if __name__ == '__main__':
     parser.add_argument('--hostname',
                         help='Hostname to use for the FS image')
     parser.add_argument('--node_coord',
-                        help='Full machine coordinate of this node."')
-    parser.add_argument('--node_id',
+                        help='Name for the build image. (old: Full machine coordinate of this node.')
+    parser.add_argument('--node_id', default=None,
                         help='Node number (1-40)."')
-    parser.add_argument('--manifest',
+    parser.add_argument('--manifest', default=None,
                         help='Manifest namespace.')
     parser.add_argument('--golden_tar',
                         help='Location of pristine FS image tarball')
@@ -1021,13 +1182,13 @@ if __name__ == '__main__':
                         help='release to use on mirror')
     parser.add_argument('--repo_areas',
                         help='areas to use from a release on mirror')
-    parser.add_argument('--packages',
+    parser.add_argument('--packages', default=None,
                         help='Extra packages to "apt-get install" on new FS.')
-    parser.add_argument('--tasks',
+    parser.add_argument('--tasks', default=None,
                         help='Tasks to "tasksel install" on new FS.')
     parser.add_argument('--build_dir',
                         help='Scratch folder for building FS images.')
-    parser.add_argument('--tftp_dir',
+    parser.add_argument('--tftp_dir', default=None,
                         help='Absolute path to the dnsmasq TFTP folder.')
     parser.add_argument('-v', '--verbose',
                         help='Make it talk. Verbosity levels from 1 to 5',

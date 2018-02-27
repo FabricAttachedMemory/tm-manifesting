@@ -11,8 +11,9 @@ import tempfile
 import unittest
 from shutil import rmtree, copytree
 
-from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink, write_to_file
+#from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink, write_to_file, move_target
 
+import tmms.utils.file_utils as FileUtils
 
 
 class CustomizeNodeHelpersTest(unittest.TestCase):
@@ -42,7 +43,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file_new = '%s.new' % (test_file)
         self.touch_file(test_file)
 
-        copy_target_into(test_file, test_file_new)
+        FileUtils.copy_target_into(test_file, test_file_new)
 
         self.assertTrue(os.path.exists(test_file_new),
             'File "%s" was not copied into "%s"!' % (test_file, test_file_new))
@@ -57,10 +58,27 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_dir_new = '%s.new' % (test_dir)
         self.touch_folder(test_dir)
 
-        copy_target_into(test_dir, test_dir_new)
+        FileUtils.copy_target_into(test_dir, test_dir_new)
 
         self.assertTrue(os.path.isdir(test_dir_new),
             'File "%s" was not copied into "%s"!' % (test_dir, test_dir_new))
+
+
+    def test_move_target(self):
+        """
+            Test move_target() by checking if original folder was removed and a
+        copy was created.
+        """
+        test_dir = '%s/test_copy_dir.orig/' % self.tmp_folder
+        test_dir_new = '%s.new' % (os.path.split(test_dir)[0])
+        self.touch_folder(test_dir)
+        move_status = FileUtils.move_target(test_dir, test_dir_new)
+
+        self.assertTrue(move_status, 'Status after move_target is not true!')
+        self.assertTrue(os.path.isdir(test_dir_new),
+                    'Folder %s was not moved!' % test_dir_new)
+        self.assertFalse(os.path.isdir(test_dir),
+                        'Original folder %s was not removed after move!' % test_dir)
 
 
     def test_remove_target_file(self):
@@ -71,7 +89,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file = '%s/test_remove_file.orig' % self.tmp_folder
         self.touch_file(test_file)
 
-        remove_target(test_file)
+        FileUtils.remove_target(test_file)
         self.assertFalse(os.path.exists(test_file), 'Target "%s" was not removed!' % test_file)
 
 
@@ -83,7 +101,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_dir = '%s/test_remove_dir.orig/' % self.tmp_folder
         self.touch_folder(test_dir)
 
-        remove_target(test_dir)
+        FileUtils.remove_target(test_dir)
         self.assertFalse(os.path.exists(test_dir), 'Target "%s" was not removed!' % test_dir)
 
 
@@ -97,23 +115,21 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
         test_file_new = '%s.linked' % test_file
         self.touch_file(test_file)
 
-        make_symlink(test_file, test_file_new)
+        FileUtils.make_symlink(test_file, test_file_new)
         self.assertTrue(os.path.exists(test_file_new),
                 'Target "%s" was not linked into "%s"!' % (test_file, test_file_new))
 
         try:
-            make_symlink(test_file, test_file_new)
+            FileUtils.make_symlink(test_file, test_file_new)
             self.assertTrue(True)
         except RuntimeError:
             self.assertFalse(True, msg='Exception for symlinking same files.')
 
         try:
-            make_symlink('/tmp/whatever', test_file)
+            FileUtils.make_symlink('/tmp/whatever', test_file)
             self.assertFalse(True, msg='No exception for symlinking nonexisting file.')
         except RuntimeError:
             self.assertTrue(True)
-
-
 
 
     def test_write_to_file(self):
@@ -128,7 +144,7 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
             self.assertFalse(True,
                 'Couldn\'t create a test file "%s"!' % test_file)
 
-        write_to_file(test_file, new_content)
+        FileUtils.write_to_file(test_file, new_content)
 
         file_content = ''
         with open(test_file, 'r') as file_obj:

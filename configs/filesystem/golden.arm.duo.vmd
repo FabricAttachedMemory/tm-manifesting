@@ -11,7 +11,7 @@
 log =
 image =
 tarball =
-mirror = 
+mirror = "http://seedy.us.rdlabs.hpecorp.net"
 
 arch = arm64
 distribution =
@@ -35,7 +35,7 @@ owner =
 
 # minbase only does "Required", keyrings are only "Important".
 # debian-archive-keyring is handled manually by debootstrap.
-package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,net-tools,nfs-common,pciutils,psmisc,psutils,python3-psutil,ssh,tcpdump,tm-zbridge,tm-flush,fam-atomic-driver,tm-fuse-4.7.2,tm-libfuse,tm-librarian,vim,acpid
+package = apt-transport-https,apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,locales,net-tools,nfs-common,pciutils,psmisc,psutils,python3-psutil,ssh,tcpdump,vim,acpid,initramfs-tools
 custom-package =
 
 # L4TM doesn't follow simple name generation, must do this manually (above)
@@ -47,7 +47,7 @@ root-password = iforgot
 
 customize =
 hostname = GOLDEN
-user = l4tm/iforgot
+user = l4mdc/iforgot
 serial-console = True
 serial-console-command = /sbin/getty -L ttyAM0 115200 vt100
 

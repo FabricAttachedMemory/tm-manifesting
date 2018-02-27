@@ -88,43 +88,53 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
             return self._logger.info
         return getattr(self._logger, lvl.lower(), self._logger.info)
 
+
     @property
     def propagate(self):
         if self._logger is None:
-            raise RuntimeError('This logger has been shut down!')
+            raise RuntimeError('This logger is unconfigured!')
         return self._logger.propagate
+
 
     @propagate.setter
     def propagate(self, value):
         if self._logger is None:
-            raise RuntimeError('This logger has been shut down!')
+            raise RuntimeError('This logger is unconfigured!')
         self._logger.propagate = value
+
 
     def shutdown(self):
         if self._logger is None:
-            raise RuntimeError('This logger has been shut down!')
+            raise RuntimeError('This logger is unconfigured!')
         self._remove_handlers(self._logger)
         self._logger = None
 
+
     def __call__(self, msg, level=None):
         if self._logger is None:
-            raise RuntimeError('This logger has been shut down!')
+            raise RuntimeError('This logger is unconfigured!')
         if isinstance(msg, flaskResponse):
             if msg.status_code >= 400:
                 logger = self._logger.error
             else:
                 logger = self._logger.info
-            msg = msg.response[0].decode()
+
+            try:
+                msg = msg.response[0].decode()
+            except AttributeError:
+                msg = msg.response[0]
+
         else:
             logger = self._level_func(level)
             msg = str(msg)
         logger(msg)
 
+
     # Behave like a regular logging.info, logging.error and etc
     _okattr = frozenset(('debug', 'info', 'warning', 'error', 'critical'))
     def __getattr__(self, attr):
         if self._logger is None:
-            raise RuntimeError('This logger has been shut down!')
+            raise RuntimeError('This logger is unconfigured!')
         if attr in self._okattr:
             return getattr(self._logger, attr)
         raise AttributeError(attr)

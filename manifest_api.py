@@ -122,7 +122,6 @@ def register_blueprints(mainapp):
     if not paths:
         raise SystemExit('Cannot find any blueprints')
     ngood = 0
-
     for p in paths:
         try:
             modspec = p.replace('/', '.') + '.blueprint'
@@ -209,8 +208,8 @@ def root():
         'index.tpl',
         api_version=mainapp.config['API_VERSION'],
         base_url=request.base_url,
-        mirror=mainapp.config['L4TM_MIRROR'],
-        release=mainapp.config['L4TM_RELEASE'],
+        mirror=mainapp.config['DEBIAN_MIRROR'],
+        release=mainapp.config['DEBIAN_RELEASE'],
         rules=mainapp.config['rules'],
         url_root=request.url_root,
         coordinate=mainapp.config['tmconfig'].racks[1]['coordinate'])
