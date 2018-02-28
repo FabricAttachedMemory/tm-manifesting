@@ -148,7 +148,8 @@ def register_blueprints(mainapp):
         try:
             modspec = p.replace('/', '.') + '.blueprint'
             mainapp.logger.info('importing %s' % modspec.split('.')[1])
-            imported = import_module(modspec)
+            #Import relative to a "tmms" module (set in python3/dist-packages/tmms)
+            imported = import_module('tmms.' + modspec)
 
             # Set commonly used globals or convenience attributes.  Each
             # imported BP has its own BP global, used as the route decorator

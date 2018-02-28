@@ -9,46 +9,42 @@ from pdb import set_trace
 
 from tmms.tm_cmd import tmcmd
 from tmms import manifest_api
-from tmms.unittests import suite_config as config
 
 
 class PackageTest(unittest.TestCase):
 
-    URL = ''
-    tm_cmd = None
-    pkg_name = 'album'
-    mock_file = os.path.dirname(os.path.realpath(__file__)) + '/mock-data/album.package.json'
 
     @classmethod
     def setUpClass(cls):
-        cls.URL = config.MANIFESTING_SERVER
-        cls.tm_cmd = tmcmd.tmpkg
+        cls.app = manifest_api.create_app()
+        manifest_api.register_blueprints(cls.app)
+        cls.app.testing = True
+        cls.client = cls.app.test_client()
+        cls.base_endpoint = '/manifesting/api/'
 
 
+    def test_return_all(self):
+        """ Status for returning all packages in the repo """
+        response = self.client.get(self.base_endpoint + 'packages/')
+        self.assertTrue(response.status_code == 200,
+                        '%s is not 200 for returring all packages list!' %\
+                        response.status_code)
 
 
     def test_album_isInList(self):
         """ Test if showpkg can return non-error data for the package. """
-        output = self.tm_cmd.listall()
-        output = json.loads(output)
-        self.assertTrue('200' in output,
-                        '%s is not 200. Incorrect status returned.' % output.keys())
-
-
-    def test_album_exists(self):
-        """ Test if showpkg can return non-error data for the package. """
-        output = self.tm_cmd.show(self.pkg_name)
-        output = json.loads(output)
-        self.assertTrue('200' in output,
-                        '%s is not 200. Incorrect status returned.' % output.keys())
+        response = self.client.get(self.base_endpoint + 'package/album')
+        self.assertTrue(response.status_code == 200,
+                        '%s is not 200. Incorrect status returned.' %\
+                        response.status_code)
 
 
     def test_pkg_not_exists(self):
         """ Test if showpkg will return error message for non-existed package. """
-        output = self.tm_cmd.show('album1')
-        output = json.loads(output)
-        self.assertTrue('404' in output,
-                        '%s is not 404. Incorrect status returned for missing pkg.' % output.keys())
+        response = self.client.get(self.base_endpoint + 'package/PlanetExpress')
+        self.assertTrue(response.status_code == 404,
+                        '%s is not 404. Incorrect status returned for missing pkg.' % \
+                        response.status_code)
 
 
 if __name__ == '__main__':

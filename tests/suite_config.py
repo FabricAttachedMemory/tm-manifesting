@@ -25,7 +25,9 @@ MANIFESTING_SERVER = 'http://%s/manifesting/api/' % os.getenv(
     'TM_MANIFEST_SERVERPORT', 'localhost:31178')
 
 # TO IMPORT THIS CONFIG, MANIFESTING SERVER MUST BE RUNNING
+'''
 try:
     http_resp = requests.get(MANIFESTING_SERVER)
 except requests.exceptions.RequestException:
     raise SystemExit('\n\t!!!!FAILED: Server at [%s] is not running! !!!!\n\t' % MANIFESTING_SERVER)
+'''
