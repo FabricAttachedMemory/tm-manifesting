@@ -1,0 +1,11 @@
+TMCONFIG='./tmconfig'
+HOST = '0.0.0.0'    # 0.0.0.0 means all interfaces in the system
+PORT = 31178        # listen on this port
+MANIFESTING_ROOT = '/tmp/tmms-test'
+TFTP_ROOT = MANIFESTING_ROOT + '/tftp'
+DEBIAN_MIRROR = 'http://seedy.us.rdlabs.hpecorp.net/Debian'
+DEBIAN_RELEASE = 'jessie'
+DEBIAN_AREAS = ('main', 'contrib', 'non-free' )
+PXE_INTERFACE = 'None'
+PXE_FIREWALL = 'DHCP'
+PXE_SUBNET = 'None'     # 'None' falls back to external DNS

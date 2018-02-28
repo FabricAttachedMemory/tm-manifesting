@@ -1,0 +1,10 @@
+# tpot says this will speed it up
+# GSSAPIAuthentication no
+
+ConnectTimeout 10
+StrictHostKeyChecking no
+
+# Use nophrase_rsa.pub as manifest "l4tm_pubkey" value
+Host node*
+	User l4tm
+	IdentityFile ~/.ssh/nophrase_rsa

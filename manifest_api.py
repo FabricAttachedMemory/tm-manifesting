@@ -63,6 +63,25 @@ except ImportError as e:
         'Cannot find Python module "tmms"; run "setup.py" and retry.')
 
 ###########################################################################
+
+def create_app():
+    ''' Create a Flask app to be used/regestered by available blueprints. '''
+    mainapp = Flask('tm_manifesting', static_url_path='/static')
+    mainapp.config.update(manconfig)
+    mainapp.config['tmconfig'] = tmconfig
+
+    mainapp.config['API_VERSION'] = 1.0
+    mainapp.config['url_prefix'] = '/manifesting'
+    mainapp.config['VERBOSE'] = \
+        cmdline_args.verbose if sys.stdin.isatty() else 0
+    mainapp.config['auto-update'] = cmdline_args.auto_update
+    mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
+    mainapp.config['DRYRUN'] = cmdline_args.dry_run
+    mainapp.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0     # For node ESP files
+
+    return mainapp
+
+
 # Set config variables for future use across the blueprints.
 
 cmdline_args = parse_cmdline_args('n/a')
@@ -76,29 +95,20 @@ except Exception as e:
 for node in tmconfig.allNodes:  # Hack around broken BU scripts
     setDhcpClientId(node)
 
+
 # mainapp is needed as decorator base so it comes early.
 # Flask sets mainapp.root_path to cwd.  Set that now; it's also needed
 # during blueprint scanning.
-
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
-mainapp = Flask('tm_manifesting', static_url_path='/static')
-mainapp.config.update(manconfig)
-mainapp.config['tmconfig'] = tmconfig
+mainapp = create_app()
 
-mainapp.config['API_VERSION'] = 1.0
-mainapp.config['url_prefix'] = '/manifesting'
-mainapp.config['VERBOSE'] = \
-    cmdline_args.verbose if sys.stdin.isatty() else 0
-mainapp.config['auto-update'] = cmdline_args.auto_update
-mainapp.config['DEBUG'] = cmdline_args.debug and sys.stdin.isatty()
-mainapp.config['DRYRUN'] = cmdline_args.dry_run
-mainapp.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0     # For node ESP files
 
 # Flask has configured a root logger with default "DEBUG" level handler that
 # spits to stderr.  That's good enough for early work.  tmmsLogger will
 # change that behavior on first invocation.
 mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' % (
     mainapp.config['PXE_INTERFACE'])
+
 
 ###########################################################################
 # mainapp was given a logger by Flask.  Modify it based on cmdline arguments.
@@ -126,7 +136,8 @@ def register_blueprints(mainapp):
         try:
             modspec = p.replace('/', '.') + '.blueprint'
             mainapp.logger.info('importing %s' % modspec.split('.')[1])
-            imported = import_module(modspec)
+            #Import relative to a "tmms" module (set in python3/dist-packages/tmms)
+            imported = import_module('tmms.' + modspec)
 
             # Set commonly used globals or convenience attributes.  Each
             # imported BP has its own BP global, used as the route decorator

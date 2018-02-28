@@ -1,0 +1,151 @@
+Quick Start to Manifesting from Github
+
+tm-manifesting is developed on L4TM systems for use in The Machine
+environment.  Support for any other distro, even Debian or HPE Linux,
+is optional and discretionary.
+
+===============================================================================
+        L4TM ENVIRONMENT
+
+Install L4TM on your target server (probably a ToRMS).
+
+Insure the system's packages are updated and include the following packages:
+
+$ sudo apt-get update
+$ sudo apt-get install python3 git
+
+Clone the latest repo from HPE Github:
+
+$ cd some/where
+$ git clone https://github.hpe.com/hpelinux/manifesting.git
+$ cd manifesting
+
+All commands below need to be run from the "manifesting" directory.
+
+=============================================================================
+        MANIFESTING SETUP: THE MACHINE CONFIGURATION FILE
+
+TMCF (The Machine Configuration File) is the large JSON file that completely
+describes the topology of an instance of The Machine.  Every instance needs
+its own custom file.  Creation of that file is outside the scope of
+manifesting.
+
+TMCF is needed for most of the setup steps listed below.  You also need
+TMCF to actually run the API server "manifest_api.py".   When you get your
+file you should save it in the default location /etc/tmconfig.  Note:
+the Librarian also uses this file.
+
+=============================================================================
+        MANIFESTING SETUP: MANIFESTING CONFIGURATION FILE
+
+The sample manifesting configuration file supplied with the repo is 
+"tmms".  Yes, it is Python syntax.  No, it will most likely NOT work
+for you without customization.  Copy it to a (new) file "/etc/tmms" and
+make edits in that copy.  There are many comments in that file explaining
+the variables and their values.  By default, all the commands (setup.py
+and manifest_api.py) will look for /etc/tmms for their configuration.
+
+You will almost certainly need to change the PXE_INTERFACE option.  You
+should also add 'main' to the DEBIAN_AREAS tuple.
+
+You may also keep a custom file in a custom place, like $HOME/mytmms.
+To use it, invoke all commands with --config.  You have to do it
+with all commands to get consistent results.
+
+=============================================================================
+        MANIFESTING SETUP: FIRST TIME
+
+$ sudo ./setup.py [ all ]
+
+By default (no arguments), or specifying "all", setup.py will start the 
+first of several phases of setup, and proceed through all of them.  That
+is the recommended invocation.  The phases are discussed below.
+
+You may see some package installation output from apt-get depending on
+the packages currently on your system.
+
+The configuration file chosen will be display, then a summary of 
+operations performed.
+
+Hopefully all error messages are clear on the nature of any problem(s)
+and suggestive as to a remedy.  Most of them will refer to a problem
+in the values you store in /etc/tmms.  You should be familiar with the
+keys and values in that file so you recognized them in error messages.
+
+For example, the error message
+
+PXE_INTERFACE: no such interface "net_accessP"
+
+means you need to set PXE_INTERFACE to the NIC which is actually connected
+to your nodes.  No, all permutations of error messages will not be listed.
+If you get confused, ask for help.
+
+=============================================================================
+        MANIFESTING SETUP: ENVIRONMENT
+
+This is the first phase of "setup.py all".   It may be explicitly invoked via
+
+$ sudo ./setup.py environment
+
+It creates the overall directory structure needed to support other
+configuration steps.  If this phase is not done first, the other phases
+will probably fail.
+
+=============================================================================
+        MANIFESTING SETUP: NETWORKING
+
+If all goes well, the networking phase will be entered next.  It can be
+manually invoked via
+
+$ sudo ./setup.py networking
+
+A similar experience will occur, some minor output of ongoing status.
+Error messages are intended to be suggestive of their own remedy.
+
+=============================================================================
+        MANIFESTING SETUP: GENERATE GOLDEN IMAGE
+
+Finally a golden image must be generated.   It should happen automatically
+if you did "setup.py all", or you can invoke only this stage with
+
+$ sudo ./setup.py golden_image
+
+This will take about twenty minutes, as the tasks involve building a 
+file system under QEMU-static control (for aarch64).  Be patient.
+
+=============================================================================
+        MANIFESTING: RUN API SERVER
+
+At this point you should be able to run the manifesting server:
+
+$ sudo ./manifest_api.py
+
+A few screens of debug info will scroll by, then a list of HTML and API
+endpoints.   The screen is then following the activity of the server.
+Every action you issue against the API should result in line(s) of
+output on the server terminal.  If the screen doesn't change, your
+networking is misconfigured.   That is not a manifesting bug.
+
+=============================================================================
+        CREATE SYSTEM SHORTCUTS TO PRIMARY MANIFESTING COMMANDS
+
+(Optional steps for $PATH convenience)
+
+Create a symbolic link to tm_manifest.py to use it as if it is an installed
+application.  This assumes your current working directory is the top of
+the repo clone, "manifesting".
+
+sudo ln -s $PWD/manifest_api.py /usr/local/bin/tm-manifest-server
+sudo ln -s $PWD/tm_cmd/tm_manifest.py /usr/local/bin/tm-manifest
+
+If you run:
+
+$ sudo tm-manifest-server
+
+A manifesting API server should start.
+
+If you run:
+
+$ tm-manifest help
+
+you should get a list of directives.

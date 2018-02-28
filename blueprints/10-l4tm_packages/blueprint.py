@@ -34,6 +34,8 @@ BP = Blueprint(_ERS_element, __name__)
 @BP.route('/%ss/' % _ERS_element)       # Plurar form of the element name to list all Packages
 @BP.route('/%s/<name>' % _ERS_element)  # Songular - to list one package.
 def _webpage(name=None):
+    if _data is None:
+        _load_data()
 
     if name is None:    # overloaded detection of singular rule
         return render_template(
@@ -68,6 +70,9 @@ def alphabetic_sets(data):
 @BP.route('/api/%ss/' % _ERS_element)       # Plurar form of the element name to list all Packages
 @BP.route('/api/%s/<name>' % _ERS_element)  # Songular - to list one package.
 def _api(name=None):
+    if _data is None:
+        _load_data()
+
     status_code = 200
     if name is None:
         packages = [ ]
@@ -91,9 +96,11 @@ def _api(name=None):
 
     for tag in ('Depends', 'Tags'):
         if tag in pkg and False:
-            set_trace()
             pkg[tag] = pkg[tag].split(', ')
 
+    #at this point, pkg is of type debian.deb822.Packages, instead of dict.
+    #that would make jsonify flip out as a TypeError. Therefore - make it dict.
+    pkg = dict(pkg)
     return make_response(jsonify(pkg), status_code)
 
 ###########################################################################
@@ -124,6 +131,7 @@ def _load_data():
             BP.logger.debug('Parsing %d bytes of package data' % len(unzipped))
             unzipped = BytesIO(unzipped)    # the next step needs read()
             tmp = [ src for src in Packages.iter_paragraphs(unzipped) ]
+
             _data.update(dict((pkg['Package'], pkg) for pkg in tmp))
 
 

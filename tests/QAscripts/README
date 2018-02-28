@@ -1,0 +1,36 @@
+= Specifying the DNS Domain
+
+  This used to be done with the TMDOMAIN variable in /etc/tmms.  Now use the
+  "domains { publicData: ....}" field in TMCF.  For FAME, see the new 
+  variable PXE_SUBNET in the tmms reference file.
+
+
+= Prepping the ToRMS to serve ARM PXE
+
+  DEPRECATED: should be done by "setup environment".  There's other useful
+  information here so keep reading.
+
+  sudo apt-get install grub-efi-arm64-bin
+
+This is NOT grub-efi:amd64, which would replace grub-pc, will
+probably break your system.  Nor is it grub-efi-arm64, which collides
+with grub-pc but doesn't break your system.
+It gives you the auxiliary modules under /usr/lib/grub/arm64-efi/*.mods
+to build an EFI boot manager:
+
+grub-mkimage --format=arm64-efi --output=grub4tm.pxe \
+	--prefix='(pxe)/boot/grub' efinet ...
+
+OR: pick up the ready-to-run PXE EFI GRUB at
+
+http://hlinux-deejay.us.rdlabs.hpecorp.net/l4tm/dists/catapult/main/uefi/grub2-arm64/current/grubnetaa64.efi.signed
+
+or unpack the package
+
+apt-get download grub-efi-arm64-signed:arm64
+
+Drop the ".signed" part.  It has all the modules as built by the command
+
+debian/build-efi-images
+
+As found after "apt-get download grub2:arm64"
