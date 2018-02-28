@@ -1,9 +1,9 @@
-tm-manifesting (3.0) catapult; urgency=low
+tm-manifesting (3.0-1) catapult; urgency=low
 
-    * Multi repo suport for building images
+    * Multi repo support for building images
     * minor bugs fix and refactoring.
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Web, 28 Wed 2017 14:05:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 28 Feb 2017 14:05:07 -0600
 
 
 tm-manifesting (2.4-5+l4tm1) catapult; urgency=low
