@@ -1,0 +1,248 @@
+tm-manifesting (3.0-1) catapult; urgency=low
+
+    * Multi repo support for building images
+    * minor bugs fix and refactoring.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 28 Feb 2017 14:05:07 -0600
+
+
+tm-manifesting (2.4-5+l4tm1) catapult; urgency=low
+
+   * Fixing packaging "configuration" routine to no to remove /etc/tmms
+   * Use correct variables for local packages; better error messages
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 24 Jul 2017 13:30:07 -0600
+
+
+tm-manifesting (2.4-4+l4tm1) catapult; urgency=low
+
+   * Do not reprocess config variables for "None" value.
+   * Unicode slash bug fix
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Fri, 14 Jul 2017 07:57:07 -0600
+
+
+tm-manifesting (2.4-3+l4tm1) catapult; urgency=low
+
+   * Smarter MP redfish scan for powered nodes; refactor names for clarity
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 12 Jul 2017 07:50:07 -0600
+
+
+tm-manifesting (2.4-2+l4tm1) catapult; urgency=low
+
+   * Remove nosmp option from grub's kernel command line.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 31 May 2017 09:33:07 -0600
+
+tm-manifesting (2.4-1+l4tm5) catapult; urgency=low
+
+   * Overriding $? of posinst script from a non 0 value if it failes
+      configuring manifesting server. This is needed to allow installation
+      of the tasksel with the manifesting package. Otherwise - it will fail and
+      cry and complain.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 17 April 2016 15:04:07 -0600
+
+tm-manifesting (2.4-1+l4tm4) catapult; urgency=low
+
+   * Fixing package fail to do clean install. Adding environment setup routine
+      for the postinst script.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 9 February 2016 15:30:07 -0600
+
+
+tm-manifesting (2.4-1+l4tm3) catapult; urgency=low
+
+   * Packaging fix - systemctl, setup networking on update and other.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 January 2016 15:15:07 -0600
+
+
+tm-manifesting (2.4-1+l4tm2) catapult; urgency=low
+
+   * Packaging bug fix - couldnt properly remove the package.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 9 January 2016 11:01:07 -0600
+
+
+tm-manifesting (2.4-1+l4tm1) catapult; urgency=low
+
+   * Hotfix typo in grub menu template with double {
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 20 December 2016 17:05:07 -0600
+
+
+tm-manifesting (2.4-0+l4tm1) catapult; urgency=low
+
+   * Kill daemons that survive a chroot; update the default golden image
+   * Update the default golden image template
+   * Use new kill_chroot_daemons()
+   * Use eth4 as default PXE_INTERFACE
+   * And other minor fixes
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 19 December 2016 17:00:07 -0600
+
+
+tm-manifesting (2.3-0+l4tm1) catapult; urgency=low
+
+   * Add sentinel /etc/default/bupxefix to scan node MPs for DHCP Client ID
+   * Add "setup tmconfig" to scan complex and create tmconfig.ini
+   * Update man pages
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Sun, 4 December 2016 21:33:07 -0600
+
+
+tm-manifesting (2.2-0+l4tm1) catapult; urgency=low
+
+   * Change lfs_fuse startup option
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 16 November 2016 12:45:07 -0600
+
+
+tm-manifesting (2.1-3+l4tm1) catapult; urgency=low
+
+   * Update man page; add section on log files
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 November 2016 17:15:07 -0600
+
+tm-manifesting (2.1-2+l4tm1) catapult; urgency=low
+
+   * Fixing the package. Smae changes to the source code as in 2.1-1+l4tm1 version.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 November 2016 9:30:07 -0600
+
+
+tm-manifesting (2.1-1+l4tm1) catapult; urgency=low
+
+   * Fixing leftovers of non full path for node coordinate:
+         Autostart LFS with physloc set at manifest binding
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 10 November 2016 9:30:07 -0600
+
+
+tm-manifesting (2.1-0+l4tm1) catapult; urgency=low
+
+   * Using full coordinate path for dnsmasq hostsfile ClientID
+   * 30-nodes/blueprint.py now returns json string in response body
+   * Lock node unbinding command while node is building
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 8 November 2016 14:52:07 -0600
+
+
+tm-manifesting (2.0-0+l4tm1) catapult; urgency=low
+
+   * New updated web UI
+   * Fixing bugs
+   * Error handling
+   * Updating documentation (man pages)
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Tue, 1 November 2016 16:52:07 -0600
+
+
+tm-manifesting (1.8-0+l4tm1) catapult; urgency=low
+
+   * Do not exit on errors for one-off packages loaded via URL
+   * Display ERS from link rather than local copy; show install script and log on web page
+   * Use a shell environment variable TM_MANIFEST_SERVERPORT to change target
+   * No local copy of ERS; show log files on web page; undo hardcoded dest for tm-manifest
+   * Properly process a PXE_INTERFACE of "None"
+   * Updating documentation
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 10 October 2016 16:16:07 -0600
+
+
+tm-manifesting (1.7-0+l4tm1) catapult; urgency=low
+
+   * Support for LSGi automated testing
+   * Tweak permissions on .ssh files
+   * Add "all" processing to waitnodes
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 6 October 2016 16:54:07 -0600
+
+tm-manifesting (1.6-0+l4tm2) catapult; urgency=low
+
+   * Install bug fix - couldn't mv tmms.purge due to incorrect if statement in
+     postinst script
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 3 October 2016 10:54:07 -0600
+
+tm-manifesting (1.6-0+l4tm1) catapult; urgency=low
+
+   * Added a -tmas version of golden image VMD config file
+   * Better error messages about golden image
+   * package upgrade support
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 29 September 2016 12:44:07 -0600
+
+tm-manifesting (1.5-0+l4tm1) catapult; urgency=low
+
+   * Add new tmms variable PXE_SUBNET to leave simplified TMCF domain name
+   * packaging to start handling upgrade routine (in progress)
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 26 September 2016 16:52:07 -0600
+
+tm-manifesting (1.4-0+l4tm3) catapult; urgency=low
+
+    * first steps on getting apt upgrade working
+        - post-args-parser script to parse command line
+    * Bugfix:
+        - tmms config file fixing repo url ends on dot
+        - warning on non existing .iptables file
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 22 September 2016 16:02:07 -0600
+
+tm-manifesting (1.4-0+l4tm2) catapult; urgency=low
+
+    * Fine tune some setup behavior to support real ToRMS with real DNS
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 22 September 2016 11:25:07 -0600
+
+tm-manifesting (1.4-0+l4tm1) catapult; urgency=low
+
+  * Generation of golden image with full librarian/LFS and drivers is now
+    working in a FAME environment
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 21 September 2016 11:35:07 -0600
+
+tm-manifesting (1.3-0+l4tm1) catapult; urgency=low
+
+  * dnsmasq configuration
+  * code refactor
+  * cleanup and bug fixes
+  * new tests and tests with FAME
+  * other minor and not so minor fixes and changes
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 19 September 2016 14:12:07 -0600
+
+tm-manifesting (1.2-0+l4tm1) catapult; urgency=low
+
+  * Adding systemd support for the tm-manifest-server
+  * Adding arm binaries
+  * Lintian overrides
+  * General api bug fixes
+  * Support leading slashes of node coordinate string
+  * Fixing unittests, config files and general error checking
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 11 August 2016 10:22:07 -0600
+
+tm-manifesting (1.1-0+l4tm1) catapult; urgency=low
+
+  * Support only amd64 arch
+  * General api bug fix
+  * Support leading slashes of node coordinate string
+  * Fixing unittests, config files and general error checking
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 4 August 2016 12:42:07 -0600
+
+tm-manifesting (1.0-0+l4tm1) catapult; urgency=low
+
+  * Initial release for l4tm distro.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Monday, 1 August 2016 14:03:52 -0600
+
+tm-manifesting (1.0) catapult; urgency=low
+
+  * Initial release of the Manifesting api.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 28 April 2016 09:12:03 -0600
