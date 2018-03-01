@@ -10,7 +10,7 @@ import time
 from pdb import set_trace
 
 from tmms.tm_cmd import tmcmd as TMCMD
-from tmms.unittests import suite_config as config
+from tmms.tests import suite_config as config
 from tm_librarian.tmconfig import TMConfig
 
 

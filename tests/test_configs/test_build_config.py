@@ -12,7 +12,6 @@ from tmms.configs.build_config import ManifestingConfiguration as MC
 
 class PackageTest(unittest.TestCase):
 
-    tmms_path = './mock/tmms'
     expected_values = {
         'TMCONFIG' : './tmconfig',
         'HOST' : '0.0.0.0',
@@ -29,11 +28,13 @@ class PackageTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        this_file_abs = os.path.abspath(__file__)
+        this_file_dir = os.path.dirname(this_file_abs)
+        cls.tmms_path = this_file_dir + '/mock/tmms'
 
 
     def test_init(self):
-        cfg= MC(self.tmms_path, False)
+        cfg = MC(self.tmms_path, False)
         try:
             MC(self.tmms_path)
             self.assertTrue(False, 'Failed to catch missing folders!')
