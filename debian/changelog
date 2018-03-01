@@ -1,9 +1,17 @@
+tm-manifesting (3.0-1) catapult; urgency=low
+
+    * Multi repo support for building images
+    * minor bugs fix and refactoring.
+
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 28 Feb 2017 14:05:07 -0600
+
+
 tm-manifesting (2.4-5+l4tm1) catapult; urgency=low
 
    * Fixing packaging "configuration" routine to no to remove /etc/tmms
    * Use correct variables for local packages; better error messages
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 24 July 2017 13:30:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Mon, 24 Jul 2017 13:30:07 -0600
 
 
 tm-manifesting (2.4-4+l4tm1) catapult; urgency=low
@@ -11,14 +19,14 @@ tm-manifesting (2.4-4+l4tm1) catapult; urgency=low
    * Do not reprocess config variables for "None" value.
    * Unicode slash bug fix
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Fri, 14 July 2017 07:57:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Fri, 14 Jul 2017 07:57:07 -0600
 
 
 tm-manifesting (2.4-3+l4tm1) catapult; urgency=low
 
    * Smarter MP redfish scan for powered nodes; refactor names for clarity
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 12 July 2017 07:50:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Wed, 12 Jul 2017 07:50:07 -0600
 
 
 tm-manifesting (2.4-2+l4tm1) catapult; urgency=low

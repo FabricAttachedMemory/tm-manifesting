@@ -1,1 +1,0 @@
-{"tasks": [], "_comment": "Unittest manifest", "release": "the operating system release (unstable/testing/stable)", "name": "testing", "description": "Evil Bender", "packages": ["album"]}
