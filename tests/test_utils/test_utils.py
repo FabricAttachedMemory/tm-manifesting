@@ -47,7 +47,6 @@ class UtilsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(compressed_dir),
                         '%s was not compressed into %s!' % (test_dir, compressed_dir))
 
-        set_trace()
         TmmsUtils.untar(uncompressed_dir, compressed_dir)
         self.assertTrue(os.path.exists(uncompressed_dir + '/' + test_file_name))
 
