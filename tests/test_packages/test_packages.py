@@ -39,6 +39,15 @@ class PackageTest(unittest.TestCase):
                         response.status_code)
 
 
+    def test_manifesting_inList(self):
+        """ Need to test OTHER_MIRRORS capailities. tm-manifesting should typically
+        come from OTHER_MIRRORS, so check if it is in the list of all packages.
+        NOTE: This might not be true at some point.
+        """
+        response = self.client.get(self.base_endpoint + 'package/tm-manifesting')
+        self.assertTrue(response.status_code == 200)
+
+
     def test_pkg_not_exists(self):
         """ Test if showpkg will return error message for non-existed package. """
         response = self.client.get(self.base_endpoint + 'package/PlanetExpress')

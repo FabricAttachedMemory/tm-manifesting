@@ -10,6 +10,7 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 from collections import defaultdict
+from flask import Blueprint, render_template, request, jsonify, make_response
 import gzip
 import os
 import requests as HTTP_REQUESTS
@@ -19,7 +20,7 @@ from debian.deb822 import Packages
 from io import BytesIO, StringIO
 from pdb import set_trace
 
-from flask import Blueprint, render_template, request, jsonify, make_response
+from tmms.utils import utils
 
 _ERS_element = 'package'
 
@@ -107,19 +108,39 @@ def _api(name=None):
 
 _data = None
 
-def _load_data():
-    # https://github.com/raumkraut/python-debian/blob/master/README.deb822
 
+def _load_data():
     global _data
-    mirror = BP.config['DEBIAN_MIRROR']
-    release = BP.config['DEBIAN_RELEASE']
-    repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (mirror, release)
+    all_mirrors = get_all_mirrors()
 
     _data = {}
-    for area in BP.config['DEBIAN_AREAS']:
+    for full_source in all_mirrors:
+        _read_packages(full_source)
+
+
+def _read_packages(full_source):
+    """ Get Packages.gz of the sources.list entry and extract all of its pks.
+    Packages are saved into _data variable and will be accessed by _filter()
+    function.
+
+    @param full_source: sources.list entry (deb http//url release area1 ...)
+
+    return: None. Content is saved into _data directly.
+    """
+    components = utils.deb_components(full_source)
+    if not components.url:
+        msg = ' - Wrong mirror format!\n'
+        msg += '  - Expected "deb http://mirror.url release ares"\n'
+        msg += '  - Mirror provided: %s' % (full_source)
+        raise RuntimeError(msg)
+
+    # Reference:
+    # https://github.com/raumkraut/python-debian/blob/master/README.deb822
+    repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (components.url, components.release)
+    for area in components.areas:
         for arch in ('binary-all', 'binary-arm64'):
-            BP.logger.info('Loading/processing %s/%s/Packages.gz...' %\
-                            (area, arch))
+            BP.logger.info('Loading/processing %s/.../%s/%s/Packages.gz...' %\
+                            (components.url, area, arch))
             pkgarea = repo % (area, arch)
             pkgresp = HTTP_REQUESTS.get(pkgarea)
             if pkgresp.status_code != 200:
@@ -133,6 +154,31 @@ def _load_data():
             tmp = [ src for src in Packages.iter_paragraphs(unzipped) ]
 
             _data.update(dict((pkg['Package'], pkg) for pkg in tmp))
+
+
+def get_all_mirrors():
+    """
+        Return a list of sources.list entries from the tmms config parameters.
+    """
+    mirror = BP.config['DEBIAN_MIRROR']
+    release = BP.config['DEBIAN_RELEASE']
+    areas = list(BP.config['DEBIAN_AREAS'])
+    areas = ' '.join(areas)
+
+    main_source = 'deb {url} {release} {areas}'\
+                    .format(url=mirror, release=release, areas=areas)
+
+    all_mirrors = BP.config['OTHER_MIRRORS']
+    #unlikly, but someone might use set instead of list. Thus - make it a list.
+    if isinstance(all_mirrors, set):
+        all_mirrors = list(all_mirrors)
+
+    if isinstance(all_mirrors, str): #can be str or list of mirrors
+        all_mirrors = [all_mirrors]  #make it A list to loop through
+
+    all_mirrors.append(main_source)
+    return all_mirrors
+
 
 
 def _filter(packages):    # Maybe it's time for a class
