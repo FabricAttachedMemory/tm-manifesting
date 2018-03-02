@@ -165,8 +165,8 @@ def get_all_mirrors():
     areas = list(BP.config['DEBIAN_AREAS'])
     areas = ' '.join(areas)
 
-    main_source = 'deb {url} {release} {areas}'\
-                    .format(url=mirror, release=release, areas=areas)
+    main_source = 'deb {url} {release} {areas}'.format(
+                                    url=mirror,release=release, areas=areas)
 
     all_mirrors = BP.config['OTHER_MIRRORS']
     #unlikly, but someone might use set instead of list. Thus - make it a list.
