@@ -528,11 +528,12 @@ def install_packages(args):
     :return [boolean] True if it worked, False otherwise with updated status.
     """
     is_debug = getattr(args, 'debug', False)
+    localdebs = None
+    packages = None
+    downloads = None
 
     # Separate the space-delimited list of packages into URLs and package names
     if args.packages is None:
-        downloads = None
-        packages = None
         msg = 'Updating/upgrading packages from golden image'
     else:
         if ',' in args.packages:

@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from shutil import rmtree, copytree
 
-from tmms.unittests import suite_config as config
+from tmms.tests import suite_config as config
 from pdb import set_trace
 
 MANIFEST_UPLOADS = config.server_config['MANIFEST_UPLOADS']

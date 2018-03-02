@@ -9,3 +9,4 @@ DEBIAN_AREAS = ('main', 'contrib', 'non-free' )
 PXE_INTERFACE = 'None'
 PXE_FIREWALL = 'DHCP'
 PXE_SUBNET = 'None'     # 'None' falls back to external DNS
+OTHER_MIRRORS = 'deb http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fam/ testing main'

@@ -1,11 +1,11 @@
 #!/usr/bin/python3 -tt
 import os
 import sys
-customize_node = os.path.realpath(__file__)
-customize_node = os.path.dirname(customize_node)
-customize_node = '%s/../../blueprints/30-nodes/node_builder/' % (customize_node)
-sys.path.append(customize_node)
-import customize_node as CN
+#customize_node = os.path.realpath(__file__)
+#customize_node = os.path.dirname(customize_node)
+#customize_node = '%s/../../blueprints/30-nodes/node_builder/' % (customize_node)
+#sys.path.append(customize_node)
+from tmms.utils import customize_node as CN
 
 tmp_folder = "/tmp/UNITTEST_CUSTOMNODE"
 fs_img = "/tmp/UNITTEST_CUSTOMNODE/fs_img"
