@@ -2,6 +2,7 @@
 '''Every real project needs a utils module.'''
 
 from contextlib import contextmanager
+import collections
 import errno
 import logging
 import os
@@ -210,7 +211,7 @@ def kill_pid(pid, procname='', daemon=True):
 
 
 def kill_chroot_daemons(rootBase):
-    '''Kill QEMU static programs with a root path that includes rootBase'''
+    """ Kill QEMU static programs with a root path that includes rootBase """
     assert not os.geteuid(), 'Only root can use kill_chroot_daemon'
     for p in psutil.process_iter():
         cmdline = p.cmdline()
@@ -221,3 +222,38 @@ def kill_chroot_daemons(rootBase):
         if not p.cwd().startswith(rootBase):
             continue
         _kill_pid_object(p)
+
+
+def deb_components(full_source):
+    """
+        Extract components(url, release, areas) of the sources.list entry into
+    a nambedtuple object.
+    When incorrectly formatted str is passed, all components are set to empty str.
+
+    @param full_source: full url as it appears in sources.list (deb url release areas)
+    """
+    pieces = collections.namedtuple('DebianComponents', 'url release areas')
+    #Need to set defaults for namedtuple params...
+    pieces.url = ''
+    pieces.release = ''
+    pieces.areas = []
+
+    #Silly check of the format of the source. If it doesn't even start with
+    #'deb', there is no reason to try extracting compojnents.
+    if not full_source.startswith('deb'):
+        return pieces
+
+    splitted = full_source.split(' ')
+    # source url might have [trusted=yes] thingy in second position. Remove it.
+    if not splitted[1].startswith('http'):
+        splitted.pop(1)
+
+    # size should be at least 4, cause "deb http//url release area1"
+    if len(splitted) < 4:
+        return pieces
+
+    pieces.url = splitted[1]
+    pieces.release = splitted[2]
+    pieces.areas = splitted[3:]
+
+    return pieces

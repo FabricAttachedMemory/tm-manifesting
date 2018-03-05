@@ -51,6 +51,36 @@ class UtilsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(uncompressed_dir + '/' + test_file_name))
 
 
+    def test_deb_components_valid(self):
+        '''
+            Validate sources.list url can be parsed properly by checking
+            url, release and areas values match between origin and parsed.
+        '''
+        url = 'http://some.deb.mirror/debian/'
+        release = 'jessie'
+        areas = 'main contrib'
+        full_source = 'deb {url} {release} {areas}'\
+                    .format(url=url, release=release, areas=areas)
+        pieces = TmmsUtils.deb_components(full_source)
+
+        self.assertTrue(url == pieces.url)
+        self.assertTrue(release == pieces.release)
+        self.assertTrue(areas.split(' ') == pieces.areas)
+
+
+    def test_deb_components_invalid(self):
+        ''' '''
+        url = 'http://some.deb.mirror/debian/'
+        release = 'jessie'
+        areas = 'main contrib'
+        full_source = '{url} {release} {areas}'\
+                    .format(url=url, release=release, areas=areas)
+        pieces = TmmsUtils.deb_components(full_source)
+
+        self.assertFalse(pieces.url)
+        self.assertFalse(pieces.release)
+        self.assertFalse(pieces.areas)
+
 
     def touch_file(self, filename):
         """ Touch a file that will be used for testing. """

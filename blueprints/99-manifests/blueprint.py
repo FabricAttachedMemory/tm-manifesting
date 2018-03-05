@@ -278,7 +278,7 @@ class ManifestDestiny(object):
         man = self.thedict
         nosuch = BP.mainapp.blueprints['package'].filter(man['packages'])
         #FIXME: Validate PACKAGE exist in mirror!
-        #assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
+        assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
 
         nosuch = BP.mainapp.blueprints['task'].filter(man['tasks'])
         assert not nosuch, 'no such task(s): ' + ', '.join(nosuch)
