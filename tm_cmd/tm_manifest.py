@@ -31,6 +31,8 @@ def _cleanup_sysarg(sysargv, parsearg):
         # remove all dashes and = signes from the argument
         arg_name = arg.strip('-').split('=')[0]
         if arg not in cmdlookup:
+            # removing directly from sysargv will cause problems. Thus, save
+            # what needs to be removed and do it after this loop is done.
             to_remove.append(arg)
             continue
 
@@ -39,7 +41,7 @@ def _cleanup_sysarg(sysargv, parsearg):
             to_remove.append(arg)
 
     # at this point, it is safe to remove from sysargv list, since it is outside
-    # the sysargv look itself.
+    # the sysargv loop.
     for arg in to_remove:
         if arg in sysargv:
             sysargv.remove(arg)
