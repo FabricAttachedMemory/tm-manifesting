@@ -39,8 +39,6 @@ def _NST(func):     # No Stack Trace
 class TmCmd():
 
     # Strangle a rookie today.
-    url = 'http://%s/manifesting/api/' % os.getenv(
-        'TM_MANIFEST_SERVERPORT', 'localhost:31178')
     args = {}
 
     def __init__(self, sort=True, headers=None, indent=4, **options):
@@ -48,26 +46,54 @@ class TmCmd():
             self.header = {'Accept' : 'application/json; version=1.0'}
         else:
             self.header = headers
+
+        self.server = options.get('server', 'localhost')
+        self.port = options.get('port', '31178')
+        #default_base_url = '%s:%s' % (server, port)
+        # Note: os ENV prioritiez over command line port and server
+        #self.url = 'http://%s/manifesting/api/' % os.getenv(
+        #    'TM_MANIFEST_SERVERPORT', default_base_url)
+
         self.json_indent = indent
         self.json_sort = sort
         self.show_name = None
         self.verbose = options.get('verbose', False)
+
+
+    @property
+    def url(self):
+        ''' Build endpoint base url using self.server and self.port values.
+        NOTE: Server and Port a always overwritten by TM_MANIFEST_SERVERPORT OS
+        environment variable (if it is set).
+        '''
+        default_base_url = '%s:%s' % (self.server, self.port)
+        return 'http://%s/manifesting/api/' % os.getenv(
+            'TM_MANIFEST_SERVERPORT', default_base_url)
+
+
 
     @_NST
     def listall(self, arg_list=None, **options):
         """
             Intended to be overridden by inherited class.
         """
+        self.server = options.get('server', self.server)
+        self.port = options.get('port', self.port)
+
         if arg_list is None:
             arg_list = []
         assert len(arg_list) == 0, 'This function does not take non-optional arguments!'
         if 'verbose' in options and options['verbose']:
             print(' - Sending request to "%s"...' % self.url)
 
+
     def show(self, target, **options):
         """
             Intended to be overridden by inherited class.
         """
+        self.server = options.get('server', self.server)
+        self.port = options.get('port', self.port)
+
         assert len(target) >= 1, 'Missing argument: thisfunction <name>!'
         # Let user pass both types to avoid confusion passing args as "list"
         # for a single argument.  Passing list is helpful for a generic
@@ -76,14 +102,19 @@ class TmCmd():
         if 'verbose' in options and options['verbose']:
             print(' - Sending request to "%s"...' % self.url)
 
+
     def delete(self, target, **options):
         """
             Base class to handle delete routines.
         """
+        self.server = options.get('server', self.server)
+        self.port = options.get('port', self.port)
+
         assert len(target) >= 1, 'Missing argument: delete <name>!'
         self.show_name = target[0] if isinstance(target, list) else target
         if options.get('verbose', False):
             print(' - Sending request to delete %s' % (self.url, target[0]))
+
 
     @_NST
     def http_request(self, url, **options):
