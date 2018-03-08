@@ -5,7 +5,7 @@ configs/            usr/lib/python3/dist-packages/tmms/
 static/             usr/lib/python3/dist-packages/tmms/
 templates/          usr/lib/python3/dist-packages/tmms/
 tm_cmd/             usr/lib/python3/dist-packages/tmms/
-unittests/          usr/lib/python3/dist-packages/tmms/
+tests/              usr/lib/python3/dist-packages/tmms/
 utils/              usr/lib/python3/dist-packages/tmms/
 tmms                usr/lib/python3/dist-packages/tmms/
 README*             usr/lib/python3/dist-packages/tmms/
