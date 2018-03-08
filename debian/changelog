@@ -3,7 +3,7 @@ tm-manifesting (3.0-2) testing; urgency=low
     * Fix packaging errors: changelog dates.
     * Changing distro from catapult to testing
 
- -- Zakhar Volchak <zakhar.volchak@hpe.com>  THu, 8 Mar 2017 9:22:07 -0600
+ -- Zakhar Volchak <zakhar.volchak@hpe.com>  Thu, 8 Mar 2018 9:22:07 -0600
 
 
 tm-manifesting (3.0-1) catapult; urgency=low
