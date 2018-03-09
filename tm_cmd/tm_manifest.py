@@ -17,46 +17,17 @@ from pdb import set_trace
 from tmcmd import cmdlookup
 
 
-def _cleanup_sysarg(sysargv, parsearg):
-    """
-        Remove "argparse" defined arguments from sys.argv list as well as any
-    other ars that are not in cmdlookup.
-    Mixing those two together causing confusion in the "cmdlookup"
-    function calls.
-    :param 'sysargv': [list] of arguments in "sys.argv"
-    :param 'parsearg': [dict] of arguments set by "argparse" module.
-    """
-    to_remove = [] #arguments to be removed from sysargv
-    for arg in sysargv:
-        # remove all dashes and = signes from the argument
-        arg_name = arg.strip('-').split('=')[0]
-        if arg not in cmdlookup:
-            # removing directly from sysargv will cause problems. Thus, save
-            # what needs to be removed and do it after this loop is done.
-            to_remove.append(arg)
-            continue
-
-        if arg_name in parsearg:
-            sysargv.remove(arg)
-            to_remove.append(arg)
-
-    # at this point, it is safe to remove from sysargv list, since it is outside
-    # the sysargv loop.
-    for arg in to_remove:
-        if arg in sysargv:
-            sysargv.remove(arg)
-
-
 def main(args):
-    _cleanup_sysarg(sys.argv, args)
-    if len(sys.argv) == 0:
+    if len(args['leftover']) == 0:
         cmdlookup['help']()
         return
 
     # at this point, sys.argv should only have arguments known to 'cmdlookup'
     # e.g: sys.argv = ['tm_manifest.py', '--port', '56666', 'list'] is now ['list']
     try:
-        print(cmdlookup[sys.argv[0]](sys.argv[1:], **args))
+        endpoint_type = args['leftover'][0]
+        endpoint_args = args['leftover'][1:]
+        print(cmdlookup[endpoint_type](endpoint_args, **args))
     except KeyError as e:
         print('Unknown argument %s!' % (e))
     except Exception as e:              # Show me the stack trace NOT!
