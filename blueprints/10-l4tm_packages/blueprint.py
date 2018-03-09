@@ -127,7 +127,8 @@ def _read_packages(full_source):
 
     return: None. Content is saved into _data directly.
     """
-    components = utils.deb_components(full_source)
+    components = utils.deb_components(full_source)  # it leaves blanks...
+    components.areas = [ a for a in components.areas if a.strip() ]
     if not components.url:
         msg = ' - Wrong mirror format!\n'
         msg += '  - Expected "deb http://mirror.url release ares"\n'
@@ -139,10 +140,9 @@ def _read_packages(full_source):
     repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (components.url, components.release)
     for area in components.areas:
         for arch in ('binary-all', 'binary-arm64'):
-            BP.logger.info('Loading/processing %s/.../%s/%s/Packages.gz...' %\
-                            (components.url, area, arch))
-            pkgarea = repo % (area, arch)
-            pkgresp = HTTP_REQUESTS.get(pkgarea)
+            retrieveURL = repo % (area, arch)
+            BP.logger.info('Loading/processing "%s"' % retrieveURL)
+            pkgresp = HTTP_REQUESTS.get(retrieveURL)
             if pkgresp.status_code != 200:
                 BP.logger.error('%s not found' % arch)
                 continue
@@ -178,7 +178,6 @@ def get_all_mirrors():
 
     all_mirrors.append(main_source)
     return all_mirrors
-
 
 
 def _filter(packages):    # Maybe it's time for a class
