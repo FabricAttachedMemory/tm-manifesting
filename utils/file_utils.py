@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import errno
 import os
 import glob
+import urllib.request
 import shutil
 import stat
 import sys
@@ -199,3 +200,31 @@ def chgrp(fname, grpname):
         raise RuntimeError('chown(%s) failed: %s' % (fname, str(e)))
 
 
+def from_url_or_local(target, destination):
+    """
+        Download a file into destination whether it is a local path or a url.
+
+    @param target: str local path or url that needs to be saved into destination.
+    @param destination: str path to where to save target file. Can path either
+                        as dir/ or dir/file_name. When dir/ is used, a file
+                        name same as of a target will be used.
+    """
+    if os.path.isdir(destination):
+        #getting basename from url str works too
+        destination = destination + '/' + os.path.basename(target)
+
+    if os.path.exists(target):
+        if not os.path.isfile(target):
+            raise RuntimeError(' - E - %s is not a file!' % target)
+
+        copy_target_into(target, destination)
+    else:
+        try:
+            with urllib.request.urlopen(target) as url_file:
+
+                with open(destination, 'wb') as out_file:
+                    data = url_file.read() # a `bytes` object
+                    out_file.write(data)
+        except urllib.error.HTTPError as err:
+            raise RuntimeError('Failed to download %s from url:\n - %s' %\
+                                (target, err))

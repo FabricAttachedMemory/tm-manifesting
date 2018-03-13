@@ -20,7 +20,6 @@ import sys
 from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
-#from utils.file_utils import remove_target
 from tmms.utils import customize_node
 from tmms.utils import file_utils
 from tmms.utils import utils as tmms_utils
@@ -34,11 +33,12 @@ def customize_golden(golden_tar, build_dir):
         'node_coord' : 'golden_custom',
         'node_id' : None,
         'tftp_dir' : build_dir,
-        'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net',
+        'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net/Debian/',
         'repo_release' : 'jessie',
         'repo_areas' : ('main', 'contrib', 'non-free'),
-        'other_mirrors' : 'deb [trusted=yes] https://downloads.linux.hpe.com/repo/l4fame/Debian/ testing main',
-        'packages' : 'linux-image-4.14.0-l4fame+, libfam-atomic2, tm-libfuse, tm-librarian',
+        'other_mirrors' : 'deb [trusted=yes] http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fam/ testing main',
+        'packages' : 'linux-image-4.14.0-l4fame+ libfam-atomic2 tm-libfuse ' +\
+                      'python3 python3-tm-librarian tm-utils tm-librarian',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
@@ -158,21 +158,7 @@ def download_image(img_path):
     if isinstance(img_path, list):
         img_path = img_path[0]
 
-    if os.path.exists(img_path):
-        if not os.path.isfile(img_path):
-            raise RuntimeError(' - E - %s is not a golden image file!')
-
-        #TODO: check if path is a tar file.
-        print(' - Local path to golden will be used to get image from:\n -- %s ' %\
-            (img_path))
-        img_basename = os.path.basename(img_path)
-
-        file_utils.copy_target_into(img_path, GOLDEN_DIR + img_basename)
-        return
-    else:
-        print(' - %s is not a local path. Goint to check url...' % img_path)
-
-    raise RuntimeError(' - E - Downloading golden image from URL is not yet implemented!')
+    file_utils.from_url_or_local(img_path, GOLDEN_DIR)
 
 
 def main(args):
@@ -183,21 +169,22 @@ def main(args):
     assert os.geteuid() == 0, 'This script requires root permissions'
 
     # -- Build 'raw' golden image using vmdebootstrap --
+    # Skip bootstrap when --image param is used
     if not getattr(args, 'skip_bootstrap', False):
-        #vmd_path = args.extra[1] if len(args.extra) >= 2 else None
-        vmd_path = getattr(args, 'vmd_cfg', None)
-        debootstrap_image(args.config, vmd_path=vmd_path)
+        if getattr(args, 'image', None) is None:
+            return
+            vmd_path = getattr(args, 'vmd_cfg', None)
+            debootstrap_image(args.config, vmd_path=vmd_path)
     else:
-        print (' -- Skipping bootstrap stage, since --skip-bootstrap param used.')
+        print (' -- Skipping bootstrap stage. --skip-bootstrap or --image is used.')
 
-    if getattr(args, 'golden', False) is not False:
-        download_image(args.golden)
+    if getattr(args, 'image', False) is not False:
+        download_image(args.image)
 
     # -- Customizing Golden Image stage --
     golden_dir = '/var/lib/tmms/sys-images/golden'
     golden_custom = golden_dir + '_custom'
     customize_golden(golden_dir + '/golden.arm.tar', golden_custom)
-
 
 
 if __name__ == '__main__':

@@ -112,7 +112,7 @@ def parse_cmdline_args(extra_args_msg):
     # ---- Golden Image ---
     parser.add_argument('--skip-bootstrap', action='store_true',
                         help='Skip bootstrap image build stage of golden image setup')
-    parser.add_argument('--golden', nargs=1, default=False,
+    parser.add_argument('--image', nargs=1, default=False,
                         help='Path to golden image to be coppied from either '\
                             ' local path or url.')
     parser.add_argument('--vmd-cfg', default=None,
