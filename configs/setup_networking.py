@@ -95,7 +95,7 @@ set timeout=8
 set debug=linux,linuxefi,efi
 set pager=1
 
-menuentry '{hostname} L4TM ARM64' {{
+menuentry '{hostname} L4MDC ARM64' {{
     linux (tftp){images_dir}/{hostname}.vmlinuz.gz {append}
     initrd (tftp){images_dir}/{hostname}.cpio.gz
 }}

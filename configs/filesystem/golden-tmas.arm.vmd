@@ -1,11 +1,9 @@
-# Fairly generic instance for L4TM development
-# 1. sudo vmdebootstrap --no-default-configs --config=vda.l4tm.arm64.vmd \
+# Fairly generic instance for L4MDC development from deprecated HPE-internal single repo known
+# as L4TM (Linux For The Machine) and used only on a proprietary simulator, TMAS (The Machine
+# Architecural Simulator).  This file is for historical reference only!!!
+# 1. sudo vmdebootstrap --no-default-configs --config=golden-tmas.arm.vmd \
 #                       --owner=$LOGNAME --hostname=something
-# 2. qemu-system-aarch64 -enable-kvm -hda /tmp/vda.l4tm.arm64.img
-#                       Puts VM on a 10-net with NAT to outside world.
-# 3. After boot,
-#    a. rm /etc/apt/sources.list		# YES REALLY
-#    b. mv /etc/apt/sources.list.d/base.list /etc/apt/sources.list
+# Then load it into the simulator, discussion is beyond the scope of this file.
 
 [config]
 log =
@@ -38,7 +36,7 @@ owner =
 package = l4tm-archive-keyring,linux-image-arm64-l4tm-tmas,apt-utils,attr,ca-certificates,dialog,ifupdown,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,pciutils,psmisc,psutils,ssh,tm-zbridge-tmas,tm-flush-tmas,fam-atomic-driver-tmas,tm-fuse-4.7.2-tmas,tm-libfuse,tm-librarian,vim
 custom-package =
 
-# L4TM doesn't follow simple name generation, must do this manually (above)
+# Kernel doesn't follow simple name generation, must do this manually (above)
 no-kernel = True
 sudo = True
 
