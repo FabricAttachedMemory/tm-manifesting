@@ -38,7 +38,7 @@ def customize_golden(golden_tar, build_dir):
         'repo_release' : 'jessie',
         'repo_areas' : ('main', 'contrib', 'non-free'),
         'other_mirrors' : 'deb [trusted=yes] https://downloads.linux.hpe.com/repo/l4fame/Debian/ testing main',
-        'packages' : 'linux-image-4.14.0-l4fame+, libfam-atomic2, tm-libfuse, tm-librarian',
+        'packages' : 'linux-image-4.14.0-l4fame, l4fame-node',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
