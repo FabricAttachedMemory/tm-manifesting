@@ -1060,7 +1060,7 @@ def execute(args):
     args.logger = None
     args.logger = logger
 
-    args.logger('---------------- Starting image build for %s' % args.hostname)
+    args.logger('--- Starting image build for %s --- ' % args.hostname)
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
     # When some of them fail they'll handle last update_status themselves.

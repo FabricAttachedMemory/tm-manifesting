@@ -156,6 +156,32 @@ class CustomizeNodeHelpersTest(unittest.TestCase):
                 'File "%s" was not updated with a new data!' % test_file)
 
 
+    def test_download_from_url(self):
+        """ Test a successfull download of a file from a URL into local destination. """
+        url = 'https://raw.githubusercontent.com/FabricAttachedMemory/tm-manifesting/master/README.md'
+        dest = '/tmp/manifesting.test_download'
+        FileUtils.from_url_or_local(url, dest)
+
+        self.assertTrue(os.path.exists(dest))
+        FileUtils.remove_target(dest)
+
+        #test destination as dir (not filename)
+        dest = '/tmp/'
+        FileUtils.from_url_or_local(url, dest)
+        self.assertTrue(os.path.exists(dest + '/README.md'))
+
+
+
+    def test_download_broken_url(self):
+        """ Test downloading from unexisting url will throw a RuntimeExceptin. """
+        url = 'http://url_to_nowhere.com'
+
+        self.assertRaises(RuntimeError,
+                            FileUtils.from_url_or_local,
+                            url, '/tmp/nowhere')
+
+
+
     def touch_file(self, filename):
         """ Touch a file that will be used for testing. """
         with open(filename, 'a'):

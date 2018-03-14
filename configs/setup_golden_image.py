@@ -20,13 +20,10 @@ import sys
 from pdb import set_trace
 
 from configs.build_config import ManifestingConfiguration
-#from utils.file_utils import remove_target
 from tmms.utils import customize_node
 from tmms.utils import file_utils
 from tmms.utils import utils as tmms_utils
 
-
-GOLDEN_DIR='/var/lib/tmms/sys-images/golden/'
 
 def customize_golden(golden_tar, build_dir):
     arg_values = {
@@ -34,10 +31,10 @@ def customize_golden(golden_tar, build_dir):
         'node_coord' : 'golden_custom',
         'node_id' : None,
         'tftp_dir' : build_dir,
-        'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net',
+        'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net/Debian/',
         'repo_release' : 'jessie',
         'repo_areas' : ('main', 'contrib', 'non-free'),
-        'other_mirrors' : 'deb [trusted=yes] https://downloads.linux.hpe.com/repo/l4fame/Debian/ testing main',
+        'other_mirrors' : 'deb [trusted=yes] http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fam/ testing main',
         'packages' : 'linux-image-4.14.0-l4fame, l4fame-node',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
@@ -75,10 +72,9 @@ def move_dir(target, into, verbose=False):
                             (target, into))
 
 
-def debootstrap_image(tmms_cfg_path, vmd_path=None):
+def debootstrap_image(manconfig, vmd_path=None):
     """
-    @param tmms_cfg_path: path to a tmms config file. Typically /etc/tmms or
-                        /.../tm-manifesting/tmms.
+    @param manconfig: parsed tmms config file of type <ManifestingConfiguration>.
     @param vmd_path: (default=None) absolute path to a vmdconfig file. If not
                     starts with '/' or is None a default path will be used:
                     ("/[...]/tm-manifesting/config/filesystem/")
@@ -87,24 +83,21 @@ def debootstrap_image(tmms_cfg_path, vmd_path=None):
     vmdebootstrap = whereami + '/vmdebootstrap'
     sampleVMDs = whereami + '/filesystem/'
 
-    if vmd_path is None:
-        vmdconfig = sampleVMDs + 'golden.arm.duo.vmd'
-    else:
-        vmdconfig = vmd_path
-        if not vmdconfig.startswith('/'):
-            vmdconfig = sampleVMDs + vmdconfig
+    vmdconfig = vmd_path
+    if not vmdconfig.startswith('/'):
+        vmdconfig = sampleVMDs + vmdconfig
 
-    assert os.path.isfile(vmdconfig), 'Cannot find ' + vmdconfig
-
-    manconfig = ManifestingConfiguration(tmms_cfg_path, autoratify=False)
-    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
+    if not os.path.isfile(vmdconfig):
+        msg = 'Cannot find %s! Must be a filename or an absolute path!' % (vmdconfig)
+        raise RuntimeError(msg)
 
     destfile = manconfig['GOLDEN_IMAGE']    # now I can have a KeyError
-
+    #get directory of the golden image dest file to save build artifacts to
     destdir = os.path.realpath(os.path.dirname(destfile))
     statvfs = os.statvfs(destdir)
-    assert statvfs.f_bsize * statvfs.f_bavail > (10 * (1 << 30)), \
-        'Need at least 10G on "%s"' % (destdir)
+
+    if (statvfs.f_bsize * statvfs.f_bavail) < (10 * (1 << 30)):
+        raise RuntimeError('Need at least 10G on "%s"' % (destdir))
 
     vmdlog = destdir + '/vmdebootstrap.log'
     vmdimage = destdir + '/golden.arm.img'
@@ -150,54 +143,45 @@ def debootstrap_image(tmms_cfg_path, vmd_path=None):
     raise RuntimeError('vmdebootstrap failed, consult %s' % vmdlog)
 
 
-def download_image(img_path):
+def download_image(img_path, destination):
     """
         Download golden image from local storage (if path is supplied) or from
-    remote (if URL is passed).
+    remote (if img_path is URL).
     """
     if isinstance(img_path, list):
         img_path = img_path[0]
 
-    if os.path.exists(img_path):
-        if not os.path.isfile(img_path):
-            raise RuntimeError(' - E - %s is not a golden image file!')
-
-        #TODO: check if path is a tar file.
-        print(' - Local path to golden will be used to get image from:\n -- %s ' %\
-            (img_path))
-        img_basename = os.path.basename(img_path)
-
-        file_utils.copy_target_into(img_path, GOLDEN_DIR + img_basename)
-        return
-    else:
-        print(' - %s is not a local path. Goint to check url...' % img_path)
-
-    raise RuntimeError(' - E - Downloading golden image from URL is not yet implemented!')
+    print(' - Getting golden image from %s' % (img_path))
+    file_utils.from_url_or_local(img_path, destination)
 
 
 def main(args):
     """
         Generate golden image into the manifesting work directory using
-        vmdebootstrap.  Return None or raise error.
+    vmdebootstrap.  Return None or raise error.
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
 
-    # -- Build 'raw' golden image using vmdebootstrap --
-    if not getattr(args, 'skip_bootstrap', False):
-        #vmd_path = args.extra[1] if len(args.extra) >= 2 else None
-        vmd_path = getattr(args, 'vmd_cfg', None)
-        debootstrap_image(args.config, vmd_path=vmd_path)
-    else:
-        print (' -- Skipping bootstrap stage, since --skip-bootstrap param used.')
+    is_image_supplied = False if getattr(args, 'sysimage', None) is None else True
 
-    if getattr(args, 'golden', False) is not False:
-        download_image(args.golden)
+    manconfig = ManifestingConfiguration(args.config, autoratify=False)
+    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
+    golden_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
+    golden_custom = golden_dir + '_custom'
+
+    # -- Build 'raw' golden image using vmdebootstrap --
+    if not is_image_supplied:
+        print(' --- Starting Debootstrap Image stage --- ')
+        print('Note: to skip debootstrap, use --image [local path or url]')
+
+        vmd_path = getattr(args, 'vmd_cfg', None)
+        debootstrap_image(manconfig, vmd_path=vmd_path)
+    else:
+        print (' - Skipping bootstrap stage...')
+        download_image(args.sysimage, manconfig['GOLDEN_IMAGE'])
 
     # -- Customizing Golden Image stage --
-    golden_dir = '/var/lib/tmms/sys-images/golden'
-    golden_custom = golden_dir + '_custom'
-    customize_golden(golden_dir + '/golden.arm.tar', golden_custom)
-
+    customize_golden(manconfig['GOLDEN_IMAGE'], golden_custom)
 
 
 if __name__ == '__main__':

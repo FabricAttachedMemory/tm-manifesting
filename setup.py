@@ -110,13 +110,13 @@ def parse_cmdline_args(extra_args_msg):
         action='store_true')
 
     # ---- Golden Image ---
-    parser.add_argument('--skip-bootstrap', action='store_true',
-                        help='Skip bootstrap image build stage of golden image setup')
-    parser.add_argument('--golden', nargs=1, default=False,
+    parser.add_argument('--sysimage', nargs=1, default=None,
                         help='Path to golden image to be coppied from either '\
-                            ' local path or url.')
-    parser.add_argument('--vmd-cfg', default=None,
-                        help='VMD Config to be used by golden image. (optional)')
+                            ' local path or url. This will skip debootstrap stage!')
+    parser.add_argument('--vmd-cfg', default='golden.arm.duo.vmd',
+                        help='VMD Config name to be used by golden image. ' +\
+                            'It is either an absolute path or a file name in ' +\
+                            'tm-manifesting/config/filesystem/.')
 
     parser.add_argument(
         '--debug',
