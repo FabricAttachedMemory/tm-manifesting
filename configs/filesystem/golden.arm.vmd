@@ -1,7 +1,8 @@
-# Fairly generic instance for L4TM development
-# 1. sudo vmdebootstrap --no-default-configs --config=vda.l4tm.arm64.vmd \
+# Fairly generic instance for L4MDC development from deprecated HPE-internal single repo known
+# as L4TM (Linux For The Machine).  This file is meant for historical purposes only!!!
+# 1. sudo vmdebootstrap --no-default-configs --config=golden.arm.vmd \
 #                       --owner=$LOGNAME --hostname=something
-# 2. qemu-system-aarch64 -enable-kvm -hda /tmp/vda.l4tm.arm64.img
+# 2. qemu-system-aarch64 -enable-kvm -hda /tmp/somewhere.img
 #                       Puts VM on a 10-net with NAT to outside world.
 # 3. After boot,
 #    a. rm /etc/apt/sources.list		# YES REALLY
@@ -38,7 +39,7 @@ owner =
 package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,net-tools,nfs-common,pciutils,psmisc,psutils,python3-psutil,ssh,tcpdump,tm-zbridge,tm-flush,fam-atomic-driver,tm-fuse-4.7.2,tm-libfuse,tm-librarian,vim,acpid
 custom-package =
 
-# L4TM doesn't follow simple name generation, must do this manually (above)
+# Kernel doesn't follow simple name generation, must do this manually (above)
 no-kernel = True
 sudo = True
 
@@ -47,7 +48,7 @@ root-password = iforgot
 
 customize =
 hostname = GOLDEN
-user = l4tm/iforgot
+user = l4mdc/iforgot
 serial-console = True
 serial-console-command = /sbin/getty -L ttyAM0 115200 vt100
 

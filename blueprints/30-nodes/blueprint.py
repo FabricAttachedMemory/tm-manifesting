@@ -345,9 +345,12 @@ def build_node(manifest, node_coord):
 
     DhcpClientId = BP.config['tmconfig'].allNodes[node_coord][0].DhcpClientId
 
-    # Optional manifest fields not in the ERS but useful during bringup
-    l4tm_privkey = manifest.thedict.get('l4tm_privkey', None)
-    l4tm_pubkey = manifest.thedict.get('l4tm_pubkey', None)
+    # Optional manifest fields not in the ERS but useful during bringup and
+    # demos.  Look for both new and old forms for now (March 2018).
+    privkey = manifest.thedict.get('privkey', None) or \
+        manifest.thedict.get('l4tm_privkey', None)
+    pubkey = manifest.thedict.get('pubkey', None) or \
+        manifest.thedict.get('l4tm_pubkey', None)
     postinst = manifest.thedict.get('postinst', None)
     rclocal = manifest.thedict.get('rclocal', None)
 
@@ -364,8 +367,8 @@ def build_node(manifest, node_coord):
         'other_mirrors': BP.config.get('OTHER_MIRRORS', None), #NEW (08-28-17)
         'packages':      packages,
         'tasks':         tasks,
-        'l4tm_privkey':  l4tm_privkey,
-        'l4tm_pubkey':   l4tm_pubkey,
+        'privkey':       privkey,
+        'pubkey':        pubkey,
         'postinst':      postinst,
         'rclocal':       rclocal,
         'golden_tar':    golden_tar,

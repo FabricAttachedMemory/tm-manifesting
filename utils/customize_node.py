@@ -323,24 +323,25 @@ def set_hosts(args):
         raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
 
-def set_l4tm_sudo(args):
+def set_sudo(args):
     """
-        Set sudoer policy of no password for user l4tm.  That user was
+        Set sudoer policy of no password for the normal user.  That user was
     configured with sudo in the golden image via vmdebootstrap.  This
     removes the password restriction for easier automation and has been
-    approved by Operational Security.  See also set_l4tm_sshkeys().
+    approved by Operational Security.  See also set_sshkeys().
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Create /etc/sudoers.d/l4tm')
-    fname = '%s/etc/sudoers.d/l4tm' % args.new_fs_dir
+    update_status(args, 'Create /etc/sudoers.d/l4mdc')
+    fname = '%s/etc/sudoers.d/l4mdc' % args.new_fs_dir
     try:
         if os.path.exists(fname):
             remove_target(fname)
 
         content = [                             # Speed up subsequent sudos
-            'l4tm\t ALL = NOPASSWD: ALL',       # No passwd
+            'l4mdc\t ALL = NOPASSWD: ALL',      # No passwd
+            'l4tm\t ALL = NOPASSWD: ALL',       # Legacy user
             'Defaults timestamp_timeout=120',   # Don't ask again for 2 hours..
             'Defaults !tty_tickets',            # On any terminal
         ]
@@ -368,40 +369,42 @@ def _get_userstuff(args, user):
                 gid = int(gid)
                 return args.new_fs_dir + home, uid, gid
         else:
-            raise RuntimeError('Cannot find user l4tm')
+            raise RuntimeError('Cannot find normal user 1000:1000')
 
 
-def set_l4tm_sshkeys(args):
+def set_sshkeys(args):
     """
-        Add l4tm_pubkey to /home/l4tm/.ssh/authorized_keys.  Overwrite
-    /home/l4tm/.ssh/id_rsa with l4tmy_privkey.  Where they come from is
+        Add pubkey to /home/<user>/.ssh/authorized_keys.  Overwrite
+    /home/<user>/.ssh/id_rsa with privkey.  Where they come from is
     your problem, but ssh-key -t rsa is a good start.
 
-    :param 'l4tm_privkey': [str] RSA private key, phraseless
-    :param 'l4tm_pubkey':  [str] RSA public key, phraseless
+    :param '[l4tm_]privkey': [str] RSA private key, phraseless
+    :param '[l4tm_]pubkey':  [str] RSA public key, phraseless
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Set ssh keys for user l4tm')
-    home, uid, gid = _get_userstuff(args, 'l4tm')
+    update_status(args, 'Set ssh keys for normal user')
+    home, uid, gid = _get_userstuff(args, 'l4mdc')
     dotssh = home + '/.ssh'
     os.makedirs(dotssh, mode=0o700, exist_ok=True)
     os.chown(dotssh, uid, gid)
 
-    if getattr(args, 'l4tm_pubkey', None) is not None:
+    # Try both for now
+    pubkey = getattr(args, 'pubkey', None) or getattr(args, 'l4tm_pubkey', None)
+    if pubkey is not None:
         auth = dotssh + '/authorized_keys'
         with open(auth, 'w+') as f:
             f.write('\n')
-            f.write(args.l4tm_pubkey)
+            f.write(pubkey)
         os.chmod(auth, 0o644)   # pubkey doesn't work if other/world-writeable
         os.chown(auth, uid, gid)
     else:
-        update_status(args, ' - ! - Skipping setting l4tm_pubkey! l4tm_pubkey is not set.')
+        update_status(args, ' - ! - ssh pubkey is not set.')
 
-
-    if getattr(args, 'l4tm_privkey', None) is not None:
+    privkey = getattr(args, 'privkey', None) or getattr(args, 'l4tm_privkey', None)
+    if privkey is not None:
         id_rsa = dotssh + '/id_rsa'     # default, simplifies config file
         with open(id_rsa, 'w') as f:
-            f.write(args.l4tm_privkey)
+            f.write(privkey)
         os.chmod(id_rsa, 0o400)
         os.chown(id_rsa, uid, gid)
 
@@ -411,7 +414,7 @@ def set_l4tm_sshkeys(args):
         os.chmod(config, 0o400)
         os.chown(config, uid, gid)
     else:
-        update_status(args, ' - ! - Skipping setting l4tm_privkey! l4tm_privkey is not set.')
+        update_status(args, ' - ! - ssh privkey is not set.')
 
 #==============================================================================
 
@@ -792,7 +795,7 @@ def create_ESP(args, blockdev, vmlinuz, cpio):
     os.makedirs(ESP_mnt)
 
     # tftp_dir has "images/nodeZZ" tacked onto it from caller.
-    # Grub itself is pulled live from L4TM repo at setup networking time.
+    # Grub itself is pulled live from a fixed location.
     # Plain grubaa64.efi was built with prefix "/EFI/debian" as opposed
     # to the '/grub' of grubnetaa64.efi.  In either case, grub[net]aa64.efi
     # turns around and grabs <prefix>/grub.cfg, where "prefix" was set at
@@ -1057,7 +1060,7 @@ def execute(args):
     args.logger = None
     args.logger = logger
 
-    args.logger('---------------- Starting image build for %s' % args.hostname)
+    args.logger('--- Starting image build for %s --- ' % args.hostname)
     # It's a big try block because individual exception handling
     # is done inside those functions that throw RuntimeError.
     # When some of them fail they'll handle last update_status themselves.
@@ -1085,8 +1088,8 @@ def execute(args):
         set_hostname(args)
         set_hosts(args)
         set_client_id(args)
-        set_l4tm_sudo(args)
-        set_l4tm_sshkeys(args)
+        set_sudo(args)
+        set_sshkeys(args)
 
         persist_initrd(args)
 
@@ -1178,7 +1181,7 @@ if __name__ == '__main__':
     parser.add_argument('--golden_tar',
                         help='Location of pristine FS image tarball')
     parser.add_argument('--repo_mirror',
-                        help='URL of L4TM mirror')
+                        help='URL of Debian mirror')
     parser.add_argument('--repo_release',
                         help='release to use on mirror')
     parser.add_argument('--repo_areas',
