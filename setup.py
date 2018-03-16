@@ -149,6 +149,22 @@ def parse_cmdline_args(extra_args_msg):
     return args
 
 
+# Chicken and egg: setup networking (which can be run during install)
+# now needs http_proxy, before /etc/tmms is ready.  Ass-u-me it's in here.
+
+def export_etc_environment():
+    with open('/etc/environment', 'r') as EE:
+        for line in EE.readlines():
+            line = line.strip()
+            if line.startswith('#'):
+                continue
+            var, val = line.split('=')
+            # Some ToRMS said "export xxx=yyy" or used quotes, bad robot!
+            val = val.strip('"\'')
+            var = var.strip().split(' ')[-1]
+            os.environ[var] = val
+
+
 if __name__ == '__main__':
     try:
         assert 'linux' in sys.platform, 'I see no Tux here (%s)' % sys.platform
@@ -165,10 +181,14 @@ if __name__ == '__main__':
         except ImportError:
             raise SystemExit('Failed to import utils.file_utils module')
 
+        export_etc_environment();
+
+        # For development, set up some helpers.  Ignore from the installed path.
         setup_file = os.path.realpath(__file__)
         git_repo_path = os.path.dirname(setup_file)
-        link_into_python(args, git_repo_path)
-        link_into_usrlocalbin(args, git_repo_path)
+        if not git_repo_path.startswith('/usr/lib/python3'):
+            link_into_python(args, git_repo_path)
+            link_into_usrlocalbin(args, git_repo_path)
 
         legal = ('environment', 'networking', 'golden_image')  # order matters
         if not args.extra or 'all' in args.extra:
