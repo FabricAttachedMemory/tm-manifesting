@@ -156,9 +156,12 @@ def export_etc_environment():
     with open('/etc/environment', 'r') as EE:
         for line in EE.readlines():
             line = line.strip()
-            if line.startswith('#'):
+            if not line or line.startswith('#'):
                 continue
-            var, val = line.split('=')
+            try:
+                var, val = line.split('=')
+            except ValueError as e:     # Incorrect number of values to unpack
+                continue
             # Some ToRMS said "export xxx=yyy" or used quotes, bad robot!
             val = val.strip('"\'')
             var = var.strip().split(' ')[-1]
