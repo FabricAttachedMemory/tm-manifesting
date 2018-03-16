@@ -66,7 +66,7 @@ def try_dh_helper(argv):
     legal = ('clean', 'install', 'build')
     if not argv or argv[0] not in legal:
         return
-    raise SystemExit()
+    raise SystemExit(0)
 
 
 def parse_cmdline_args(extra_args_msg):
@@ -148,9 +148,9 @@ def parse_cmdline_args(extra_args_msg):
         args.verbose = True     # this is what forces logging at DEBUG level
     return args
 
-
 # Chicken and egg: setup networking (which can be run during install)
 # now needs http_proxy, before /etc/tmms is ready.  Ass-u-me it's in here.
+
 
 def export_etc_environment():
     with open('/etc/environment', 'r') as EE:
@@ -184,7 +184,7 @@ if __name__ == '__main__':
         except ImportError:
             raise SystemExit('Failed to import utils.file_utils module')
 
-        export_etc_environment();
+        export_etc_environment()
 
         # For development, set up some helpers.  Ignore from the installed path.
         setup_file = os.path.realpath(__file__)
