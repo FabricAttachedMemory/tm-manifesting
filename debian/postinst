@@ -72,7 +72,7 @@ if [ "$IsConfigure" == true ]; then
 
     if [ -f /etc/tmconfig ]; then
         echo " --- /etc/tmconfig file was found... --- "
-        echo " --- Running 'tm-manifest setup netwroking' --- "
+        echo " --- Running 'tm-manifest setup networking' --- "
         tm-manifest setup networking || :
     else
         echo " --- !!! WARNING !!! --- "
