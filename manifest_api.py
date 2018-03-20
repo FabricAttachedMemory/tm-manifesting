@@ -24,7 +24,7 @@
  routine.
 """
 __author__ = "Rocky Craig, Zakhar Volchak"
-__copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
+__copyright__ = "Copyright 2018 Hewlett Packard Enterprise Development LP"
 __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
@@ -51,7 +51,7 @@ from tm_librarian.tmconfig import TMConfig
 # For running from git repo, setup.py does the right thing.  True .deb
 # installation will also do the right thing.
 try:
-    from tmms.setup import parse_cmdline_args
+    from tmms.setup import parse_cmdline_args, export_etc_environment
     from tmms.utils.utils import piper, create_loopback_files, setDhcpClientId
     from tmms.utils.utils import kill_pid
     from tmms.utils.logging import tmmsLogger
@@ -59,10 +59,10 @@ try:
     from tmms.configs.build_config import ManifestingConfiguration
     from tmms.utils.daemonize3 import Daemon
 except ImportError as e:
-    raise SystemExit(
-        'Cannot find Python module "tmms"; run "setup.py" and retry.')
+    raise SystemExit('Processing submodules in tmms: %s' % str(e))
 
 ###########################################################################
+
 
 def create_app():
     ''' Create a Flask app to be used/regestered by available blueprints. '''
@@ -102,16 +102,15 @@ for node in tmconfig.allNodes:  # Hack around broken BU scripts
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 mainapp = create_app()
 
-
 # Flask has configured a root logger with default "DEBUG" level handler that
 # spits to stderr.  That's good enough for early work.  tmmsLogger will
 # change that behavior on first invocation.
 mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' % (
     mainapp.config['PXE_INTERFACE'])
 
-
 ###########################################################################
 # mainapp was given a logger by Flask.  Modify it based on cmdline arguments.
+
 
 def configure_logging(mainapp, cmdline_args):
     # Can this just run to stderr?
@@ -380,6 +379,8 @@ def daemonize(mainapp, cmdline_args):
 
 
 def main():
+    export_etc_environment()
+
     if cmdline_args.start_dnsmasq:
         kill_dnsmasq(mainapp.config)
         ret = start_dnsmasq(mainapp.config)

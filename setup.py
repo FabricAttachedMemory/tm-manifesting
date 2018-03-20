@@ -66,7 +66,7 @@ def try_dh_helper(argv):
     legal = ('clean', 'install', 'build')
     if not argv or argv[0] not in legal:
         return
-    raise SystemExit()
+    raise SystemExit(0)
 
 
 def parse_cmdline_args(extra_args_msg):
@@ -148,6 +148,25 @@ def parse_cmdline_args(extra_args_msg):
         args.verbose = True     # this is what forces logging at DEBUG level
     return args
 
+# Chicken and egg: setup networking (which can be run during install)
+# now needs http_proxy, before /etc/tmms is ready.  Ass-u-me it's in here.
+
+
+def export_etc_environment():
+    with open('/etc/environment', 'r') as EE:
+        for line in EE.readlines():
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            try:
+                var, val = line.split('=')
+            except ValueError as e:     # Incorrect number of values to unpack
+                continue
+            # Some ToRMS said "export xxx=yyy" or used quotes, bad robot!
+            val = val.strip('"\'')
+            var = var.strip().split(' ')[-1]
+            os.environ[var] = val
+
 
 if __name__ == '__main__':
     try:
@@ -165,10 +184,14 @@ if __name__ == '__main__':
         except ImportError:
             raise SystemExit('Failed to import utils.file_utils module')
 
+        export_etc_environment()
+
+        # For development, set up some helpers.  Ignore from the installed path.
         setup_file = os.path.realpath(__file__)
         git_repo_path = os.path.dirname(setup_file)
-        link_into_python(args, git_repo_path)
-        link_into_usrlocalbin(args, git_repo_path)
+        if not git_repo_path.startswith('/usr/lib/python3'):
+            link_into_python(args, git_repo_path)
+            link_into_usrlocalbin(args, git_repo_path)
 
         legal = ('environment', 'networking', 'golden_image')  # order matters
         if not args.extra or 'all' in args.extra:

@@ -1,0 +1,5 @@
+http_proxy=http://http.test.proxy:1234/
+https_proxy=http://https.test.proxy:1234/
+ftp_proxy=http://ftp.test.proxy:1234/
+
+no_proxy=localhost,some.other.host
