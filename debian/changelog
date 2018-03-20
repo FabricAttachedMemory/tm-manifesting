@@ -1,3 +1,11 @@
+tm-manifesting (3.1-1) testing; urgency=low
+
+    * Can now upload a golden image from URL
+    * Fix packaging errors (python version; usr/default -> etc; prerm: set -e)
+
+ -- Rocky Craig <rocky.craig@hpe.com>  Fri, 16 Mar 2018 9:42:42 -0600
+
+
 tm-manifesting (3.0-2) testing; urgency=low
 
     * Fix packaging errors: changelog dates.

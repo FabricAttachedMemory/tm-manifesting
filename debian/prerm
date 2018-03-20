@@ -1,9 +1,11 @@
 #!/bin/bash
 #DEBHELPER#
 
-#. /var/lib/dpkg/info/tm-manifest.post-args-parser $1
-TMMS_SRC=/usr/lib/python3/dist-packages/tmms
+set -e	# avoids lintian error but passes it on to apt-get :-(
 
+set -u
+
+# Using false and true allows you to just "run the variable"
 IsUpgrade=false
 IsRemove=false
 IsPurge=false
@@ -11,66 +13,54 @@ IsFailedUpgrade=false
 IsAbortRemove=false
 
 
-for arg in "$@"
-do
-case $arg in
+for arg in "$@"; do
+    case $arg in
     upgrade)
         IsUpgrade=true
-        shift
     ;;
     remove)
         IsRemove=true
-        shift
     ;;
     purge)
         IsPurge=true
-        shift
     ;;
     failed-upgrade)
         IsFailedUpgrade=true
-        shift
     ;;
     abort-remove)
         IsAbortRemove=true
-        shift
     ;;
     *)
     ;;
-esac
+    esac
+    shift
 done
 
 
 # Flag to indicate server is running as a daemon
-ps -ef | grep tm-manifest-server | grep -v grep
-if [ $? -eq "0" ]; then
+if pgrep tm-manifest-server; then
     # Will flag the restart of the service later on during the update
     #touch /tmp/tm-manifest-server.restart
     echo " --- !!! WARNING !!! --- "
     echo " --- Shutting down manifesting daemon.... it will not be restarted on update! --- "
     echo " --- A systemctl service of the manifesting server will be started instead! --- "
-    tm-manifest-server --daemon-stop
+    tm-manifest-server --daemon-stop || true
 fi
 
 # Flag to indicate server is running as systemctl service
-bin/systemctl status tm-manifest-server | grep running
-if [ $? -eq "0" ]; then
+if systemctl status tm-manifest-server | grep -q running; then
     #touch /tmp/tm-manifest-server.restart-service
     echo " --- !!! WARNING !!! --- "
     echo " --- systemctl service will be stopped and restarted on update! --- "
-    bin/systemctl stop tm-manifest-server
+    systemctl stop tm-manifest-server || true
 fi
 
+if $IsRemove; then
 
-if [ "$IsRemove" == true ]; then
+    systemctl disable tm-manifest-server
 
-    bin/systemctl disable tm-manifest-server
-
-    if [ -e "/lib/systemd/system/tm-manifest-server.service" ]; then
-        rm /lib/systemd/system/tm-manifest-server.service
-    fi
-    if [ -e "/usr/default/tm-manifest-server" ]; then
-        rm /usr/default/tm-manifest-server
-    fi
+    rm -f /lib/systemd/system/tm-manifest-server.service
+    rm -f /etc/default/tm-manifest-server
 
     systemctl daemon-reload
 
@@ -81,16 +71,15 @@ if [ "$IsRemove" == true ]; then
 fi
 
 
-if [ "$IsUpgrade" == true ]; then
-    echo " --- prerm upgrade: doing nothing... --- "
-fi
+$IsUpgrade && echo " --- prerm upgrade: doing nothing... --- " || true
 
-
-if [ "$IsFailedUpgrade" == true ]; then
+if $IsFailedUpgrade; then
     echo " --- prerm failed-upgrade: doing nothing... (handled by postrm) --- "
 fi
 
 
-if [ "$IsAbortRemove" == true ]; then
+if $IsAbortRemove; then
     echo " --- prerm abort-remove: is not handlede... skipping. ---"
 fi
+
+exit 0
