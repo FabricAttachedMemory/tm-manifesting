@@ -31,6 +31,7 @@ from tmms.utils.logging import tmmsLogger
 from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
 from tmms.utils.file_utils import write_to_file, workdir, make_dir
 from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
+from tmms.utils import utils # FIXME: this line should replace above imports!
 
 #==============================================================================
 
@@ -138,27 +139,25 @@ def cleanup_sources_list(args):
                                 ' '.join(args.repo_areas))
         ]
 
-        #if args.other_mirrors:
-        #    content.append('\n'.join(args.other_mirrors))
-
         write_to_file(sources_list, '\n'.join(content))
     except RuntimeError as err:
         raise RuntimeError('clean_sources_list() failed: %s' % str(err))
 
 
-def set_apt_conf(path, apt_cfg_content):
+def set_apt_conf(path, apt_cfg_content, args=None):
     '''
         Set etc/apt/apt.conf content. Usually, it is just PROXY.
     @param path: path to a etc/apt/apt.conf of the build system image.
     @param apt_cfg_content: str (or list) what should go into etc/apt/apt.conf
     '''
     #FIXME: No apt_cfg defaults for corp firewall!
-    if apt_cfg_content is None:
-        apt_cfg_content = 'Acquire::http::Proxy '
-        # NOTE: " is required around proxy URL str or apt will flipout
-        apt_cfg_content += '"http://web-proxy.corp.hpecorp.net:8080";'
+    if not apt_cfg_content:
+        if args is not None:
+            update_status(args, '- Skipping set_apt_conf. Reason: value is empty.')
+        return
 
-    # if a list was passed, just make it a string joined by new line.
+    # if a list (each element of which is a line for apt.conf)  was passed, just
+    # make it a string joined by new line.
     if isinstance(apt_cfg_content, list):
         apt_cfg_content = '\n'.join(apt_cfg_content)
 
@@ -169,7 +168,34 @@ def set_apt_conf(path, apt_cfg_content):
     try:
         write_to_file(path, apt_cfg_content)
     except RuntimeError as err:
-        raise RuntimeError('Coul not set apt_conf content at "%s"! [%s]' %\
+        raise RuntimeError('Could not set_apt_proxy content at "%s"! [%s]' %\
+                            (path, err))
+
+
+def set_apt_proxy(path, proxy, args=None):
+    """ """
+    if not proxy or not isinstance(proxy, dict):
+        proxy = utils.get_sys_env()
+
+    apt_lines = []
+    allowed_keys = ('http', 'https', 'ftp',
+                    'http_proxy', 'https_proxy', 'ftp_proxy')
+    for proxy_type, proxy_url in proxy.items():
+        if proxy_type not in allowed_keys:
+            continue
+        proxy_type = proxy_type.split('_proxy')[0]
+        entry = 'Acquire::%s::proxy "%s";' % (proxy_type, proxy_url)
+        apt_lines.append(entry)
+
+    content = '\n'.join(apt_lines)
+
+    if args is not None:
+        update_status(args, 'Adding proxy entries to %s:\n %s\n' % (path, content))
+
+    try:
+        write_to_file(path, content)
+    except RuntimeError as err:
+        raise RuntimeError('Failed writing proxy settings to %s! Reason:\n- %s' %\
                             (path, err))
 
 
@@ -182,7 +208,7 @@ def add_mirror(args):
 
     update_status(args, 'Adding other mirrors: %s' % args.other_mirrors)
     sources_list = '%s/etc/apt/sources.list' % args.new_fs_dir
-    write_to_file(sources_list, ''.join(args.other_mirrors), is_append=True)
+    write_to_file(sources_list, '\n'.join(args.other_mirrors), is_append=True)
     return
 
 
@@ -267,13 +293,11 @@ def set_environment(args):
         if os.path.exists(fname):
             remove_target(fname)
 
-        proxy = getattr(args, 'web_proxy', 'web-proxy.corp.hpecorp.net:8080')
-        no_proxy = '10.0.0.0/8'     # FIXME: calculate something for real HW
-        content = [
-            'http_proxy=http://%s' % proxy,
-            'https_proxy=https://%s' % proxy,
-            'no_proxy=127.0.0.0/8,%s' % no_proxy
-        ]
+        host_env = utils.get_sys_env()
+        content = []
+        for var, val in host_env.items():
+            content.append('%s=%s' % (var, val))
+
         content = '\n'.join(content)
         write_to_file(fname, content)
     except RuntimeError as err:
@@ -1068,11 +1092,12 @@ def execute(args):
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
 
-        apt_conf_path = args.new_fs_dir + '/etc/apt/apt.conf'
-        set_apt_conf(apt_conf_path, getattr(args, 'manifest', {}).get('apt_conf', ''))
-
         cleanup_sources_list(args)
         add_mirror(args)
+
+        apt_conf_path = args.new_fs_dir + '/etc/apt/apt.conf'
+        set_apt_conf(apt_conf_path, args.manifest.get('apt_conf', ''), args)
+        set_apt_proxy(apt_conf_path, args.manifest.get('proxy', {}), args)
 
         install_packages(args)
 

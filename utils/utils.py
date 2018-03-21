@@ -257,3 +257,30 @@ def deb_components(full_source):
     pieces.areas = splitted[3:]
 
     return pieces
+
+
+def get_sys_env(path_to_env=None):
+    """ """
+    if path_to_env is None:
+        path_to_env = '/etc/environment'
+    env_lines = []
+
+    with open(path_to_env, 'r') as EE:
+        env_lines = EE.read().split('\n')
+
+    result = {}
+    for line in env_lines:
+        # Some ToRMS said "export xxx=yyy" or used quotes, bad robot!
+        # therefore, try to remove 'export ' for each line, to make it xx=yy
+        line = line.strip().replace('export ', '')
+        if not line or line.startswith('#'):
+            continue
+        try:
+            var, val = line.split('=')
+        except ValueError as e:     # Incorrect number of values to unpack
+            continue
+        val = val.strip('"\'')
+        var = var.strip().split(' ')[-1]
+        result[var] = val
+
+    return result

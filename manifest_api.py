@@ -51,9 +51,10 @@ from tm_librarian.tmconfig import TMConfig
 # For running from git repo, setup.py does the right thing.  True .deb
 # installation will also do the right thing.
 try:
-    from tmms.setup import parse_cmdline_args, export_etc_environment
+    from tmms.setup import parse_cmdline_args
     from tmms.utils.utils import piper, create_loopback_files, setDhcpClientId
     from tmms.utils.utils import kill_pid
+    from tmms.utils import utils #FIXME: this should replace above imports!
     from tmms.utils.logging import tmmsLogger
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
@@ -105,8 +106,8 @@ mainapp = create_app()
 # Flask has configured a root logger with default "DEBUG" level handler that
 # spits to stderr.  That's good enough for early work.  tmmsLogger will
 # change that behavior on first invocation.
-mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' % (
-    mainapp.config['PXE_INTERFACE'])
+mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' %\
+                            (mainapp.config['PXE_INTERFACE'])
 
 ###########################################################################
 # mainapp was given a logger by Flask.  Modify it based on cmdline arguments.
@@ -379,7 +380,7 @@ def daemonize(mainapp, cmdline_args):
 
 
 def main():
-    export_etc_environment()
+    os.environ.update(utils.get_sys_env())
 
     if cmdline_args.start_dnsmasq:
         kill_dnsmasq(mainapp.config)
@@ -410,7 +411,6 @@ def main():
 
     # http://flask.pocoo.org/docs/0.10/api/#application-object; options at
     # http://werkzeug.pocoo.org/docs/0.11/serving/#werkzeug.serving.run_simple
-
     if mainapp.config['DEBUG']:
         mainapp.jinja_env.cache = create_cache(0)
 

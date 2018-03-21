@@ -168,7 +168,7 @@ def get_all_mirrors():
     main_source = 'deb {url} {release} {areas}'.format(
                                     url=mirror,release=release, areas=areas)
 
-    all_mirrors = BP.config['OTHER_MIRRORS']
+    all_mirrors = list(BP.config['OTHER_MIRRORS']) # clone it by using list()!
     #unlikly, but someone might use set instead of list. Thus - make it a list.
     if isinstance(all_mirrors, set):
         all_mirrors = list(all_mirrors)
