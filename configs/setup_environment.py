@@ -70,7 +70,7 @@ def install_base_packages():
                 'dosfstools', 'grub-efi-arm64-bin',
                 'python3-debian', 'python3-dnspython', 'python3-flask',
                 'python3-netaddr', 'python3-netifaces', 'python3-psutil',
-                'python3-requests',
+                'python3-requests', 'python3-magic',
                 'qemu-efi', 'tm-librarian', 'vmdebootstrap']
     errors = []
     for pkg in pkg_list:

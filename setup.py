@@ -15,8 +15,9 @@ import argparse
 import os
 import os.path
 import sys
-
 from pdb import set_trace
+
+from tmms.utils import utils
 
 
 def link_into_python(args, git_repo_path):
@@ -152,22 +153,6 @@ def parse_cmdline_args(extra_args_msg):
 # now needs http_proxy, before /etc/tmms is ready.  Ass-u-me it's in here.
 
 
-def export_etc_environment():
-    with open('/etc/environment', 'r') as EE:
-        for line in EE.readlines():
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            try:
-                var, val = line.split('=')
-            except ValueError as e:     # Incorrect number of values to unpack
-                continue
-            # Some ToRMS said "export xxx=yyy" or used quotes, bad robot!
-            val = val.strip('"\'')
-            var = var.strip().split(' ')[-1]
-            os.environ[var] = val
-
-
 if __name__ == '__main__':
     try:
         assert 'linux' in sys.platform, 'I see no Tux here (%s)' % sys.platform
@@ -184,7 +169,7 @@ if __name__ == '__main__':
         except ImportError:
             raise SystemExit('Failed to import utils.file_utils module')
 
-        export_etc_environment()
+        os.environ.update(utils.get_sys_env())
 
         # For development, set up some helpers.  Ignore from the installed path.
         setup_file = os.path.realpath(__file__)
