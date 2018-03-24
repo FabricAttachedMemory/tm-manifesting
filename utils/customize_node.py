@@ -168,38 +168,46 @@ def set_apt_conf(path, apt_cfg_content, args=None):
     try:
         write_to_file(path, apt_cfg_content)
     except RuntimeError as err:
-        raise RuntimeError('Could not set_apt_proxy content at "%s"! [%s]' %\
-                            (path, err))
+        raise RuntimeError('Could not set_apt_conf content at "%s"! [%s]' % (
+                            path, err))
 
 
-def set_apt_proxy(path, proxy, args=None):
+def set_apt_proxy(args):
     """ """
-    if not proxy or not isinstance(proxy, dict):
-        proxy = utils.get_sys_env()
+    # FIXME: while called from both tm-manifest setup and tm-manifest-server,
+    # runtime environment is quite different and this one set of rules is
+    # insufficient.  Either way, get the proxies from os.environ.
+    if 'golden' not in args.new_fs_dir:     # Not during true manifesting
+        return
+    path = args.new_fs_dir + '/etc/apt/apt.conf.d'
+    make_dir(path)
+    path += '/00FAMproxy.conf'
 
-    apt_lines = []
-    allowed_keys = ('http', 'https', 'ftp',
-                    'http_proxy', 'https_proxy', 'ftp_proxy')
-    for proxy_type, proxy_url in proxy.items():
-        if proxy_type not in allowed_keys:
+    apt_lines = [ ]     # FIXME: add DIRECT to ToRMS
+    for proxy_type in ('http_proxy', 'https_proxy', 'ftp_proxy', 'no_proxy'):
+        proxy_url = os.environ.get(proxy_type, False)
+        if not proxy_url:
             continue
         proxy_type = proxy_type.split('_proxy')[0]
-        entry = 'Acquire::%s::proxy "%s";' % (proxy_type, proxy_url)
+        if proxy_type == 'no':
+            continue    # FIXME: craft a "DIRECT" entry
+        else:
+            entry = 'Acquire::%s::proxy "%s";' % (proxy_type, proxy_url)
         apt_lines.append(entry)
 
     content = '\n'.join(apt_lines)
-
-    if args is not None:
-        update_status(args, 'Adding proxy entries to %s:\n %s\n' % (path, content))
+    update_status(args, 'Adding proxy entries to %s:\n%s\n' % (path, content))
+    if not apt_lines:
+        return
 
     try:
-        write_to_file(path, content)
+        write_to_file(path, content)    # FIXME: overwrite???
     except RuntimeError as err:
         raise RuntimeError('Failed writing proxy settings to %s! Reason:\n- %s' %\
                             (path, err))
 
 
-def add_mirror(args):
+def add_other_mirror(args):
     """
     @param other_mirrors:
     """
@@ -207,13 +215,17 @@ def add_mirror(args):
         return
 
     update_status(args, 'Adding other mirrors: %s' % args.other_mirrors)
-    sources_list = '%s/etc/apt/sources.list' % args.new_fs_dir
-    write_to_file(sources_list, '\n'.join(args.other_mirrors), is_append=True)
+    sources_list = '%s/etc/apt/sources.list.d' % args.new_fs_dir
+    make_dir(sources_list)
+    sources_list += '/other.list'
+    if isinstance(args.other_mirrors, str):
+        other_mirrors = args.other_mirrors.split(',')
+    else:
+        other_mirrors = args.other_mirrors
+    write_to_file(sources_list, '\n'.join(other_mirrors), is_append=True)
     return
 
-
-
-#==============================================================================
+#===========================================================================
 
 
 def set_client_id(args):
@@ -293,10 +305,12 @@ def set_environment(args):
         if os.path.exists(fname):
             remove_target(fname)
 
-        host_env = utils.get_sys_env()
-        content = []
-        for var, val in host_env.items():
-            content.append('%s=%s' % (var, val))
+        content = [ '# Created by TMMS for %s on %s' %
+            (args.hostname, time.ctime()) ]
+        for var in ('http_proxy', 'https_proxy', 'no_proxy' ):
+            val = os.environ.get(var, False)
+            if val:
+                content.append('%s=%s' % (var, val))
 
         content = '\n'.join(content)
         write_to_file(fname, content)
@@ -1093,17 +1107,18 @@ def execute(args):
         args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
 
         cleanup_sources_list(args)
-        add_mirror(args)
+        add_other_mirror(args)
 
-        apt_conf_path = args.new_fs_dir + '/etc/apt/apt.conf'
-        set_apt_conf(apt_conf_path, args.manifest.get('apt_conf', ''), args)
-        set_apt_proxy(apt_conf_path, args.manifest.get('proxy', {}), args)
+        # Golden image contrived args has no "manifest" attribute.  Besides,
+        # a manifest should not contain distro-specific data structures.
+        # set_apt_conf(apt_conf_path, args.manifest.get('apt_conf', ''), args)
+        set_apt_proxy(args)
 
         install_packages(args)
 
         tmp = extract_bootfiles(args)
-        #assert tmp, 'Golden image %s had no kernel' % args.golden_tar
-        #assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
+        assert tmp, 'Golden image %s had no kernel(s)' % args.golden_tar
+        assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
         vmlinuz_golden = tmp[0]
         update_status(args, 'Found golden kernel %s' %
                       os.path.basename(vmlinuz_golden))

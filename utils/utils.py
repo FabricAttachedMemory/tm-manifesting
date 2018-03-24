@@ -259,28 +259,55 @@ def deb_components(full_source):
     return pieces
 
 
-def get_sys_env(path_to_env=None):
-    """ """
-    if path_to_env is None:
-        path_to_env = '/etc/environment'
-    env_lines = []
+def get_vars_from_file(path_to_vars=None, only=None):
+    """Parse a file of shell (bash) environment variables."""
+    if path_to_vars is None:
+        path_to_vars = '/etc/environment'
+    if only is None or not only:
+        only = ()       # "None" means get them all
 
-    with open(path_to_env, 'r') as EE:
-        env_lines = EE.read().split('\n')
+    try:
+        with open(path_to_vars, 'r') as EE:
+            env_lines = EE.read().split('\n')
+        # Some ToRMS said "export xxx=yyy" or used quotes, bad robot!
+        env_lines = [ line.strip().replace('export ', '')
+            for line in env_lines ]
+    except OSError as e:
+        logging.error("Couldn't read %s: %s" % (path_to_vars, str(e)))
+        return None
 
     result = {}
-    for line in env_lines:
-        # Some ToRMS said "export xxx=yyy" or used quotes, bad robot!
-        # therefore, try to remove 'export ' for each line, to make it xx=yy
-        line = line.strip().replace('export ', '')
+    for linenum, line in enumerate(env_lines):
         if not line or line.startswith('#'):
             continue
         try:
             var, val = line.split('=')
         except ValueError as e:     # Incorrect number of values to unpack
+            logging.error("Ignoring %s line %d: %s" % (
+                path_to_vars, linenum + 1, line))
             continue
-        val = val.strip('"\'')
-        var = var.strip().split(' ')[-1]
+        var = var.strip().split(' ')[-1]    # Ignore spaces, take final token
+        if only and var not in only:
+            continue
+        val = val.strip('"\'')              # Remove quotes
         result[var] = val
 
     return result
+
+
+def set_proxy_environment():
+    '''If http[s]_proxy are not set, try to grab them from /etc/environment.
+       Set them in os.environ for use by subprograms and subroutines.'''
+
+    # What's in the environment?  It either came from systemctl under
+    # /etc/systemd/system/tm-manifest-server.service.d/xxxx.conf or an
+    # explicit set on the command line, or existing in the environment (like
+    # from "sudo -E tm-manifest setup blah").  INVOCATION_ID is in os.environ
+    # if this was started from systemctl.  Not sure if it matters...
+    # no_proxy is observed by "requests" module.
+
+    only = [ p for p in ('http_proxy', 'https_proxy', 'ftp_proxy', 'no_proxy')
+            if p not in os.environ ]
+    only = only or None
+    os.environ.update(get_vars_from_file(only=only))
+

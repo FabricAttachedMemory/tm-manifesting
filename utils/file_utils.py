@@ -1,12 +1,14 @@
 #!/usr/bin/python3
 from contextlib import contextmanager
 import errno
-import os
 import glob
-import urllib.request
+import logging
+import os
 import shutil
 import stat
 import sys
+import urllib.request
+
 from pdb import set_trace
 
 _allowed_dirs = [
@@ -56,8 +58,7 @@ def copy_target_into(target, into, verbose=False):
             shutil.copytree(target, into)   # copy directory
         else:
             shutil.copyfile(target, into)   # copy single file
-        if verbose:
-            print(' - Copy completed: from %s into %s' % (target, into))
+        logging.info(' - Copy completed: from %s into %s' % (target, into))
     except (AssertionError, RuntimeError, EnvironmentError) as err:
         raise RuntimeError('Couldn\'t copy "%s" into "%s": %s' % (
             target, into, str(err)))
@@ -67,8 +68,7 @@ def move_target(target, into, verbose=False):
     """
         Move target folder into new folder. NOTE: target will be removed!
     """
-    if verbose:
-        print(' -- Moving %s into %s' % (target, into))
+    logging.info(' -- Moving %s into %s' % (target, into))
     if target == into:
         return False
     copy_target_into(target, into, verbose=verbose)
@@ -77,8 +77,8 @@ def move_target(target, into, verbose=False):
 
     # verified number of files of copied files with original
     if len(orig_content) != len(copied_content):
-        if verbose:
-            print(' - Failed to move() %s into %s! Copied content is not the same.')
+        logging.error(
+            ' - Failed to move() %s into %s! Copied content is not the same.')
 
         remove_target(into, verbose=verbose)
         return False
@@ -137,8 +137,7 @@ def remove_target(target, verbose=False):
             shutil.rmtree(target)
         elif os.path.exists(target):
             os.remove(target)
-        if verbose:
-            print(' - %s has been removed!' % target)
+        logging.info(' - %s has been removed!' % target)
     except (AssertionError, EnvironmentError) as e:
         raise RuntimeError('Couldn\'t remove "%s": %s' % (target, str(e)))
 

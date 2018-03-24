@@ -15,6 +15,7 @@ import argparse
 import os
 import os.path
 import sys
+
 from pdb import set_trace
 
 from tmms.utils import utils
@@ -150,7 +151,7 @@ def parse_cmdline_args(extra_args_msg):
     return args
 
 # Chicken and egg: setup networking (which can be run during install)
-# now needs http_proxy, before /etc/tmms is ready.  Ass-u-me it's in here.
+# now needs http_proxy, before /etc/tmms is ready.
 
 
 if __name__ == '__main__':
@@ -169,7 +170,7 @@ if __name__ == '__main__':
         except ImportError:
             raise SystemExit('Failed to import utils.file_utils module')
 
-        os.environ.update(utils.get_sys_env())
+        utils.set_proxy_environment()
 
         # For development, set up some helpers.  Ignore from the installed path.
         setup_file = os.path.realpath(__file__)
