@@ -28,58 +28,49 @@ from glob import glob
 from pdb import set_trace
 
 from tmms.utils.logging import tmmsLogger
-from tmms.utils.file_utils import copy_target_into, remove_target, make_symlink
+from tmms.utils.file_utils import copy_target_into, remove_target
+from tmms.utils.file_utils import make_symlink, move_target
 from tmms.utils.file_utils import write_to_file, workdir, make_dir
 from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
 from tmms.utils import utils # FIXME: this line should replace above imports!
 
 #==============================================================================
+# A (custom) kernel will probably only boot itself and not load any modules.
+# I have seen a custom kernel force a reload of the original (distro) kernel
+# from a dependency cascade of the drivers (zbridge, atomics, tmfs, tmflush).
+# I suspect /etc/kernel scripts from the original golden kernel but haven't
+# actually tracked it down.   Hasn't been seen in a while....
 
 
-def extract_bootfiles(args):
+def extract_bootfiles(args, phase_msg):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
     These files are not needed in the rootfs for diskless boot.  Move them
-    to args.build_dir for future use.  Return any kernel(s) that are found.
-    Let the caller decide if the count is an error.
+    to args.build_dir for future use.  Two or more kernels at any one call
+    is an error (no way to choose programmatically).  Let the caller decide
+    if zero kernels is an error.
 
     :param 'args.build_dir': [str] where to move the unecessary files.
     :param 'args.new_fs_dir': [str] where to find the unecessary files.
+    :param 'phase_msg': [str] Additional debug message string.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    update_status(args, 'Extract any /boot/[vmlinuz,initrd]')
     boot_dir = '%s/boot/' % args.new_fs_dir
-    vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # one list
-    if getattr(args, 'debug', False) and len(vmlinuz) > 1:
-        set_trace()
-        pass    # multiple kernels exist, probably a dependency cascade
-    initrd = glob('%s/initrd.img*' % (boot_dir))    # two lists
-    vmlinuzes = []
-    try:
-        for source in vmlinuz + initrd:            # move them all
-            copy_into = '%s/%s' % (args.build_dir, os.path.basename(source))
-            copy_target_into(source, copy_into)
-            if '/vmlinuz' in copy_into:
-                vmlinuzes.append(copy_into)
-
-            if getattr(args, 'keep_kernel', True):
-                remove_target(source)
-            else:
-                update_status(args, ' - Kernel files not removed from boot. (param: --keep-kernel)')
-
-        # Vmlinuz files where found and moved. Good to return.
-        if vmlinuzes:
-            return vmlinuzes
-    except Exception as err:
-        raise RuntimeError('extract_bootfiles() failed: %s' % str(err))
-
-    golden_dir = os.path.dirname(args.golden_tar)
-    update_status(args, ' - No vmlinuz and initrd in unter/boot/')
-    update_status(args, '   - Checking golden dir for those files at %s...' % golden_dir)
-    # No vmlinuz found in untar/boot/. Check if they are already in the build_dir
-    vmlinuz = glob('%s/vmlinuz*' % (golden_dir))      # one list
-    return vmlinuz
-
+    vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
+    initrd = glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
+    if len(vmlinuz) > 1:
+        if args.debug and sys.stdin.isatty():       # Not forked
+            set_trace()
+        raise RuntimeError('Multiple (%d) %s kernels exist' % (
+            len(vmlinuz), phase_msg))
+    args.vmlinuz_golden = ''
+    update_status(args, 'Extract %d %s /boot/[vmlinuz,initrd]' % (
+        len(vmlinuz), phase_msg))
+    for source in vmlinuz + initrd:            # move them all
+        dest = '%s/%s' % (args.build_dir, os.path.basename(source))
+        assert move_target(source, dest), 'Move of %s failed' % source
+        if '/vmlinuz' in dest:
+            args.vmlinuz_golden = dest
 
 #=============================================================================
 # MAGIC: turn a transient initrd into a persistent rootfs with two corrective
@@ -177,22 +168,22 @@ def set_apt_proxy(args):
     # FIXME: while called from both tm-manifest setup and tm-manifest-server,
     # runtime environment is quite different and this one set of rules is
     # insufficient.  Either way, get the proxies from os.environ.
-    if 'golden' not in args.new_fs_dir:     # Not during true manifesting
+    if not args.is_golden:      # One final post-processing step is done later
         return
     path = args.new_fs_dir + '/etc/apt/apt.conf.d'
     make_dir(path)
     path += '/00FAMproxy.conf'
+    args.apt_dot_conf = path    # for post-processing
 
-    apt_lines = [ ]     # FIXME: add DIRECT to ToRMS
-    for proxy_type in ('http_proxy', 'https_proxy', 'ftp_proxy', 'no_proxy'):
+    # FIXME: it's really dependent on xxx_mirror saying locahost, but this
+    # really shouldn't hurt. And don't process 'no_proxy' variable.
+    apt_lines = [ 'Acquire::http::proxy::localhost "DIRECT";' ]
+    for proxy_type in ('http_proxy', 'https_proxy', 'ftp_proxy'):
         proxy_url = os.environ.get(proxy_type, False)
         if not proxy_url:
             continue
         proxy_type = proxy_type.split('_proxy')[0]
-        if proxy_type == 'no':
-            continue    # FIXME: craft a "DIRECT" entry
-        else:
-            entry = 'Acquire::%s::proxy "%s";' % (proxy_type, proxy_url)
+        entry = 'Acquire::%s::proxy "%s";' % (proxy_type, proxy_url)
         apt_lines.append(entry)
 
     content = '\n'.join(apt_lines)
@@ -201,7 +192,7 @@ def set_apt_proxy(args):
         return
 
     try:
-        write_to_file(path, content)    # FIXME: overwrite???
+        write_to_file(path, content)    # Yes, overwrite
     except RuntimeError as err:
         raise RuntimeError('Failed writing proxy settings to %s! Reason:\n- %s' %\
                             (path, err))
@@ -211,7 +202,7 @@ def add_other_mirror(args):
     """
     @param other_mirrors:
     """
-    if not hasattr(args, 'other_mirrors'):
+    if not args.is_golden or not hasattr(args, 'other_mirrors'):
         return
 
     update_status(args, 'Adding other mirrors: %s' % args.other_mirrors)
@@ -222,8 +213,17 @@ def add_other_mirror(args):
         other_mirrors = args.other_mirrors.split(',')
     else:
         other_mirrors = args.other_mirrors
-    write_to_file(sources_list, '\n'.join(other_mirrors), is_append=True)
+    write_to_file(sources_list, '\n'.join(other_mirrors))
     return
+
+
+def localhost2torms(args):
+    '''Go through apt.conf.d/00FAMproxy.con and change localhost -> torms'''
+    if args.is_golden:  # TSNH :-)
+        return
+    update_status(args, 'Convert "localhost" references to "torms"')
+    with open(args.apt_dot_conf, 'r') as f:
+        lines = f.readlines()
 
 #===========================================================================
 
@@ -307,7 +307,7 @@ def set_environment(args):
 
         content = [ '# Created by TMMS for %s on %s' %
             (args.hostname, time.ctime()) ]
-        for var in ('http_proxy', 'https_proxy', 'no_proxy' ):
+        for var in ('http_proxy', 'https_proxy'):
             val = os.environ.get(var, False)
             if val:
                 content.append('%s=%s' % (var, val))
@@ -640,7 +640,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
             for pkg in packages:
                 install.write(
                     '\necho -e "\\n---------- Installing %s\\n"\n' % pkg)
-                cmd = 'apt-get install -q -y --force-yes -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
+                cmd = 'apt-get install -q -y --reinstall --force-yes -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" %s\n' % pkg
                 install.write(cmd)
                 # Things from the repo OUGHT to work.
                 install.write(
@@ -1009,13 +1009,13 @@ def _is_gzipped(fname):
         raise RuntimeError('Failed in _is_gzipped(%s)! Error: %s' % (fname, err))
 
 
-def compress_bootfiles(args, vmlinuz_file, cpio_file):
+def compress_bootfiles(args, cpio_file):
     update_status(args, 'Compressing kernel and file system')
     vmlinuz_gzip = args.tftp_dir + '/' + args.hostname + '.vmlinuz.gz'
-    if _is_gzipped(vmlinuz_file):
-        shutil.copy(vmlinuz_file, vmlinuz_gzip)
+    if _is_gzipped(args.vmlinuz_golden):
+        shutil.copy(args.vmlinuz_golden, vmlinuz_gzip)
     else:
-        with open(vmlinuz_file, 'rb') as f_in:
+        with open(args.vmlinuz_golden, 'rb') as f_in:
             with gzip.open(vmlinuz_gzip, mode='wb', compresslevel=6) as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
@@ -1056,6 +1056,8 @@ def execute(args):
         args.debug = False
     if getattr(args, 'verbose', None) is None:
         args.verbose = False
+    if getattr(args, 'is_golden', None) is None:    # setup_golden.py
+        args.is_golden = False
 
     logger = getattr(args, 'logger', None)
 
@@ -1106,22 +1108,17 @@ def execute(args):
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
 
-        cleanup_sources_list(args)
-        add_other_mirror(args)
+        extract_bootfiles(args, 'golden')       # What does it come with
 
         # Golden image contrived args has no "manifest" attribute.  Besides,
         # a manifest should not contain distro-specific data structures.
         # set_apt_conf(apt_conf_path, args.manifest.get('apt_conf', ''), args)
+        cleanup_sources_list(args)
         set_apt_proxy(args)
-
+        add_other_mirror(args)
         install_packages(args)
-
-        tmp = extract_bootfiles(args)
-        assert tmp, 'Golden image %s had no kernel(s)' % args.golden_tar
-        assert len(tmp) == 1, 'Golden image %s has multiple kernels' % args.golden_tar
-        vmlinuz_golden = tmp[0]
-        update_status(args, 'Found golden kernel %s' %
-                      os.path.basename(vmlinuz_golden))
+        extract_bootfiles(args, 'add-on')       # There MAY have been a new one
+        assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         # Global and account config files
         set_environment(args)
@@ -1133,57 +1130,44 @@ def execute(args):
 
         persist_initrd(args)
 
-        # FINALLY! Add packages, tasks, and script(let)s from manifest.
-        #cleanup_sources_list(args)
-        #install_packages(args)
-
-        # Was there a custom kernel?  Note that it will probably only
-        # boot itself and not load any modules.  I have seen a custom kernel
-        # force a reload of the original golden kernel, from a dependency
-        # cascade of the drivers (zbridge, atomics, tmfs, tmflush).
-        # I suspect /etc/kernel scripts from the original golden kernel but
-        # haven't actually tracked it down.  Work around it, especially with
-        # this clever little context manager.
-        #tmp = extract_bootfiles(args)
-        with contextlib.suppress(ValueError):
-            tmp.remove(vmlinuz_golden)
-        if tmp:
-            assert len(tmp) < 2, 'Too many custom kernels'
-            update_status(args, 'Replacing golden kernel %s with %s' % (
-                os.path.basename(vmlinuz_golden), os.path.basename(tmp[0])))
-            vmlinuz_golden = tmp[0]
-        else:
-            update_status(args, 'No custom kernel found in manifest')
-
-        # Final customizations
-
+        localhost2torms(args)
         hack_LFS_autostart(args)    # Temporary; must come before...
         rewrite_rclocal(args)
 
         #------------------------------------------------------------------
-        # Assemble the images
+        # If making a new golden image, restore the kernel.  Otherwise
+        # assemble the bootable PXE images.
 
-        cpio_file = create_cpio(args)
+        if args.is_golden:
+            update_status(args, 'Restoring %s to golden image' % args.vmlinuz_golden)
+            copy_target_into(
+                args.vmlinuz_golden, '%s/untar/boot/' % args.build_dir)
+            response['message'] = 'Golden image ready for use'
+            status = 'ready'
+        else:
+            cpio_file = create_cpio(args)
+            vmlinuz_gzip, cpio_gzip = compress_bootfiles(args, cpio_file)
+            create_SNBU_image(args, vmlinuz_gzip, cpio_gzip)
 
-        vmlinuz_gzip, cpio_gzip = compress_bootfiles(
-            args, vmlinuz_golden, cpio_file)
-        create_SNBU_image(args, vmlinuz_gzip, cpio_gzip)
+            # Free up space someday, but not during active development
+            # remove_target(args.build_dir)
 
-        # Free up space someday, but not during active development
-        # remove_target(args.build_dir)
+            # Leave a copy of the controlling manifest for post-mortems
+            if getattr(args, 'manifest', None) is not None:
+                manifest_tftp_file = args.manifest.namespace.replace('/', '.')
+                copy_target_into(args.manifest.fullpath,
+                                args.tftp_dir + '/' + manifest_tftp_file)
 
-        # Leave a copy of the controlling manifest for post-mortems
-        if getattr(args, 'manifest', None) is not None:
-            manifest_tftp_file = args.manifest.namespace.replace('/', '.')
-            copy_target_into(args.manifest.fullpath,
-                             args.tftp_dir + '/' + manifest_tftp_file)
+            update_status(args, 'Updating grub menu for the node.')
+            customize_grub(args)
 
-        update_status(args, 'Updating grub menu for the node.')
-        customize_grub(args)
+            response['message'] = 'PXE files ready to boot'
+            status = 'ready'
 
-        response['message'] = 'PXE files ready to boot'
-        status = 'ready'
-
+    except AssertionError as err:   # Consistency check
+        response['status'] = 505
+        response['message'] = 'Consistency failure: %s' % str(err)
+        status = 'error'
     except RuntimeError as err:     # Caught earlier and re-thrown as this
         response['status'] = 505
         response['message'] = 'Filesystem image build failed: %s' % str(err)

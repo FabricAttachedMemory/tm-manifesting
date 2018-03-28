@@ -57,6 +57,8 @@ def copy_target_into(target, into, verbose=False):
         if os.path.isdir(target):
             shutil.copytree(target, into)   # copy directory
         else:
+            if os.path.isdir(into):
+                into += '/' + os.path.basename(target)
             shutil.copyfile(target, into)   # copy single file
         logging.info(' - Copy completed: from %s into %s' % (target, into))
     except (AssertionError, RuntimeError, EnvironmentError) as err:
@@ -216,6 +218,9 @@ def from_url_or_local(target, destination):
         if not os.path.isfile(target):
             raise RuntimeError(' - E - %s is not a file!' % target)
 
+        # Desired effect is a valid destination.  Is it done already?
+        if os.path.realpath(target) == os.path.realpath(destination):
+            return
         copy_target_into(target, destination)
     else:
         try:

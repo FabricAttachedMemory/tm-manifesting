@@ -25,28 +25,29 @@ from tmms.utils import file_utils
 from tmms.utils import utils as tmms_utils
 
 
-def customize_golden(golden_tar, build_dir):
+def customize_golden(manconfig, golden_tar, build_dir):
+    '''Combine /etc/tmms settings and some hardcoded values.'''
     arg_values = {
+        'is_golden': True,      # Modifies a lot of behavior in customize_node
         'hostname' : 'golden',
         'node_coord' : 'golden_custom',
         'node_id' : None,
         'tftp_dir' : build_dir,
-        'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net/Debian/',
-        'repo_release' : 'jessie',
-        'repo_areas' : ('main', 'contrib', 'non-free'),
-        'other_mirrors' : 'deb [trusted=yes] http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fam/ testing main',
+        'repo_mirror' : manconfig['DEBIAN_MIRROR'],
+        'repo_release' : manconfig['DEBIAN_RELEASE'],
+        'repo_areas' : manconfig['DEBIAN_AREAS'],
+        'other_mirrors' : manconfig['OTHER_MIRRORS'],
         'packages' : 'linux-image-4.14.0-l4fame,l4fame-node',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
         'verbose' : True,
-        'debug' : True,         # prevent fork/exec of customize_node.py
-        'keep_kernel' : True,
+        'debug' : True,         # prevent fork/exec
         'logger' : None
     }
 
     try:
-        customize_node.execute(argparse.Namespace(**arg_values))
+        response = customize_node.execute(argparse.Namespace(**arg_values))
     except Exception as err:
         _, _, exc_tb = sys.exc_info()
         raise RuntimeError('%s:%s\n %s\n' %\
@@ -181,7 +182,7 @@ def main(args):
         print(' - Skipping bootstrap stage...')
         download_image(supplied_image, golden_tar)
 
-    customize_golden(golden_tar, golden_custom)
+    customize_golden(manconfig, golden_tar, golden_custom)
 
 
 if __name__ == '__main__':
