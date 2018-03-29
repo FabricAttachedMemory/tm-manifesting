@@ -106,8 +106,8 @@ mainapp = create_app()
 # Flask has configured a root logger with default "DEBUG" level handler that
 # spits to stderr.  That's good enough for early work.  tmmsLogger will
 # change that behavior on first invocation.
-mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' %\
-                            (mainapp.config['PXE_INTERFACE'])
+mainapp.config['LOGFILE'] = '/var/log/tmms.%s.log' % (
+    mainapp.config['PXE_INTERFACE'])
 
 ###########################################################################
 # mainapp was given a logger by Flask.  Modify it based on cmdline arguments.
@@ -380,7 +380,7 @@ def daemonize(mainapp, cmdline_args):
 
 
 def main():
-    os.environ.update(utils.get_sys_env())
+    utils.set_proxy_environment()
 
     if cmdline_args.start_dnsmasq:
         kill_dnsmasq(mainapp.config)
@@ -401,7 +401,10 @@ def main():
         mainapp.logger.warning(msg)
         # keep going
 
-    mainapp.logger.info('starting new invocation of API server')
+    mainapp.logger.info('New invocation of API server w/ environment:')
+    for key in sorted(os.environ.keys()):
+        msg = '%s=%s' % (key, os.environ[key])
+        mainapp.logger.info(msg)
 
     mainapp.config['rules'] = sorted(
         '%s %s' % (rule.rule, rule.methods) for

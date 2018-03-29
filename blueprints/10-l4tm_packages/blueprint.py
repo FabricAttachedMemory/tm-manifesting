@@ -12,6 +12,7 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 from collections import defaultdict
 from flask import Blueprint, render_template, request, jsonify, make_response
 import gzip
+import logging
 import os
 import requests as HTTP_REQUESTS
 import sys
@@ -134,6 +135,9 @@ def _read_packages(full_source):
         msg += '  - Expected "deb http://mirror.url release ares"\n'
         msg += '  - Mirror provided: %s' % (full_source)
         raise RuntimeError(msg)
+
+    logging.info('Proxy settings\n%s' % '\n'.join(
+        sorted((p for p in os.environ if 'proxy' in p))))
 
     # Reference:
     # https://github.com/raumkraut/python-debian/blob/master/README.deb822

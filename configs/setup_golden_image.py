@@ -25,28 +25,29 @@ from tmms.utils import file_utils
 from tmms.utils import utils as tmms_utils
 
 
-def customize_golden(golden_tar, build_dir):
+def customize_golden(manconfig, golden_tar, build_dir):
+    '''Combine /etc/tmms settings and some hardcoded values.'''
     arg_values = {
+        'is_golden': True,      # Modifies a lot of behavior in customize_node
         'hostname' : 'golden',
         'node_coord' : 'golden_custom',
         'node_id' : None,
         'tftp_dir' : build_dir,
-        'repo_mirror' : 'http://seedy.us.rdlabs.hpecorp.net/Debian/',
-        'repo_release' : 'jessie',
-        'repo_areas' : ('main', 'contrib', 'non-free'),
-        'other_mirrors' : 'deb [trusted=yes] http://hlinux-deejay.us.rdlabs.hpecorp.net/l4fam/ testing main',
-        'packages' : 'linux-image-4.14.0-l4fame, l4fame-node',
+        'repo_mirror' : manconfig['DEBIAN_MIRROR'],
+        'repo_release' : manconfig['DEBIAN_RELEASE'],
+        'repo_areas' : manconfig['DEBIAN_AREAS'],
+        'other_mirrors' : manconfig['OTHER_MIRRORS'],
+        'packages' : 'linux-image-4.14.0-l4fame,l4fame-node',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
         'verbose' : True,
-        'debug' : True,
-        'keep_kernel' : True,
+        'debug' : True,         # prevent fork/exec
         'logger' : None
     }
 
     try:
-        customize_node.execute(argparse.Namespace(**arg_values))
+        response = customize_node.execute(argparse.Namespace(**arg_values))
     except Exception as err:
         _, _, exc_tb = sys.exc_info()
         raise RuntimeError('%s:%s\n %s\n' %\
@@ -68,8 +69,7 @@ def customize_golden(golden_tar, build_dir):
 def move_dir(target, into, verbose=False):
     move_status = file_utils.move_target(target, into, verbose)
     if move_status is False:
-        raise RuntimeError(' - Failed to move %s into %s!' %\
-                            (target, into))
+        raise RuntimeError(' - Failed to move %s into %s!' % (target, into))
 
 
 def debootstrap_image(manconfig, vmd_path=None):
@@ -139,7 +139,7 @@ def debootstrap_image(manconfig, vmd_path=None):
         return True
 
     errors = [ e for e in contents if 'WARN' in e or 'ERROR' in e ]
-    print(''.join(errors), file=sys.stderr)    # They already have newlines
+    logging.error(''.join(errors), file=sys.stderr)  # already have newlines
     raise RuntimeError('vmdebootstrap failed, consult %s' % vmdlog)
 
 
@@ -162,26 +162,27 @@ def main(args):
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
 
-    is_image_supplied = False if getattr(args, 'sysimage', None) is None else True
+    supplied_image = getattr(args, 'sysimage', None)
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
-    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', 'TMCONFIG'))
-    golden_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
+    missing = manconfig.ratify(dontcare=('TMCONFIG', ))
+    assert not missing, 'tmms config file is missing %s' % missing
+    golden_tar = manconfig['GOLDEN_IMAGE']
+    golden_dir = os.path.dirname(golden_tar)
     golden_custom = golden_dir + '_custom'
 
-    # -- Build 'raw' golden image using vmdebootstrap --
-    if not is_image_supplied:
+    # -- Maybe build 'raw' golden image using vmdebootstrap --
+    if supplied_image is None:
         print(' --- Starting Debootstrap Image stage --- ')
-        print('Note: to skip debootstrap, use --image [local path or url]')
+        print('Note: to skip debootstrap, use --image <local path or url>')
 
         vmd_path = getattr(args, 'vmd_cfg', None)
         debootstrap_image(manconfig, vmd_path=vmd_path)
     else:
-        print (' - Skipping bootstrap stage...')
-        download_image(args.sysimage, manconfig['GOLDEN_IMAGE'])
+        print(' - Skipping bootstrap stage...')
+        download_image(supplied_image, golden_tar)
 
-    # -- Customizing Golden Image stage --
-    customize_golden(manconfig['GOLDEN_IMAGE'], golden_custom)
+    customize_golden(manconfig, golden_tar, golden_custom)
 
 
 if __name__ == '__main__':
