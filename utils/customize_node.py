@@ -63,7 +63,8 @@ def extract_bootfiles(args, phase_msg):
             set_trace()
         raise RuntimeError('Multiple (%d) %s kernels exist' % (
             len(vmlinuz), phase_msg))
-    args.vmlinuz_golden = ''
+    if not hasattr(args, 'vmlinuz_golden'):         # singleton
+        args.vmlinuz_golden = ''
     update_status(args, 'Extract %d %s /boot/[vmlinuz,initrd]' % (
         len(vmlinuz), phase_msg))
     for source in vmlinuz + initrd:            # move them all
@@ -168,12 +169,12 @@ def set_apt_proxy(args):
     # FIXME: while called from both tm-manifest setup and tm-manifest-server,
     # runtime environment is quite different and this one set of rules is
     # insufficient.  Either way, get the proxies from os.environ.
-    if not args.is_golden:      # One final post-processing step is done later
-        return
     path = args.new_fs_dir + '/etc/apt/apt.conf.d'
     make_dir(path)
     path += '/00FAMproxy.conf'
     args.apt_dot_conf = path    # for post-processing
+    if not args.is_golden:      # One final post-processing step is done later
+        return
 
     # FIXME: it's really dependent on xxx_mirror saying locahost, but this
     # really shouldn't hurt. And don't process 'no_proxy' variable.
@@ -202,28 +203,33 @@ def add_other_mirror(args):
     """
     @param other_mirrors:
     """
+    args.other_list = '%s/etc/apt/sources.list.d' % args.new_fs_dir
+    make_dir(args.other_list)
+    args.other_list += '/other.list'        # For post-processing
     if not args.is_golden or not hasattr(args, 'other_mirrors'):
         return
 
     update_status(args, 'Adding other mirrors: %s' % args.other_mirrors)
-    sources_list = '%s/etc/apt/sources.list.d' % args.new_fs_dir
-    make_dir(sources_list)
-    sources_list += '/other.list'
     if isinstance(args.other_mirrors, str):
         other_mirrors = args.other_mirrors.split(',')
     else:
         other_mirrors = args.other_mirrors
-    write_to_file(sources_list, '\n'.join(other_mirrors))
+    write_to_file(args.other_list, '\n'.join(other_mirrors))
     return
 
 
 def localhost2torms(args):
-    '''Go through apt.conf.d/00FAMproxy.con and change localhost -> torms'''
-    if args.is_golden:  # TSNH :-)
+    '''Go through apt.conf.d and sources.list.d and change localhost -> torms'''
+    if args.is_golden:
         return
-    update_status(args, 'Convert "localhost" references to "torms"')
-    with open(args.apt_dot_conf, 'r') as f:
-        lines = f.readlines()
+    update_status(args, 'Convert APT "localhost" references to "torms"')
+
+    # Always apt.conf, usually other_list
+    for fname in (args.apt_dot_conf, args.other_list):
+        if os.path.isfile(fname):
+            with open(fname, 'r') as f:             # Has newlines...
+                lines = ''.join(f.readlines())      # ...so keep them
+            write_to_file(fname, lines.replace('localhost', 'torms'))
 
 #===========================================================================
 
@@ -262,8 +268,8 @@ def hack_LFS_autostart(args):
     :param 'node_id': [int] expanded into R:E:N.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    if getattr(args, 'node_id', None) is None:
-        update_status(args, ' - ! - Skipping "hack_lfs_autostart"! No "node_id" in "args".')
+    if args.is_golden:
+        update_status(args, ' - ! - Skipping hack_lfs_autostart')
         return
 
     rclocal = ''
@@ -272,7 +278,6 @@ def hack_LFS_autostart(args):
 
     update_status(args, 'Hack LFS autostart')
     LFS_conf = '%s/etc/default/tm-lfs' % args.new_fs_dir
-
 
     enc = ((args.node_id - 1) // 10) + 1
     node = ((args.node_id - 1) % 10) + 1
@@ -286,8 +291,8 @@ def hack_LFS_autostart(args):
         rclocal += 'systemctl enable tm-lfs\nsystemctl start tm-lfs\n'
 
         args.rclocal = rclocal
-    except Exception as err:
-        raise RuntimeError('Cannot hack LFS autostart: %s' % str(err))
+    except Exception as err:    # Not an error, just trouble on node boot
+        update_status(args, 'Cannot hack LFS autostart: %s' % str(err))
 
 #==============================================================================
 

@@ -1,3 +1,14 @@
+tm-manifesting (3.2-1) unstable; urgency=low
+
+    * Take http[s]_proxy from environment, then from /etc/environment
+    * Two passes of extracting boot files
+    * Golden image creation is now driven from some /etc/tmms values
+    * Self-consistency checks
+    * Extend fields in args to hold intermediate values of customize_node
+
+ -- Rocky Craig <rocky.craig@hpe.com>  Fri, 30 Mar 2018 9:42:42 -0700
+
+
 tm-manifesting (3.1-1) testing; urgency=low
 
     * Can now upload a golden image from URL
