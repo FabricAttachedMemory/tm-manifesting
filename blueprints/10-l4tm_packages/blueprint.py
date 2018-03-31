@@ -112,6 +112,11 @@ _data = None
 
 def _load_data():
     global _data
+
+    logging.info('Proxy settings\n%s' % '\n'.join(
+        sorted(('%s=%s' % (p, os.environ[p])
+            for p in os.environ if 'proxy' in p))))
+
     all_mirrors = get_all_mirrors()
 
     _data = {}
@@ -135,9 +140,6 @@ def _read_packages(full_source):
         msg += '  - Expected "deb http://mirror.url release ares"\n'
         msg += '  - Mirror provided: %s' % (full_source)
         raise RuntimeError(msg)
-
-    logging.info('Proxy settings\n%s' % '\n'.join(
-        sorted((p for p in os.environ if 'proxy' in p))))
 
     # Reference:
     # https://github.com/raumkraut/python-debian/blob/master/README.deb822

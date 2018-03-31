@@ -1,5 +1,5 @@
 [Unit]
-Description=TheMachine Manifesting API Server
+Description=The Machine Manifesting Service API
 Requires=network-online.target
 After=network-online.target
 
