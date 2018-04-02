@@ -59,7 +59,7 @@ def install_base_packages():
         for cmd in (
             'dpkg --add-architecture arm64',
             'apt-get update',
-            'apt-get -y --force-yes upgrade'
+            'apt-get -y upgrade'
         ):
             ret, stdout, stderr = piper(cmd)
             assert not (bool(ret) or bool(stderr)), \

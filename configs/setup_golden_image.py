@@ -102,18 +102,18 @@ def debootstrap_image(manconfig, vmd_path=None):
     vmdlog = destdir + '/vmdebootstrap.log'
     vmdimage = destdir + '/golden.arm.img'
 
+    #--image={image}
     cmd = '''{vmdebootstrap} --no-default-configs
              --config={vmd_cfg}
              --log={vmd_log}
-             --image={image}
              --tarball={tarball}
              --mirror={mirror}
              --distribution={distro}
           '''
+    #image=vmdimage,
     cmd = cmd.format(vmdebootstrap=vmdebootstrap,
                 vmd_cfg=vmdconfig,
                 vmd_log=vmdlog,
-                image=vmdimage,
                 tarball=destfile,
                 mirror=manconfig['DEBIAN_MIRROR'],
                 distro=manconfig['DEBIAN_RELEASE'])
@@ -166,7 +166,7 @@ def main(args):
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('TMCONFIG', ))
-    assert not missing, 'tmms config file is missing %s' % missing
+#    assert not missing, 'tmms config file is missing %s' % missing
     golden_tar = manconfig['GOLDEN_IMAGE']
     golden_dir = os.path.dirname(golden_tar)
     golden_custom = golden_dir + '_custom'
