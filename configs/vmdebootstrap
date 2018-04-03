@@ -334,7 +334,7 @@ class VmDebootstrap(cliapp.Application):  # pylint: disable=too-many-public-meth
             self._image_operations(rootdir, rootdev)
             filesystem.list_installed_pkgs()
 
-            if self.settings['foreign'] and False:      # Rocky 1
+            if self.settings['foreign']:      # Rocky 1
                 os.unlink(
                     '%s/usr/bin/%s' %
                     (rootdir, os.path.basename(self.settings['foreign'])))

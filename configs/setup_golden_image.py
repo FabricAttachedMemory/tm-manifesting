@@ -181,7 +181,7 @@ def main(args):
     else:
         print(' - Skipping bootstrap stage...')
         download_image(supplied_image, golden_tar)
-
+    return
     customize_golden(manconfig, golden_tar, golden_custom)
 
 
