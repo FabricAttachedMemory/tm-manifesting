@@ -37,7 +37,7 @@ def customize_golden(manconfig, golden_tar, build_dir):
         'repo_release' : manconfig['DEBIAN_RELEASE'],
         'repo_areas' : manconfig['DEBIAN_AREAS'],
         'other_mirrors' : manconfig['OTHER_MIRRORS'],
-        'packages' : 'linux-image-4.14.0-l4fame,l4fame-node',
+        'packages' : 'linux-image-4.14.0-l4fame-72708-ge6511d981425,l4fame-node',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
@@ -181,7 +181,7 @@ def main(args):
     else:
         print(' - Skipping bootstrap stage...')
         download_image(supplied_image, golden_tar)
-    return
+
     customize_golden(manconfig, golden_tar, golden_custom)
 
 

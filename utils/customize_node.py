@@ -1113,6 +1113,14 @@ def execute(args):
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
 
+        foreign_package = 'qemu-aarch64-static'
+        foreign_in_build = args.build_dir + '/untar/usr/bin/' + foreign_package
+        if not os.path.exists(foreign_in_build):
+            copy_target_into('/usr/bin/' + foreign_package, foreign_in_build)
+            os.chmod(foreign_in_build, 0o755)
+        else:
+            print(' ----- %s FOUND IN BUILD DIR! ------- ' % (foreign_package))
+
         extract_bootfiles(args, 'golden')       # What does it come with
 
         # Golden image contrived args has no "manifest" attribute.  Besides,

@@ -34,7 +34,9 @@ def _fs_sanity_check(target):
     isNotAllowed = True
     for allowed in _allowed_dirs:
         allowed_size = len(allowed)
-        if allowed == elems[:allowed_size]:
+        allowed_path = '/' + '/'.join(allowed)
+        if target.startswith(allowed_path):
+        #if allowed == elems[:allowed_size]:
             isNotAllowed = False
             break
 
@@ -53,7 +55,7 @@ def copy_target_into(target, into, verbose=False):
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     try:
-        _fs_sanity_check(target)
+        _fs_sanity_check(into)
         if os.path.isdir(target):
             shutil.copytree(target, into)   # copy directory
         else:
