@@ -1121,8 +1121,6 @@ def execute(args):
         else:
             print(' ----- %s FOUND IN BUILD DIR! ------- ' % (foreign_package))
 
-        extract_bootfiles(args, 'golden')       # What does it come with
-
         # Golden image contrived args has no "manifest" attribute.  Besides,
         # a manifest should not contain distro-specific data structures.
         # set_apt_conf(apt_conf_path, args.manifest.get('apt_conf', ''), args)
@@ -1130,6 +1128,8 @@ def execute(args):
         set_apt_proxy(args)
         add_other_mirror(args)
         install_packages(args)
+
+        extract_bootfiles(args, 'golden')       # What does it come with
         extract_bootfiles(args, 'add-on')       # There MAY have been a new one
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
