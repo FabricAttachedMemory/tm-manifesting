@@ -139,7 +139,7 @@ def debootstrap_image(manconfig, vmd_path=None):
         return True
 
     errors = [ e for e in contents if 'WARN' in e or 'ERROR' in e ]
-    logging.error(''.join(errors), file=sys.stderr)  # already have newlines
+    #logging.error(''.join(errors), file=sys.stderr)  # already have newlines
     raise RuntimeError('vmdebootstrap failed, consult %s' % vmdlog)
 
 
