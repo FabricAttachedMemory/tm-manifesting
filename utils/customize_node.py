@@ -366,6 +366,23 @@ def set_hosts(args):
         raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
 
+def set_resolv_conf(args):
+    """
+    """
+    update_status(args, 'Fixing etc/resolv.cfg')
+    resolv_path = '%s/etc/resolv.conf' % (args.new_fs_dir)
+
+    if os.path.islink(resolv_path):
+        remove_target(resolv_path)
+
+    content = None
+    with open('/etc/resolv.conf', 'r') as file_obj:
+        content = file_obj.read().split('\n')
+
+    write_to_file(resolv_path, '\n'.join(content))
+    #copy_target_into('/etc/resolv.conf', resolv_path)
+
+
 def set_sudo(args):
     """
         Set sudoer policy of no password for the normal user.  That user was
@@ -1127,19 +1144,22 @@ def execute(args):
         cleanup_sources_list(args)
         set_apt_proxy(args)
         add_other_mirror(args)
-        install_packages(args)
 
-        extract_bootfiles(args, 'golden')       # What does it come with
-        extract_bootfiles(args, 'add-on')       # There MAY have been a new one
-        assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
-
+        set_trace()
         # Global and account config files
+        set_resolv_conf(args)
         set_environment(args)
         set_hostname(args)
         set_hosts(args)
         set_client_id(args)
         set_sudo(args)
         set_sshkeys(args)
+
+        install_packages(args)
+
+        extract_bootfiles(args, 'golden')       # What does it come with
+        extract_bootfiles(args, 'add-on')       # There MAY have been a new one
+        assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)
 

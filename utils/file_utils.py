@@ -139,6 +139,8 @@ def remove_target(target, verbose=False):
         _fs_sanity_check(target)
         if os.path.isdir(target):
             shutil.rmtree(target)
+        elif os.path.islink(target): #symlink to "unlink". Documentation lies
+            os.unlink(target)        #that os.unlink and os.remove are the same
         elif os.path.exists(target):
             os.remove(target)
         logging.info(' - %s has been removed!' % target)

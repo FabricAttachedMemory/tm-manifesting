@@ -80,7 +80,8 @@ def debootstrap_image(manconfig, vmd_path=None):
                     ("/[...]/tm-manifesting/config/filesystem/")
     """
     whereami = os.path.dirname(os.path.realpath(__file__))
-    vmdebootstrap = whereami + '/vmdebootstrap'
+    #vmdebootstrap = whereami + '/vmdebootstrap'
+    vmdebootstrap = 'vmdebootstrap'
     sampleVMDs = whereami + '/filesystem/'
 
     vmdconfig = vmd_path
