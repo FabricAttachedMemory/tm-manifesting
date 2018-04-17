@@ -42,7 +42,7 @@ from tmms.utils import utils # FIXME: this line should replace above imports!
 # actually tracked it down.   Hasn't been seen in a while....
 
 
-def extract_bootfiles(args, phase_msg):
+def extract_bootfiles(args, phase_msg, cleanup_attempt=0):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
     These files are not needed in the rootfs for diskless boot.  Move them
@@ -59,10 +59,16 @@ def extract_bootfiles(args, phase_msg):
     vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
     initrd = glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
     if len(vmlinuz) > 1:
-        if args.debug and sys.stdin.isatty():       # Not forked
+        if cleanup_attempt == 0:
             set_trace()
-        raise RuntimeError('Multiple (%d) %s kernels exist' % (
-            len(vmlinuz), phase_msg))
+            boot_files = vmlinuz + initrd
+            clean_extra_kernels(args, boot_files)
+            extract_bootfiles(args, phase_msg, cleanup_attempt + 1)
+        else:
+            if args.debug and sys.stdin.isatty():       # Not forked
+                set_trace()
+            raise RuntimeError('Multiple (%d) %s kernels exist' % (
+                len(vmlinuz), phase_msg))
     if not hasattr(args, 'vmlinuz_golden'):         # singleton
         args.vmlinuz_golden = ''
     update_status(args, 'Extract %d %s /boot/[vmlinuz,initrd]' % (
@@ -72,6 +78,22 @@ def extract_bootfiles(args, phase_msg):
         assert move_target(source, dest), 'Move of %s failed' % source
         if '/vmlinuz' in dest:
             args.vmlinuz_golden = dest
+
+
+def clean_extra_kernels(args, kernel_files):
+    """
+        TODO
+    """
+    boot_dir = os.path.dirname(args.golden_tar)
+    golden_boot_files = glob(boot_dir + '/vmlinuz*')
+    golden_boot_files.extend(glob(boot_dir + '/initrd*'))
+    for a_file in kernel_files:
+        file_name = os.path.basename(a_file)
+        for golden_file in golden_boot_files:
+            golden_file_name = os.path.basename(golden_file)
+            if file_name == golden_file_name:
+                remove_target(a_file)
+                break
 
 #=============================================================================
 # MAGIC: turn a transient initrd into a persistent rootfs with two corrective
@@ -1145,7 +1167,6 @@ def execute(args):
         set_apt_proxy(args)
         add_other_mirror(args)
 
-        set_trace()
         # Global and account config files
         set_resolv_conf(args)
         set_environment(args)
@@ -1158,7 +1179,7 @@ def execute(args):
         install_packages(args)
 
         extract_bootfiles(args, 'golden')       # What does it come with
-        extract_bootfiles(args, 'add-on')       # There MAY have been a new one
+        #extract_bootfiles(args, 'add-on')       # There MAY have been a new one
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)

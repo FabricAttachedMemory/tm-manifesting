@@ -310,4 +310,3 @@ def set_proxy_environment():
             if p not in os.environ ]
     only = only or None
     os.environ.update(get_vars_from_file(only=only))
-
