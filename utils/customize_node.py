@@ -58,42 +58,25 @@ def extract_bootfiles(args, phase_msg, cleanup_attempt=0):
     boot_dir = '%s/boot/' % args.new_fs_dir
     vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
     initrd = glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
+    #also extract config-* and System.map* files installed with kernel.
+    misc = glob('%s/config*' % boot_dir)
+    misc.extend(glob('%s/System.map*' % boot_dir))
+
     if len(vmlinuz) > 1:
-        if cleanup_attempt == 0:
+        if args.debug and sys.stdin.isatty():       # Not forked
             set_trace()
-            boot_files = vmlinuz + initrd
-            clean_extra_kernels(args, boot_files)
-            extract_bootfiles(args, phase_msg, cleanup_attempt + 1)
-        else:
-            if args.debug and sys.stdin.isatty():       # Not forked
-                set_trace()
-            raise RuntimeError('Multiple (%d) %s kernels exist' % (
-                len(vmlinuz), phase_msg))
+        raise RuntimeError('Multiple (%d) %s kernels exist' % (
+            len(vmlinuz), phase_msg))
     if not hasattr(args, 'vmlinuz_golden'):         # singleton
         args.vmlinuz_golden = ''
     update_status(args, 'Extract %d %s /boot/[vmlinuz,initrd]' % (
         len(vmlinuz), phase_msg))
-    for source in vmlinuz + initrd:            # move them all
+    for source in vmlinuz + initrd + misc:            # move them all
         dest = '%s/%s' % (args.build_dir, os.path.basename(source))
         assert move_target(source, dest), 'Move of %s failed' % source
         if '/vmlinuz' in dest:
             args.vmlinuz_golden = dest
 
-
-def clean_extra_kernels(args, kernel_files):
-    """
-        TODO
-    """
-    boot_dir = os.path.dirname(args.golden_tar)
-    golden_boot_files = glob(boot_dir + '/vmlinuz*')
-    golden_boot_files.extend(glob(boot_dir + '/initrd*'))
-    for a_file in kernel_files:
-        file_name = os.path.basename(a_file)
-        for golden_file in golden_boot_files:
-            golden_file_name = os.path.basename(golden_file)
-            if file_name == golden_file_name:
-                remove_target(a_file)
-                break
 
 #=============================================================================
 # MAGIC: turn a transient initrd into a persistent rootfs with two corrective
@@ -790,9 +773,9 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                 'chroot install.sh retval=%d: %s' % (ret, stdouterr))
         return True     # but see finally
     except Exception as err:
-        args.logger.error(str(err))
+        args.logger.error( '%s' % (err))
         with open(args.new_fs_dir + installog, 'r') as log:
-            args.logger.debug(log.read())
+            args.logger.debug(' - D - %s' % log.read())
         raise RuntimeError(str(err))
     finally:
         umountret, _, _ = piper(umount)
@@ -846,7 +829,7 @@ def update_status(args, message, status='building'):
         message = message['message']
     except Exception as e:
         pass
-    args.logger(message, level=level)
+    args.logger('%s' % message, level=level)
 
     response = {}
     if getattr(args, 'manifest', None) is None:
@@ -995,11 +978,14 @@ def create_SNBU_image(args, vmlinuz, cpio):
         do_copy = create_ESP(args, blockdev, vmlinuz, cpio)
 
     except AssertionError as e:
-        args.logger.error('%s failed: errno = %d: %s' % (str(e), ret, stderr))
+        args.logger.error('%s failed:\n - errno = %d: %s' % (
+                        str(e), ret, stderr))
     except RuntimeError as e:
-        args.logger.error('%s: errno = %d: %s' % (str(e), ret, stderr))
+        args.logger.error('%s:\n - errno = %d: %s' % (
+                        str(e), ret, stderr))
     except Exception as e:
-        args.logger.critical('%s: errno = %d: %s' % (str(e), ret, stderr))
+        args.logger.critical('%s:\n - errno = %d: %s' % (
+                        str(e), ret, stderr))
 
     if undo_kpartx:
         # Sometimes this fails, especially with overloaded/underpowered
@@ -1009,7 +995,7 @@ def create_SNBU_image(args, vmlinuz, cpio):
         ret, stdout, stderr = piper(cmd)
         # assert not ret, cmd
         if ret or stderr:
-            args.logger.warning('kpartx -d returned %d: %s' % (ret, stderr))
+            args.logger.warning('kpartx -d returned %d:\n - %s' % (ret, stderr))
 
     if do_copy:
         try:
@@ -1137,7 +1123,7 @@ def execute(args):
     # Replace the logger after parent may have closed extra fds
     fname='%s/build.log' % args.build_dir
     if logger is not None:
-        args.logger.info('Build details in %s' % fname)
+        args.logger.info(' --- Build details in %s ---' % fname)
 
     logger = tmmsLogger(args.hostname, use_file=fname)
     logger.propagate = args.verbose     # always gets forced True at end
@@ -1157,8 +1143,6 @@ def execute(args):
         if not os.path.exists(foreign_in_build):
             copy_target_into('/usr/bin/' + foreign_package, foreign_in_build)
             os.chmod(foreign_in_build, 0o755)
-        else:
-            print(' ----- %s FOUND IN BUILD DIR! ------- ' % (foreign_package))
 
         # Golden image contrived args has no "manifest" attribute.  Besides,
         # a manifest should not contain distro-specific data structures.
@@ -1191,11 +1175,12 @@ def execute(args):
         #------------------------------------------------------------------
         # If making a new golden image, restore the kernel.  Otherwise
         # assemble the bootable PXE images.
+        # ZACH: What for??? Did I leave this comment? What is going on??
 
         if args.is_golden:
-            update_status(args, 'Restoring %s to golden image' % args.vmlinuz_golden)
-            copy_target_into(
-                args.vmlinuz_golden, '%s/untar/boot/' % args.build_dir)
+            #update_status(args, 'Restoring %s to golden image' % args.vmlinuz_golden)
+            #copy_target_into(
+            #    args.vmlinuz_golden, '%s/untar/boot/' % args.build_dir)
             response['message'] = 'Golden image ready for use'
             status = 'ready'
         else:
