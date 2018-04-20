@@ -30,8 +30,7 @@ arch = arm64
 # and don't get pulled in with certain variants so put them back:
 # dbus: shutdown is broken without it
 # init: many things are broken with it, specifically auto-networking.
-# Other notes:
-package = aptitude,apt-utils,attr,build-essential,ca-certificates,curl,dbus,gnupg,ifupdown,init,iproute2,iputils-ping,iputils-tracepath,isc-dhcp-client,locales,nfs-common,pciutils,psmisc,psutils,python3-psutil,ssh,vim,wget,initramfs-tools,kmod,apt-transport-https
+package = aptitude,apt-utils,attr,build-essential,ca-certificates,curl,dbus,gnupg,ifupdown,init,iproute2,iputils-ping,iputils-tracepath,locales,isc-dhcp-client,nfs-common,pciutils,psmisc,psutils,python3-psutil,ssh,vim,wget,initramfs-tools,kmod,apt-transport-https,network-manager
 
 custom-package =
 
@@ -47,6 +46,8 @@ sudo = True
 # /etc/systemd/network/99-dhcp.network magically appears, hopefully from udev.
 # systemd-networkd = Please do the right thing
 # enable-dhcp = Please do the right thing
+enable-dhcp = True
+systemd-networkd = True
 root-password = iforgot
 lock-root-password = False
 
