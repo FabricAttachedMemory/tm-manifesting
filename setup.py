@@ -18,7 +18,7 @@ import sys
 
 from pdb import set_trace
 
-from tmms.utils import utils
+#from tmms.utils import utils
 
 
 def link_into_python(args, git_repo_path):
@@ -167,10 +167,12 @@ if __name__ == '__main__':
         # scripts will do.
         try:
             from utils.file_utils import make_symlink
+            from utils.utils import set_proxy_environment
         except ImportError:
             raise SystemExit('Failed to import utils.file_utils module')
 
-        utils.set_proxy_environment()
+        #utils.set_proxy_environment()
+        set_proxy_environment()
 
         # For development, set up some helpers.  Ignore from the installed path.
         setup_file = os.path.realpath(__file__)
