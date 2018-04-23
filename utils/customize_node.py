@@ -42,7 +42,7 @@ from tmms.utils import utils # FIXME: this line should replace above imports!
 # actually tracked it down.   Hasn't been seen in a while....
 
 
-def extract_bootfiles(args, phase_msg, cleanup_attempt=0):
+def extract_bootfiles(args, phase_msg):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
     These files are not needed in the rootfs for diskless boot.  Move them
@@ -301,6 +301,21 @@ def hack_LFS_autostart(args):
 
 #==============================================================================
 
+def set_foreign_package(args, foreign_package):
+    """
+        When "foreign" parameter used in vmdebootstrap, it will remove whose
+    packages from the image when done building. However, there are cases when
+    those foreign packages need to stay in the image. For example, for manifesting
+    to be able to "chroot" to arm image, "qemu-aarch64-static" need to be present
+    in the usr/bin directory.
+
+    @param foreign_package: package to get from host's /usr/bin into build image
+    """
+    foreign_in_build = args.build_dir + '/untar/usr/bin/' + foreign_package
+    if not os.path.exists(foreign_in_build):
+        copy_target_into('/usr/bin/' + foreign_package, foreign_in_build)
+        os.chmod(foreign_in_build, 0o755)
+
 
 def set_environment(args):
     """
@@ -380,13 +395,7 @@ def set_resolv_conf(args):
 
     if os.path.islink(resolv_path):
         remove_target(resolv_path)
-    '''
-    content = None
-    with open('/etc/resolv.conf', 'r') as file_obj:
-        content = file_obj.read().split('\n')
 
-    write_to_file(resolv_path, '\n'.join(content))
-    '''
     copy_target_into('/etc/resolv.conf', resolv_path)
 
 
@@ -1140,11 +1149,7 @@ def execute(args):
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
 
-        foreign_package = 'qemu-aarch64-static'
-        foreign_in_build = args.build_dir + '/untar/usr/bin/' + foreign_package
-        if not os.path.exists(foreign_in_build):
-            copy_target_into('/usr/bin/' + foreign_package, foreign_in_build)
-            os.chmod(foreign_in_build, 0o755)
+        set_foreign_package(args, 'qemu-aarch64-static')
 
         # Golden image contrived args has no "manifest" attribute.  Besides,
         # a manifest should not contain distro-specific data structures.
@@ -1178,8 +1183,7 @@ def execute(args):
         #------------------------------------------------------------------
         # If making a new golden image, restore the kernel.  Otherwise
         # assemble the bootable PXE images.
-        # ZACH: What for??? Did I leave this comment? What is going on??
-
+        # ZACH: Why did I do this? Need to leave a "useful" comment next time...
         if args.is_golden:
             #update_status(args, 'Restoring %s to golden image' % args.vmlinuz_golden)
             #copy_target_into(

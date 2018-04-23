@@ -36,7 +36,6 @@ def _fs_sanity_check(target):
         allowed_size = len(allowed)
         allowed_path = '/' + '/'.join(allowed)
         if target.startswith(allowed_path):
-        #if allowed == elems[:allowed_size]:
             isNotAllowed = False
             break
 
@@ -121,12 +120,12 @@ def make_symlink(source, target):
         raise RuntimeError('Symlink failed! %s not found!' % source)
     try:
         os.symlink(source, target)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise RuntimeError(' - E - symlink(%s -> %s) failed: %s' % (
-                source, target, str(e)))
+    except OSError as err:
+        if err.errno != errno.EEXIST:
+            raise RuntimeError('- E - Symlink failed: %s\n - From: %s\n - Into: %s' % (
+                err, source, target))
         if not os.path.islink(target):
-            raise RuntimeError(' - E - Existing "%s" is not a symlink' % target)
+            raise RuntimeError('- E - Existing "%s" is not a symlink' % target)
         if os.path.realpath(target) != source:
             raise RuntimeError(
                 ' - E - Existing symlink "%s" does not point to %s' % (
