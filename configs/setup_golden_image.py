@@ -80,7 +80,6 @@ def debootstrap_image(manconfig, vmd_path=None):
                     ("/[...]/tm-manifesting/config/filesystem/")
     """
     whereami = os.path.dirname(os.path.realpath(__file__))
-    #vmdebootstrap = whereami + '/vmdebootstrap'
     vmdebootstrap = 'vmdebootstrap'
     sampleVMDs = whereami + '/filesystem/'
 
@@ -103,7 +102,6 @@ def debootstrap_image(manconfig, vmd_path=None):
     vmdlog = destdir + '/vmdebootstrap.log'
     vmdimage = destdir + '/golden.arm.img'
 
-    #--image={image}
     cmd = '''{vmdebootstrap} --no-default-configs
              --config={vmd_cfg}
              --log={vmd_log}
@@ -111,7 +109,7 @@ def debootstrap_image(manconfig, vmd_path=None):
              --mirror={mirror}
              --distribution={distro}
           '''
-    #image=vmdimage,
+
     cmd = cmd.format(vmdebootstrap=vmdebootstrap,
                 vmd_cfg=vmdconfig,
                 vmd_log=vmdlog,

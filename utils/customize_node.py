@@ -390,15 +390,6 @@ def set_resolv_conf(args):
     copy_target_into('/etc/resolv.conf', resolv_path)
 
 
-def set_network_interfaces(args):
-    """
-        Copy /etc/network/interface from host to the building image.
-    """
-    update_status(args, 'Setting etc/network/interface')
-    interface_path = '%s/etc/network/interfaces' % args.new_fs_dir
-    copy_target_into('/etc/network/interfaces', interface_path)
-
-
 def set_sudo(args):
     """
         Set sudoer policy of no password for the normal user.  That user was
@@ -1165,9 +1156,6 @@ def execute(args):
         # Global and account config files
         set_resolv_conf(args)
 
-        #remove_target(args.new_fs_dir + '/etc/systemd/network/99-dhcp.network')
-
-        #set_network_interfaces(args)
         set_environment(args)
         set_hostname(args)
         set_hosts(args)
