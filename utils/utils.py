@@ -7,18 +7,19 @@ import errno
 import logging
 import os
 import glob
-import psutil
-import requests as HTTP_REQUESTS
 import shlex
 import shutil
 import signal
 import time
 import tarfile
 
+import psutil
+import requests as HTTP_REQUESTS
+from tmms.utils.file_utils import remove_target, workdir, mknod, chgrp
+
 from pdb import set_trace
 from subprocess import call, Popen, PIPE, DEVNULL
 
-from tmms.utils.file_utils import remove_target, workdir, mknod, chgrp
 
 
 def basepath(fullpath, leading):

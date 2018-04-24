@@ -55,25 +55,25 @@ def install_base_packages():
     """
     ret, stdout, stderr = piper('dpkg --print-foreign-architectures')
     if 'arm64' not in stdout.decode():
-        print(' ---- Adding ARM64 architecture via apt-get update ---- ')
+        print(' ---- Adding ARM64 architecture via apt-get ---- ')
         for cmd in (
             'dpkg --add-architecture arm64',
-            'apt-get update',
-            'apt-get -y upgrade'
+            'apt-get -y update',
         ):
             ret, stdout, stderr = piper(cmd)
             assert not (bool(ret) or bool(stderr)), \
                 '"%s" failed: %s' % (cmd, stderr)
 
     print(' ---- Installing base packages ---- ')
-    pkg_list = ['apt-utils', 'cpio', 'dnsmasq',
-                'dosfstools', 'grub-efi-arm64-bin',
-                'python3-debian', 'python3-dnspython', 'python3-flask',
-                'python3-netaddr', 'python3-netifaces', 'python3-psutil',
-                'python3-requests', 'python3-magic',
-                'qemu-efi', 'tm-librarian', 'vmdebootstrap']
+    this_file = os.path.abspath(__file__)
+    this_folder = os.path.dirname(this_file)
+    pkg_list = read_requirements_list(this_folder + '/packages.req')
+
     errors = []
     for pkg in pkg_list:
+        if not pkg or pkg.startswith('#') or pkg.startswith('//'):
+            continue
+        print( '- Attempting to install package: %s ' % (pkg))
         cmd = 'apt-get install -y -qq %s' % (pkg)
         ret, stdout, stderr = piper(cmd)
         if ret or stderr:
@@ -85,11 +85,21 @@ def install_base_packages():
                         '%s not loaded, symlink it into Python from git' % pkg,
                         file=sys.stderr)
             elif pkg in ('qemu-efi', ):     # might be on plain-old Debian
-                print('Need manual installation of %s !!!!!!!!!!!!!!!!!' % pkg)
+                print('Need manual installation of %s' % pkg)
             else:
                 errors.append('[%s] %s' % (pkg, stderr))
     if errors:
         raise RuntimeError('\n'.join(errors))
+
+
+def read_requirements_list(path):
+    """
+        Read a file with package names (one per ine) to be installed.
+    """
+    file_content = ''
+    with open(path, 'r') as file_obj:
+        file_content = file_obj.read().rstrip('\n')
+    return file_content.split('\n')
 
 
 def main(args):
