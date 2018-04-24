@@ -34,7 +34,8 @@ def _fs_sanity_check(target):
     isNotAllowed = True
     for allowed in _allowed_dirs:
         allowed_size = len(allowed)
-        if allowed == elems[:allowed_size]:
+        allowed_path = '/' + '/'.join(allowed)
+        if target.startswith(allowed_path):
             isNotAllowed = False
             break
 
@@ -53,26 +54,30 @@ def copy_target_into(target, into, verbose=False):
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     try:
-        _fs_sanity_check(target)
+        _fs_sanity_check(into)
         if os.path.isdir(target):
             shutil.copytree(target, into)   # copy directory
         else:
             if os.path.isdir(into):
                 into += '/' + os.path.basename(target)
             shutil.copyfile(target, into)   # copy single file
-        logging.info(' - Copy completed: from %s into %s' % (target, into))
+        logging.info(' - Copy completed:\n * from %s\n * into %s' % (target, into))
     except (AssertionError, RuntimeError, EnvironmentError) as err:
-        raise RuntimeError('Couldn\'t copy "%s" into "%s": %s' % (
-            target, into, str(err)))
+        msg = ' - E - Couldn\'t copy "%s" into "%s"!\n - Reason:\n -- %s' % (
+                target, into, str(err))
+        raise RuntimeError(msg)
 
 
 def move_target(target, into, verbose=False):
     """
         Move target folder into new folder. NOTE: target will be removed!
     """
-    logging.info(' -- Moving %s into %s' % (target, into))
+    logging.info(' ---- Prepare to Move ----\n - %s into %s' % (target, into))
+
     if target == into:
+        logging.warning(' - W - Cant move... "Target" and "Into" is the same path!')
         return False
+
     copy_target_into(target, into, verbose=verbose)
     orig_content = glob.glob(target + '/*')
     copied_content = glob.glob(into + '/*')
@@ -80,7 +85,8 @@ def move_target(target, into, verbose=False):
     # verified number of files of copied files with original
     if len(orig_content) != len(copied_content):
         logging.error(
-            ' - Failed to move() %s into %s! Copied content is not the same.')
+            ' - E - Failed to move():\n %s into %s!' \
+            '\n - Reason: Copied content is not the same.')
 
         remove_target(into, verbose=verbose)
         return False
@@ -114,15 +120,15 @@ def make_symlink(source, target):
         raise RuntimeError('Symlink failed! %s not found!' % source)
     try:
         os.symlink(source, target)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise RuntimeError('symlink(%s -> %s) failed: %s' % (
-                source, target, str(e)))
+    except OSError as err:
+        if err.errno != errno.EEXIST:
+            raise RuntimeError('- E - Symlink failed: %s\n - From: %s\n - Into: %s' % (
+                err, source, target))
         if not os.path.islink(target):
-            raise RuntimeError('Existing "%s" is not a symlink' % target)
+            raise RuntimeError('- E - Existing "%s" is not a symlink' % target)
         if os.path.realpath(target) != source:
             raise RuntimeError(
-                'Existing symlink "%s" does not point to %s' % (
+                ' - E - Existing symlink "%s" does not point to %s' % (
                     target, source))
 
 
@@ -137,11 +143,14 @@ def remove_target(target, verbose=False):
         _fs_sanity_check(target)
         if os.path.isdir(target):
             shutil.rmtree(target)
+        elif os.path.islink(target): #symlink to "unlink". Documentation lies
+            os.unlink(target)        #that os.unlink and os.remove are the same
         elif os.path.exists(target):
             os.remove(target)
         logging.info(' - %s has been removed!' % target)
     except (AssertionError, EnvironmentError) as e:
-        raise RuntimeError('Couldn\'t remove "%s": %s' % (target, str(e)))
+        msg = ' - E - Couldn\'t remove "%s"!\n - Reason: %s' % (target, str(e))
+        raise RuntimeError(msg)
 
 
 @contextmanager

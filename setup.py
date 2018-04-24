@@ -18,7 +18,7 @@ import sys
 
 from pdb import set_trace
 
-from tmms.utils import utils
+#from tmms.utils import utils
 
 
 def link_into_python(args, git_repo_path):
@@ -115,7 +115,7 @@ def parse_cmdline_args(extra_args_msg):
     parser.add_argument('--sysimage', nargs=1, default=None,
                         help='Path to golden image to be coppied from either '\
                             ' local path or url. This will skip debootstrap stage!')
-    parser.add_argument('--vmd-cfg', default='golden.arm.duo.vmd',
+    parser.add_argument('--vmd-cfg', default='golden.arm.vmd',
                         help='VMD Config name to be used by golden image. ' +\
                             'It is either an absolute path or a file name in ' +\
                             'tm-manifesting/config/filesystem/.')
@@ -156,7 +156,10 @@ def parse_cmdline_args(extra_args_msg):
 
 if __name__ == '__main__':
     try:
-        assert 'linux' in sys.platform, 'I see no Tux here (%s)' % sys.platform
+        if 'linux' not in sys.platform:
+            msg = 'Need a Linux-based platform. (%s) not supported.' % sys.platform
+            raise RuntimeError(msg)
+
         args = parse_cmdline_args(
             'setup action(s):\n   "all", "environment", "networking", "golden_image"')
         try_dh_helper(args.extra)     # Doesn't return if packaging called me
@@ -167,14 +170,20 @@ if __name__ == '__main__':
         # scripts will do.
         try:
             from utils.file_utils import make_symlink
-        except ImportError:
-            raise SystemExit('Failed to import utils.file_utils module')
+            from utils.utils import set_proxy_environment
+        except ImportError as err:
+            from configs import setup_environment
+            setup_environment.main(args)
+            from utils.file_utils import make_symlink
+            from utils.utils import set_proxy_environment
+            #raise SystemExit('Failed to import: %s' % err)
 
-        utils.set_proxy_environment()
+        set_proxy_environment()
 
         # For development, set up some helpers.  Ignore from the installed path.
         setup_file = os.path.realpath(__file__)
         git_repo_path = os.path.dirname(setup_file)
+
         if not git_repo_path.startswith('/usr/lib/python3'):
             link_into_python(args, git_repo_path)
             link_into_usrlocalbin(args, git_repo_path)
@@ -186,6 +195,7 @@ if __name__ == '__main__':
             actions = args.extra
             assert actions[0] in ('tmconfig',) + legal, \
                 'Illegal action "%s"' % actions[0]
+
         for a in actions:
             if a == 'environment':
                 from configs import setup_environment

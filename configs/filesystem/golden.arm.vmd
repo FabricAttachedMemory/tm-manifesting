@@ -1,24 +1,12 @@
-# Fairly generic instance for L4MDC development from deprecated HPE-internal single repo known
-# as L4TM (Linux For The Machine).  This file is meant for historical purposes only!!!
-# 1. sudo vmdebootstrap --no-default-configs --config=golden.arm.vmd \
-#                       --owner=$LOGNAME --hostname=something
-# 2. qemu-system-aarch64 -enable-kvm -hda /tmp/somewhere.img
-#                       Puts VM on a 10-net with NAT to outside world.
-# 3. After boot,
-#    a. rm /etc/apt/sources.list		# YES REALLY
-#    b. mv /etc/apt/sources.list.d/base.list /etc/apt/sources.list
+# Fabric Attached Memory Emulation configuration file for vmdebootstrap.  
+# The following values are crafted for the command line:
+# log, image, tarball, mirror, owner
+# vmdebootstrap versions: 1.6
+# https://media.readthedocs.org/pdf/vmdebootstrap/latest/vmdebootstrap.pdf
+# Features: debootstraptops, system-networkd, apt-configure, use-uefi
 
 [config]
-log =
-image =
-tarball =
-mirror = 
-
-arch = arm64
-distribution =
-variant = buildd
-foreign = /usr/bin/qemu-aarch64-static
-
+debootstrapopts = "variant=buildd keep-debootstrap-dir"
 verbose = True
 output =
 log-level = debug
@@ -27,38 +15,52 @@ log-keep = 10
 log-mode = 0666
 dump-memory-profile = none
 memory-dump-interval = 300
+pkglist = True
 
 sparse = False
-size = 3072M
+size = 8G
 bootsize = 0
 boottype = ext2
-owner =
+roottype = ext4
+foreign = /usr/bin/qemu-aarch64-static
 
-# minbase only does "Required", keyrings are only "Important".
-# debian-archive-keyring is handled manually by debootstrap.
-package = l4tm-archive-keyring,linux-image-arm64-l4tm,apt-utils,attr,ca-certificates,dialog,ethtool,ifupdown,iperf,iputils-ping,isc-dhcp-client,libmagic1,libpmem,locales,net-tools,nfs-common,pciutils,psmisc,psutils,python3-psutil,ssh,tcpdump,tm-zbridge,tm-flush,fam-atomic-driver,tm-fuse-4.7.2,tm-libfuse,tm-librarian,vim,acpid
+arch = arm64
+
+# Apparently some packages changed from "Priority: required" to important
+# and don't get pulled in with certain variants so put them back:
+# dbus: shutdown is broken without it
+# init: many things are broken with it, specifically auto-networking.
+package = aptitude,apt-utils,attr,build-essential,ca-certificates,curl,dbus,gnupg,ifupdown,init,iproute2,iputils-ping,iputils-tracepath,locales,isc-dhcp-client,nfs-common,pciutils,psmisc,psutils,python3-psutil,ssh,vim,wget,initramfs-tools,kmod,apt-transport-https,network-manager
+
 custom-package =
 
-# Kernel doesn't follow simple name generation, must do this manually (above)
+# 2017-12: L4FAME exports kernel 4.14y which is later than stretch @ 4.3.
+# However, our kernel package from "make deb-pkg" is currently missing 
+# Depends: kmod, linux-base (>= 4.3~), initramfs-tools (>= 0.120+deb8u2) | linux-initramfs-tool
+# so the resulting image is unbootable.  Add these packages to "package" above
+# until our 4.14 in l4fame is fixed.
 no-kernel = True
 sudo = True
 
+# Do not try to second-guess the defaults based on the above PDF.  Somehow
+# /etc/systemd/network/99-dhcp.network magically appears, hopefully from udev.
+# systemd-networkd = Please do the right thing
+# enable-dhcp = Please do the right thing
 enable-dhcp = True
+systemd-networkd = True
 root-password = iforgot
+lock-root-password = False
 
 customize =
-hostname = GOLDEN
+hostname = golden
 user = l4mdc/iforgot
-serial-console = True
-serial-console-command = /sbin/getty -L ttyAM0 115200 vt100
+serial-console = False
+serial-console-command = /sbin/getty -L ttyS0 115200 vt100
 
-# /etc/apt/sources.list is always set up with ftp.us.debian.org and the
-# selected suite; sometimes that even makes sense.  "True" below creates 
-# /etc/apt/sources.list.d/base.conf with the real info but it 
-# may collide with or duplicate sources.list.  YMMV but elimination of
-# sources.list is probably a good idea.
-configure-apt = True
+# "True" creates sources.list.d/base.conf but it duplicates sources.list
+configure-apt = False
 
 extlinux = False
 mbr = False
-grub = False
+grub = True
+use-uefi = True

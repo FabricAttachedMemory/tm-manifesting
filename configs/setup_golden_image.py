@@ -37,7 +37,7 @@ def customize_golden(manconfig, golden_tar, build_dir):
         'repo_release' : manconfig['DEBIAN_RELEASE'],
         'repo_areas' : manconfig['DEBIAN_AREAS'],
         'other_mirrors' : manconfig['OTHER_MIRRORS'],
-        'packages' : 'linux-image-4.14.0-l4fame,l4fame-node',
+        'packages' : 'linux-image-4.14.0-l4fame-72708-ge6511d981425,l4fame-node',
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
@@ -80,7 +80,7 @@ def debootstrap_image(manconfig, vmd_path=None):
                     ("/[...]/tm-manifesting/config/filesystem/")
     """
     whereami = os.path.dirname(os.path.realpath(__file__))
-    vmdebootstrap = whereami + '/vmdebootstrap'
+    vmdebootstrap = 'vmdebootstrap'
     sampleVMDs = whereami + '/filesystem/'
 
     vmdconfig = vmd_path
@@ -105,15 +105,14 @@ def debootstrap_image(manconfig, vmd_path=None):
     cmd = '''{vmdebootstrap} --no-default-configs
              --config={vmd_cfg}
              --log={vmd_log}
-             --image={image}
              --tarball={tarball}
              --mirror={mirror}
              --distribution={distro}
           '''
+
     cmd = cmd.format(vmdebootstrap=vmdebootstrap,
                 vmd_cfg=vmdconfig,
                 vmd_log=vmdlog,
-                image=vmdimage,
                 tarball=destfile,
                 mirror=manconfig['DEBIAN_MIRROR'],
                 distro=manconfig['DEBIAN_RELEASE'])
@@ -139,7 +138,7 @@ def debootstrap_image(manconfig, vmd_path=None):
         return True
 
     errors = [ e for e in contents if 'WARN' in e or 'ERROR' in e ]
-    logging.error(''.join(errors), file=sys.stderr)  # already have newlines
+    #logging.error(''.join(errors), file=sys.stderr)  # already have newlines
     raise RuntimeError('vmdebootstrap failed, consult %s' % vmdlog)
 
 
@@ -166,7 +165,7 @@ def main(args):
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('TMCONFIG', ))
-    assert not missing, 'tmms config file is missing %s' % missing
+#    assert not missing, 'tmms config file is missing %s' % missing
     golden_tar = manconfig['GOLDEN_IMAGE']
     golden_dir = os.path.dirname(golden_tar)
     golden_custom = golden_dir + '_custom'

@@ -1,0 +1,16 @@
+apt-utils
+cpio
+dnsmasq
+dosfstools
+grub-efi-arm64-bin
+qemu-efi
+#vmdebootstrap
+python3-debian
+python3-dnspython
+python3-flask
+python3-netaddr
+python3-netifaces
+python3-psutil
+python3-requests
+python3-magic
+python3-psutil
