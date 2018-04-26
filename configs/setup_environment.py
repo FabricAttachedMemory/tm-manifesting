@@ -22,7 +22,7 @@ from pdb import set_trace
 # Python path "tmms" may not exist yet.
 
 from configs.build_config import ManifestingConfiguration
-from utils.utils import piper, create_loopback_files
+from utils.core_utils import piper, create_loopback_files
 from utils.file_utils import make_dir, remove_target
 
 
@@ -87,7 +87,12 @@ def install_base_packages():
             elif pkg in ('qemu-efi', ):     # might be on plain-old Debian
                 print('Need manual installation of %s' % pkg)
             else:
-                errors.append('[%s] %s' % (pkg, stderr))
+                error_msg_str = '[%s] %s' % (pkg, stderr)
+                # Vmdebootstrap logs this message to stderr for some reason,
+                # even though it is not an error...
+                if 'Extracting templates from packages' in error_msg_str:
+                    continue
+                errors.append(error_msg_str)
     if errors:
         raise RuntimeError('\n'.join(errors))
 

@@ -19,10 +19,10 @@ import sys
 
 from pdb import set_trace
 
-from configs.build_config import ManifestingConfiguration
-from tmms.utils import customize_node
 from tmms.utils import file_utils
-from tmms.utils import utils as tmms_utils
+from tmms.utils import customize_node
+from tmms.utils import core_utils as tmms_utils
+from configs.build_config import ManifestingConfiguration
 
 
 def customize_golden(manconfig, golden_tar, build_dir):

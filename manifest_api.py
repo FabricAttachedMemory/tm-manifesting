@@ -51,14 +51,13 @@ from tm_librarian.tmconfig import TMConfig
 # For running from git repo, setup.py does the right thing.  True .deb
 # installation will also do the right thing.
 try:
+    from tmms.utils import utils
+    from tmms.utils import core_utils
+    from tmms.utils.daemonize3 import Daemon
     from tmms.setup import parse_cmdline_args
-    from tmms.utils.utils import piper, create_loopback_files, setDhcpClientId
-    from tmms.utils.utils import kill_pid
-    from tmms.utils import utils #FIXME: this should replace above imports!
     from tmms.utils.logging import tmmsLogger
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
-    from tmms.utils.daemonize3 import Daemon
 except ImportError as e:
     raise SystemExit('Processing submodules in tmms: %s' % str(e))
 
@@ -94,7 +93,7 @@ except Exception as e:
     raise SystemExit('Bad config file(s): %s' % str(e))
 
 for node in tmconfig.allNodes:  # Hack around broken BU scripts
-    setDhcpClientId(node)
+    utils.setDhcpClientId(node)
 
 
 # mainapp is needed as decorator base so it comes early.
@@ -254,7 +253,7 @@ def clear_iptables(config):
         cmd = 'iptables ' + d
         ret = 0
         while not ret:
-            ret, stdout, stderr = piper(cmd)
+            ret, stdout, stderr = core_utils.piper(cmd)
     return action_format
 
 
@@ -268,7 +267,7 @@ def set_iptables(config):
         if not a or a.startswith('#'):
             continue
         cmd = 'iptables ' + a
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         if ret:
             raise RuntimeError('%s failed: %s' % (cmd, stderr))
     return action_format
@@ -282,7 +281,7 @@ def kill_dnsmasq(config):
     try:
         with open(config['DNSMASQ_PIDFILE'], 'r') as f:
             pid = int(f.read())
-        kill_pid(pid, 'dnsmasq')
+        utils.kill_pid(pid, 'dnsmasq')
     except Exception:   # a valiant effort in vain
         pass
 
@@ -312,7 +311,7 @@ def kill_dnsmasq(config):
         mainapp.logger.info('Killing %d copies of dnsmasq' % len(pids))
     while len(pids):
         pid = pids.pop()
-        kill_pid(pid, 'dnsmasq')    # Until someone starts using bind9...
+        utils.kill_pid(pid, 'dnsmasq')    # Until someone starts using bind9...
 
 
 def start_dnsmasq(config):
@@ -328,8 +327,7 @@ def start_dnsmasq(config):
 
     # This is configured to daemonize so a p.poll() should be zero (RTFM
     # dnsmasq, section EXIT CODES).
-    p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
-        # stdout='/dev/null', stderr='/dev/null')
+    p = core_utils.piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
     while True:
         time.sleep(1.0)     # Chance to daemonize on busy system
         tmp = p.poll()      # Exit code if it finished.
@@ -380,7 +378,7 @@ def daemonize(mainapp, cmdline_args):
 
 
 def main():
-    utils.set_proxy_environment()
+    core_utils.set_proxy_environment()
 
     if cmdline_args.start_dnsmasq:
         kill_dnsmasq(mainapp.config)
@@ -417,7 +415,7 @@ def main():
     if mainapp.config['DEBUG']:
         mainapp.jinja_env.cache = create_cache(0)
 
-    create_loopback_files() # they disappear after LXC restart FIXME utils?
+    core_utils.create_loopback_files() # they disappear after LXC restart FIXME utils?
     set_iptables(mainapp.config)
     kill_dnsmasq(mainapp.config)
     start_dnsmasq(mainapp.config)
