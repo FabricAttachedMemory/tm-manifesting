@@ -7,14 +7,15 @@ import os
 import shutil
 import stat
 import sys
-#import urllib.request
+import urllib.request
 
 from pdb import set_trace
 
 _allowed_dirs = [
             ['var', 'lib'],
             ['var', 'lib', 'tmp'],
-            ['tmp']
+            ['tmp'],
+            ['home']
                 ]
 
 def _fs_sanity_check(target):
@@ -209,7 +210,7 @@ def chgrp(fname, grpname):
     except OSError as e:
         raise RuntimeError('chown(%s) failed: %s' % (fname, str(e)))
 
-'''
+
 def from_url_or_local(target, destination):
     """
         Download a file into destination whether it is a local path or a url.
@@ -241,4 +242,3 @@ def from_url_or_local(target, destination):
         except urllib.error.HTTPError as err:
             raise RuntimeError('Failed to download %s from url:\n - %s' %\
                                 (target, err))
-'''

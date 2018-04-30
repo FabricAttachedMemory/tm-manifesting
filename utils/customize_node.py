@@ -31,9 +31,8 @@ from tmms.utils.logging import tmmsLogger
 from tmms.utils.file_utils import copy_target_into, remove_target
 from tmms.utils.file_utils import make_symlink, move_target
 from tmms.utils.file_utils import write_to_file, workdir, make_dir
-#from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
+from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
 from tmms.utils import utils # FIXME: this line should replace above imports!
-from tmms.utils import core_utils
 
 #==============================================================================
 # A (custom) kernel will probably only boot itself and not load any modules.
@@ -68,10 +67,17 @@ def extract_bootfiles(args, phase_msg):
             set_trace()
         raise RuntimeError('Multiple (%d) %s kernels exist' % (
             len(vmlinuz), phase_msg))
+
     if not hasattr(args, 'vmlinuz_golden'):         # singleton
         args.vmlinuz_golden = ''
+
+    if phase_msg == 'golden':
+        update_status(args, 'Kernel found. Keeping as is without moving...')
+        return
+
     update_status(args, 'Extract %d %s /boot/[vmlinuz,initrd]' % (
         len(vmlinuz), phase_msg))
+
     for source in vmlinuz + initrd + misc:            # move them all
         dest = '%s/%s' % (args.build_dir, os.path.basename(source))
         assert move_target(source, dest), 'Move of %s failed' % source
@@ -536,7 +542,7 @@ def create_cpio(args):
     update_status(args, 'Create %s from %s' % (cpio_file, args.new_fs_dir))
     try:
         # Skip things even though they may have been moved
-        found_data = core_utils.find(
+        found_data = find(
             args.new_fs_dir,
             ignore_files=['vmlinuz', 'initrd.img'],
             ignore_dirs=['boot'])
@@ -551,7 +557,7 @@ def create_cpio(args):
             # ./boot...). This causes Kernel Panic when trying to boot with
             # such a cpio file.
             with workdir(args.new_fs_dir):
-                ret, cpio_out, cpio_err = core_utils.piper(
+                ret, cpio_out, cpio_err = piper(
                     cmd, stdin=cpio_stdin, stdout=dest_obj)
                 assert not ret, 'cpio failed: %s' % cpio_err
 
@@ -752,14 +758,14 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
     try:
         procmount = args.new_fs_dir + '/proc'
         os.makedirs(procmount, exist_ok=True)
-        ret, stdout, sterr = core_utils.piper('mount -obind /proc ' + procmount)
+        ret, stdout, sterr = piper('mount -obind /proc ' + procmount)
         assert not ret, 'Cannot bind mount /proc'
 
         umount = 'umount -fl %s' % procmount
 
         ptsmount = args.new_fs_dir + '/dev/pts'
         os.makedirs(ptsmount, exist_ok=True)
-        ret, stdout, sterr = core_utils.piper('mount -obind /dev/pts ' + ptsmount)
+        ret, stdout, sterr = piper('mount -obind /dev/pts ' + ptsmount)
         assert not ret, 'Cannot bind mount /dev/pts'
 
         umount = 'umount -fl %s %s' % (procmount, ptsmount)
@@ -774,7 +780,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
         # This can take MINUTES, ie, "album" pulls in about 80 more packages.
         # While running, sys-images/nodeXX/untar/root/install.log is updated.
         # Hopefully install.sh catches its own errors
-        ret, stdout, stderr = core_utils.piper(cmd, use_call=True)
+        ret, stdout, stderr = piper(cmd, use_call=True)
         if ret:
             stdouterr = ''
             if stdout is not None:
@@ -790,8 +796,8 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
             args.logger.debug(' - D - %s' % log.read())
         raise RuntimeError(str(err))
     finally:
-        umountret, _, _ = core_utils.piper(umount)
-        utils.kill_chroot_daemons(args.build_dir)
+        umountret, _, _ = piper(umount)
+        kill_chroot_daemons(args.build_dir)
     return False
 
 
@@ -894,14 +900,14 @@ def create_ESP(args, blockdev, vmlinuz, cpio):
             'Cannot find mapper file %s' % blockdev
 
         cmd = 'mkfs.vfat ' + blockdev
-        ret, stdout, stderr = core_utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
         # Step 3: Make, mount, and fill the VFAT FS.  The EFI default startup
         # script goes at /, but the grub stuff lives under "prefix".
 
         cmd = 'mount %s %s' % (blockdev, ESP_mnt)
-        ret, stdout, stderr = core_utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
         undo_mount = True
         update_status(args, 'SDHC GRUB DIR established at %s' % grubdir)
@@ -927,7 +933,7 @@ def create_ESP(args, blockdev, vmlinuz, cpio):
 
     if undo_mount:
         cmd = 'umount ' + ESP_mnt
-        ret, stdout, stderr = core_utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
     return undo_mount   # suppress final copy if this didn't work
@@ -968,14 +974,14 @@ def create_SNBU_image(args, vmlinuz, cpio):
         cmd += 'unit MiB mkpart primary fat32 %d 100%% ' % ESP_offset
         cmd += 'set 1 boot on set 1 esp on '
         cmd += 'name 1 %s ' % args.hostname
-        ret, stdout, stderr = core_utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
 
         # Step 2: located the partition and create a block device.
         # Ass-u-me enough loopback devics to go around.
 
         cmd = 'kpartx -asv %s' % ESP_img
-        ret, stdout, stderr = core_utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         assert not ret, cmd
         undo_kpartx = True
         stdout = stdout.decode()
@@ -1004,7 +1010,7 @@ def create_SNBU_image(args, vmlinuz, cpio):
         # server and "setnodes all".   Early in diagnosis, not sure what
         # to do about it.   Just move along for now and see what happens
         cmd = 'kpartx -d %s' % ESP_img
-        ret, stdout, stderr = core_utils.piper(cmd)
+        ret, stdout, stderr = piper(cmd)
         # assert not ret, cmd
         if ret or stderr:
             args.logger.warning('kpartx -d returned %d:\n - %s' % (ret, stderr))
@@ -1148,7 +1154,10 @@ def execute(args):
     # When some of them fail they'll handle last update_status themselves.
     try:
         update_status(args, 'Untar golden image')
-        args.new_fs_dir = core_utils.untar(args.build_dir + '/untar/', args.golden_tar)
+        args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
+
+        if args.hostname != 'golden': #Keep kernel when building a golden image
+            extract_bootfiles(args, 'golden')       # What does it come with
 
         set_foreign_package(args, 'qemu-aarch64-static')
 
@@ -1171,8 +1180,8 @@ def execute(args):
 
         install_packages(args)
 
-        extract_bootfiles(args, 'golden')       # What does it come with
-        #extract_bootfiles(args, 'add-on')       # There MAY have been a new one
+        if args.hostname != 'golden': #Keep kernel when building a golden image
+            extract_bootfiles(args, 'add-on')       # There MAY have been a new one
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)
