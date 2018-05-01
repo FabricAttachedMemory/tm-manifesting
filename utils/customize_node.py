@@ -31,8 +31,8 @@ from tmms.utils.logging import tmmsLogger
 from tmms.utils.file_utils import copy_target_into, remove_target
 from tmms.utils.file_utils import make_symlink, move_target
 from tmms.utils.file_utils import write_to_file, workdir, make_dir
-from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
-from tmms.utils import utils # FIXME: this line should replace above imports!
+from tmms.utils.utils import kill_chroot_daemons
+from tmms.utils.core_utils import find, piper, untar
 
 #==============================================================================
 # A (custom) kernel will probably only boot itself and not load any modules.
@@ -42,7 +42,7 @@ from tmms.utils import utils # FIXME: this line should replace above imports!
 # actually tracked it down.   Hasn't been seen in a while....
 
 
-def extract_bootfiles(args, phase_msg):
+def extract_bootfiles(args, keep_kernel=False):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
     These files are not needed in the rootfs for diskless boot.  Move them
@@ -52,7 +52,8 @@ def extract_bootfiles(args, phase_msg):
 
     :param 'args.build_dir': [str] where to move the unecessary files.
     :param 'args.new_fs_dir': [str] where to find the unecessary files.
-    :param 'phase_msg': [str] Additional debug message string.
+    :param 'keep_kernel': [bool] True - keep, but copy into the build dir.
+                                False - move kernel from boot/.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     boot_dir = '%s/boot/' % args.new_fs_dir
@@ -65,24 +66,26 @@ def extract_bootfiles(args, phase_msg):
     if len(vmlinuz) > 1:
         if args.debug and sys.stdin.isatty():       # Not forked
             set_trace()
-        raise RuntimeError('Multiple (%d) %s kernels exist' % (
-            len(vmlinuz), phase_msg))
+        raise RuntimeError('Multiple (%d) kernels exist! Hostname: %s' % (
+            len(vmlinuz), args.hostname))
 
     if not hasattr(args, 'vmlinuz_golden'):         # singleton
         args.vmlinuz_golden = ''
 
-    if phase_msg == 'golden':
-        update_status(args, 'Kernel found. Keeping as is without moving...')
-        return
-
-    update_status(args, 'Extract %d %s /boot/[vmlinuz,initrd]' % (
-        len(vmlinuz), phase_msg))
+    extract_type = 'Extract' if not keep_kernel else 'Copy and keep'
+    update_status(args, '%s %d /boot/[vmlinuz,initrd]' % (
+        extract_type, len(vmlinuz)))
 
     for source in vmlinuz + initrd + misc:            # move them all
         dest = '%s/%s' % (args.build_dir, os.path.basename(source))
-        assert move_target(source, dest), 'Move of %s failed' % source
+        if keep_kernel:
+            assert copy_target_into(source, dest), 'Copy of %s failed' % source
+        else:
+            assert move_target(source, dest), 'Move of %s failed' % source
         if '/vmlinuz' in dest:
             args.vmlinuz_golden = dest
+
+    return vmlinuz + initrd + misc
 
 
 #=============================================================================
@@ -1156,8 +1159,8 @@ def execute(args):
         update_status(args, 'Untar golden image')
         args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
 
-        if args.hostname != 'golden': #Keep kernel when building a golden image
-            extract_bootfiles(args, 'golden')       # What does it come with
+        # Move kernel that comes with golden image.
+        extract_bootfiles(args, args.hostname == 'golden')
 
         set_foreign_package(args, 'qemu-aarch64-static')
 
@@ -1180,8 +1183,8 @@ def execute(args):
 
         install_packages(args)
 
-        if args.hostname != 'golden': #Keep kernel when building a golden image
-            extract_bootfiles(args, 'add-on')       # There MAY have been a new one
+        #Move installed "kernel" from boot/ (if any).
+        extract_bootfiles(args, args.hostname == 'golden')
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)

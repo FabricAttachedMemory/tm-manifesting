@@ -11,17 +11,18 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
-import argparse
-from collections import namedtuple
-import errno
 import os
 import sys
+import errno
+import argparse
+from collections import namedtuple
 
 from pdb import set_trace
 
+from tmms.utils import utils
+from tmms.utils import core_utils
 from tmms.utils import file_utils
 from tmms.utils import customize_node
-from tmms.utils import core_utils as tmms_utils
 from configs.build_config import ManifestingConfiguration
 
 
@@ -54,7 +55,7 @@ def customize_golden(manconfig, golden_tar, build_dir):
                             (os.path.basename(__file__), exc_tb.tb_lineno, err))
 
     golden_dir = os.path.dirname(golden_tar)
-    tmms_utils.make_tar(build_dir + '/golden.arm.tar', build_dir + '/untar')
+    core_utils.make_tar(build_dir + '/golden.arm.tar', build_dir + '/untar')
     file_utils.remove_target(build_dir + '/untar')
 
     if os.path.exists(golden_dir + '.raw'):
@@ -121,7 +122,7 @@ def debootstrap_image(manconfig, vmd_path=None):
     os.unsetenv('LS_COLORS')    # this value is big, pointless and distracting
     file_utils.remove_target(destdir + '/debootstrap.log')
     file_utils.remove_target(vmdlog)
-    ret, _, _ = tmms_utils.piper(cmd, use_call=True)     # Watch it all go by
+    ret, _, _ = core_utils.piper(cmd, use_call=True)     # Watch it all go by
 
     # Get the directory which was the chroot populating the loopback mount.
     # Match a stanza in the deboostrap command line.
@@ -130,9 +131,9 @@ def debootstrap_image(manconfig, vmd_path=None):
     tmp = [ t for t in contents if pat in t ]
     if len(tmp):
         tmp = '/tmp/' + tmp[-1].split('/tmp/')[1].split()[0]
-        tmms_utils.kill_chroot_daemons(tmp)
+        utils.kill_chroot_daemons(tmp)
 
-    tmms_utils.create_loopback_files()     # LXC containers don't have them on restart.
+    core_utils.create_loopback_files()     # LXC containers don't have them on restart.
 
     if not ret:
         return True

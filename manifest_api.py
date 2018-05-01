@@ -37,13 +37,13 @@ import psutil
 import sys
 import time
 
-from importlib import import_module
 from pdb import set_trace
+from importlib import import_module
 
 assert os.geteuid() == 0, 'This program requires root permissions'
 
-from flask import Flask, render_template, request, jsonify
 from jinja2.environment import create_cache
+from flask import Flask, render_template, request, jsonify
 
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
@@ -54,8 +54,8 @@ try:
     from tmms.utils import utils
     from tmms.utils import core_utils
     from tmms.utils.daemonize3 import Daemon
-    from tmms.setup import parse_cmdline_args
     from tmms.utils.logging import tmmsLogger
+    from tmms.setup import parse_cmdline_args
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
 except ImportError as e:

@@ -25,9 +25,9 @@ from flask import Blueprint, render_template, request, jsonify
 from flask import make_response, send_from_directory, redirect
 from werkzeug.exceptions import BadRequest
 
-from tmms.utils.utils import piper
-from tmms.utils.logging import tmmsLogger
+from tmms.utils.core_utils import piper
 from tmms.utils import customize_node
+from tmms.utils.logging import tmmsLogger
 
 _ERS_element = 'node'
 

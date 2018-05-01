@@ -1,24 +1,19 @@
 #!/usr/bin/python3 -tt
 '''Every real project needs a utils module.'''
 
-from contextlib import contextmanager
-import collections
-# TRASH import errno
-import logging
 import os
+import time
 import glob
 import shlex
-# TRASH import shutil
 import signal
-import time
 import tarfile
-
-#import psutil
-#import requests as HTTP_REQUESTS
-from .file_utils import remove_target, workdir, mknod, chgrp
-
+import logging
+import collections
 from pdb import set_trace
+from contextlib import contextmanager
 from subprocess import call, Popen, PIPE, DEVNULL
+
+from .file_utils import remove_target, workdir, mknod, chgrp
 
 
 def basepath(fullpath, leading):
