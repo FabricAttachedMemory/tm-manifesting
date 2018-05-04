@@ -170,13 +170,9 @@ if __name__ == '__main__':
         # scripts will do.
         try:
             from utils.file_utils import make_symlink
-            from utils.utils import set_proxy_environment
+            from utils.core_utils import set_proxy_environment
         except ImportError as err:
-            from configs import setup_environment
-            setup_environment.main(args)
-            from utils.file_utils import make_symlink
-            from utils.utils import set_proxy_environment
-            #raise SystemExit('Failed to import: %s' % err)
+            raise SystemExit('Failed to import: %s' % err)
 
         set_proxy_environment()
 

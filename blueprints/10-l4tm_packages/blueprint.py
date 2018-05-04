@@ -21,7 +21,7 @@ from debian.deb822 import Packages
 from io import BytesIO, StringIO
 from pdb import set_trace
 
-from tmms.utils import utils
+from tmms.utils import core_utils
 
 _ERS_element = 'package'
 
@@ -133,7 +133,7 @@ def _read_packages(full_source):
 
     return: None. Content is saved into _data directly.
     """
-    components = utils.deb_components(full_source)  # it leaves blanks...
+    components = core_utils.deb_components(full_source)  # it leaves blanks...
     components.areas = [ a for a in components.areas if a.strip() ]
     if not components.url:
         msg = ' - Wrong mirror format!\n'

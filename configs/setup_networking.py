@@ -38,9 +38,10 @@ from tm_librarian.tmconfig import TMConfig
 # Imports are relative to parent directory with setup.py because implicit
 # Python path "tmms" may not exist yet.
 
-from configs.build_config import ManifestingConfiguration
-from utils.utils import basepath, piper, setDhcpClientId
+from utils.utils import setDhcpClientId
+from utils.core_utils import basepath, piper
 from utils.file_utils import make_symlink, make_dir
+from configs.build_config import ManifestingConfiguration
 
 ###########################################################################
 # Templates for config files
