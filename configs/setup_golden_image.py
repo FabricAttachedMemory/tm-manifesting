@@ -55,7 +55,7 @@ def customize_golden(manconfig, golden_tar, build_dir):
                             (os.path.basename(__file__), exc_tb.tb_lineno, err))
 
     golden_dir = os.path.dirname(golden_tar)
-    core_utils.make_tar(build_dir + '/golden.arm.tar', build_dir + '/untar')
+    core_utils.make_tar(build_dir + '/golden.tar', build_dir + '/untar')
     file_utils.remove_target(build_dir + '/untar')
 
     if os.path.exists(golden_dir + '.raw'):
@@ -101,7 +101,7 @@ def debootstrap_image(manconfig, vmd_path=None):
         raise RuntimeError('Need at least 10G on "%s"' % (destdir))
 
     vmdlog = destdir + '/vmdebootstrap.log'
-    vmdimage = destdir + '/golden.arm.img'
+    vmdimage = destdir + '/golden.img'
 
     cmd = '''{vmdebootstrap} --no-default-configs
              --config={vmd_cfg}
@@ -134,6 +134,7 @@ def debootstrap_image(manconfig, vmd_path=None):
         utils.kill_chroot_daemons(tmp)
 
     core_utils.create_loopback_files()     # LXC containers don't have them on restart.
+    file_utils.copy_target_into(vmdconfig, destdir + 'vmd')
 
     if not ret:
         return True

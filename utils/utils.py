@@ -91,3 +91,22 @@ def kill_chroot_daemons(rootBase):
         if not p.cwd().startswith(rootBase):
             continue
         _kill_pid_object(p)
+
+
+def parse_vmd(path):
+    if not os.path.exists(path):
+        return {}
+
+    vmd_data = {}
+    file_content = ''
+    with open(path, 'r') as file_obj:
+        file_content = file_obj.read()
+
+    for line in file_content.split('\n'):
+        vmd_param = line.split('=')
+        if len(vmd_param) != 2:
+            continue
+
+        vmd_data[vmd_param[0].strip()] = vmd_param[1].strip()
+
+    return vmd_data

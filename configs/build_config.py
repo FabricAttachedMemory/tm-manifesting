@@ -98,7 +98,7 @@ class ManifestingConfiguration(object):
         self._settings.update({
             'MANIFESTING_ROOT':     mroot,
             'FILESYSTEM_IMAGES':    fsimages,
-            'GOLDEN_IMAGE':         fsimages + '/golden/golden.arm.tar',
+            'GOLDEN_IMAGE':         fsimages + '/golden/golden.tar',
             'MANIFEST_UPLOADS':     mroot + '/manifests',
             'DNSMASQ_CONFIGS':      mroot + '/dnsmasq',
 
