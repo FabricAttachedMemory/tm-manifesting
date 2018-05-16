@@ -10,29 +10,25 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
+import argparse
 import errno
+import flask
+import glob
 import json
 import os
+from pdb import set_trace
 import sys
 import time
+import werkzeug
 
-from argparse import Namespace
-from glob import glob
-from shutil import copyfile
-from pdb import set_trace
-
-from flask import Blueprint, render_template, request, jsonify
-from flask import make_response, send_from_directory, redirect
-from werkzeug.exceptions import BadRequest
-
-from tmms.utils.core_utils import piper
+from tmms.utils import core_utils
 from tmms.utils import customize_node
-from tmms.utils.logging import tmmsLogger
+
 
 _ERS_element = 'node'
 
 # See the README in the main templates directory.
-BP = Blueprint(_ERS_element, __name__)
+BP = flask.Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 # HTML
@@ -48,24 +44,25 @@ def web_node_all():
             node.manifest = status['manifest']
             node.status = status['status']
 
-    return render_template(
+    return flask.render_template(
         _ERS_element + '_all.tpl',
         label=__doc__,
         nodes=BP.nodes,
-        base_url=request.url)
+        base_url=flask.request.url)
 
 
 @BP.route('/%s/<path:name>' % _ERS_element, methods=('POST', ))
 @BP.route('/%s//<path:name>' % _ERS_element, methods=('POST', ))
 def web_node_button_action(name=None):
     # Either way, name has no leading slash.
-    if 'unbind' in request.form:
+    if 'unbind' in flask.request.form:
         delete_node_binding(name)
-    elif 'bind' in request.form:
-        manname = request.form['manifest_sel']
+    elif 'bind' in flask.request.form:
+        manname = flask.request.form['manifest_sel']
         manifest = BP.manifest_lookup(manname)
         build_node(manifest, name)
-    return redirect(request.base_url)   # Eliminates browser caching of POST
+    # Eliminates browser caching of POST
+    return flask.redirect(flask.request.base_url)
 
 
 @BP.route('/%s/<path:name>' % _ERS_element)
@@ -84,7 +81,7 @@ def web_node_status(name=None):
                 ESPpath = '%s/%s/%s.ESP' % (
                     BP.config['TFTP_IMAGES'], node.hostname, node.hostname)
                 if os.path.isfile(ESPpath):
-                    prefix = request.url.split(_ERS_element)[0]
+                    prefix = flask.request.url.split(_ERS_element)[0]
                     ESPURL = '%s%s/ESP/%s' % (
                         prefix, _ERS_element, node.hostname)
                     ESPsizeMB = os.stat(ESPpath).st_size >> 20
@@ -103,20 +100,20 @@ def web_node_status(name=None):
 
         # all manifests' names with namespace
         manifests = sorted(BP.blueprints['manifest'].get_all())
-        return render_template(
+        return flask.render_template(
             _ERS_element + '.tpl',
             label=__doc__,
             node=node,
             manifests=manifests,
             status=status,
-            base_url=request.url.split(name)[0],
+            base_url=flask.request.url.split(name)[0],
             ESPURL=ESPURL,
             ESPsizeMB=ESPsizeMB,
             installsh=installsh,
             installlog=installlog
         )
     except Exception as e:
-        return make_response('Kaboom: %s' % str(e), 404)
+        return flask.make_response('Kaboom: %s' % str(e), 404)
 
 
 @BP.route('/%s/ESP/<path:hostname>' % _ERS_element)
@@ -124,7 +121,7 @@ def web_node_send_ESP(hostname):
     filename = hostname + '.ESP'
     ESPdir = '%s/%s' % (BP.config['TFTP_IMAGES'], hostname)
 
-    return send_from_directory(
+    return flask.send_from_directory(
         ESPdir,                                     # required #1
         filename,                                   # required #2
         as_attachment=True,                         # os.path.basename
@@ -141,7 +138,7 @@ def get_all_nodes():
     """
         List all nodes coordinates known to the server.
     """
-    response = jsonify({'nodes': list(BP.node_coords)})     # already sorted
+    response = flask.jsonify({'nodes': list(BP.node_coords)})     # already sorted
     response.status_code = 200
 
     BP.logger.debug(response)
@@ -156,11 +153,11 @@ def get_all_bindings():
     """
     nodes_info = _load_data()
     if not nodes_info:  # FIXME: This is not a correct id of the node binding
-        response = jsonify({
+        response = flask.jsonify({
             'No Content': 'There are no manifests associated with any nodes.'})
         response.status_code = 204
     else:
-        response = jsonify({'mappings': nodes_info})
+        response = flask.jsonify({'mappings': nodes_info})
         response.status_code = 200
     BP.logger(response)
     return response
@@ -201,16 +198,16 @@ def get_node_bind_info(nodespec=None):
     # we need to add leading /.
     node_coord = _resolve_node_coord(nodespec)
     if node_coord is None:
-        response_msg = jsonify({ 'status' : 'No such node "%s"' % nodespec})
-        response = make_response(response_msg,404)
+        response_msg = flask.jsonify({ 'status' : 'No such node "%s"' % nodespec})
+        response = flask.make_response(response_msg,404)
         BP.logger.error(response)
         return response
     result = get_node_status(node_coord)
     if result is None:
-        response_msg = jsonify({'status' : 'No Content'})
-        response = make_response(response_msg, 204)
+        response_msg = flask.jsonify({'status' : 'No Content'})
+        response = flask.make_response(response_msg, 204)
     else:
-        response = make_response(jsonify(result), 200)
+        response = flask.make_response(flask.jsonify(result), 200)
     BP.logger(response)
     return response
 
@@ -238,28 +235,30 @@ def delete_node_binding(nodespec):
     # we need to add leading /.
     node_coord = _resolve_node_coord(nodespec)
     if node_coord is None:
-        response_msg = jsonify({'status' : 'No such node "%s"' % nodespec})
-        response = make_response(response_msg, 404)
+        response_msg = flask.jsonify({'status' : 'No such node "%s"' % nodespec})
+        response = flask.make_response(response_msg, 404)
         BP.logger(response)    # chooses log level based on status code
         return response
 
     node_status = get_node_status(node_coord)
     if node_status and node_status['status'] == 'building':
-        response_msg = jsonify({'status' : 'Cant delete binding - node is busy.'})
-        return make_response(response_msg, 409)
+        msg = 'Cant delete binding - node is busy.'
+        response_msg = flask.jsonify({'status' : msg})
+        return flask.make_response(response_msg, 409)
 
-    response_msg = jsonify({'status' : 'Successful cleanup.'})
-    response = make_response(response_msg, 204)
+    response_msg = flask.jsonify({'status' : 'Successful cleanup.'})
+    response = flask.make_response(response_msg, 204)
 
     try:
         node_image_dir = node_coord2image_dir(node_coord)
-        for node_file in glob(node_image_dir + '/*'):
+        for node_file in glob.glob(node_image_dir + '/*'):
             os.remove(node_file)
     except AssertionError as e:     # no such dir, no such binding
         pass
     except OSError as err:
-        response_msg = jsonify({'status' : 'Failed to delete binding: %s' % err})
-        response = make_response(response_msg, 500)
+        msg = 'Failed to delete binding: %s' % err
+        response_msg = flask.jsonify({'status' : msg})
+        response = flask.make_response(response_msg, 500)
     BP.logger(response)    # chooses log level based on status code
     return response
 
@@ -285,13 +284,13 @@ def bind_node_to_manifest(nodespec=None):
         assert get_node_status(node_coord) is None, 'Node is already bound.'
 
         resp_status = 413
-        assert int(request.headers['Content-Length']) < 200, \
+        assert int(flask.request.headers['Content-Length']) < 200, \
             'Content is too long! Max size is 200 characters.'
 
         resp_status = 400
         # Validate requested manifest exists.
-        contentstr = request.get_data().decode()
-        req_body = request.get_json(contentstr)
+        contentstr = flask.request.get_data().decode()
+        req_body = flask.request.get_json(contentstr)
 
         manname = req_body['manifest']  # can have path in it
 
@@ -300,12 +299,12 @@ def bind_node_to_manifest(nodespec=None):
         assert manifest is not None, "The specified manifest does not exist."
         manifest.validate_packages_tasks()
         response = build_node(manifest, node_coord)
-    except BadRequest as e:
-        response_msg = jsonify({'status' : e.get_response()})
-        response = make_response(response_msg, resp_status)
+    except werkzeug.exceptions.BadRequest as e:
+        response_msg = flask.jsonify({'status' : e.get_response()})
+        response = flask.make_response(response_msg, resp_status)
     except (AssertionError, ValueError) as err:
-        response_msg = jsonify({'status' : str(err)})
-        response = make_response(response_msg, resp_status)
+        response_msg = flask.jsonify({'status' : str(err)})
+        response = flask.make_response(response_msg, resp_status)
     BP.logger(response)
     return response
 
@@ -322,8 +321,8 @@ def build_node(manifest, node_coord):
     """
     golden_tar = BP.config['GOLDEN_IMAGE']
     if not os.path.exists(golden_tar):
-        response_msg = jsonify({'status' : 'Missing "Golden Image"!' })
-        return make_response(response_msg, 505)
+        response_msg = flask.jsonify({'status' : 'Missing "Golden Image"!' })
+        return flask.make_response(response_msg, 505)
 
     # Each node gets its own set of dirs.  'nodes[]' matches snippets.
     hostname = BP.nodes[node_coord][0].hostname
@@ -388,14 +387,16 @@ def build_node(manifest, node_coord):
     cmd = os.path.dirname(__file__) + \
         '/node_builder/customize_node.py ' + ' '.join(cmd_args)
 
-    response_msg = jsonify({'status' : '%s manifest set; image build initiated.' % hostname})
-    response = make_response(response_msg, 201)
+    msg = '%s manifest set; image build initiated.' % hostname
+    response_msg = flask.jsonify({'status' : msg})
+    response = flask.make_response(response_msg, 201)
 
-    if glob(tftp_dir + '/*.cpio'):
-        response_msg = jsonify({'status' : 'Existing manifest changed; image re-build initiated.'})
-        response = make_response(response_msg, 200)
+    if glob.glob(tftp_dir + '/*.cpio'):
+        msg = 'Existing manifest changed; image re-build initiated.'
+        response_msg = flask.jsonify({'status' : msg})
+        response = flask.make_response(response_msg, 200)
 
-    build_args = Namespace(**build_args)    # mutable
+    build_args = argparse.Namespace(**build_args)    # mutable
 
     # ------------------------- DRY RUN
     if BP.config['DRYRUN']:
@@ -410,8 +411,9 @@ def build_node(manifest, node_coord):
         os.makedirs(build_dir, exist_ok=True)
         os.makedirs(tftp_dir, exist_ok=True)
     except (EnvironmentError):
-        response_msg = jsonify({'status' : 'Failed to create "%s"!' % build_dir })
-        return make_response(response_msg, 505)
+        msg = 'Failed to create "%s"!' % build_dir
+        response_msg = flask.jsonify({'status' : msg})
+        return flask.make_response(response_msg, 505)
 
     # Before the child, to eliminate race condition if returning from
     # here to web-based actions.
@@ -426,8 +428,9 @@ def build_node(manifest, node_coord):
     try:
         forked = os.fork()
     except OSError as err:
-        response_msg = jsonify({'status' : 'AYE! Rocky\'s rookie got shot in the toe nail! [%s]' % err})
-        return make_response(response_msg, 505)
+        msg = 'AYE! Took an arrow to the knee! [%s]' % err
+        response_msg = flask.jsonify({'status' : msg})
+        return flask.make_response(response_msg, 505)
 
     if forked > 0:  # wait for the child1 to exit.
         try:

@@ -1,19 +1,18 @@
 #!/usr/bin/python3 -tt
 '''Every real project needs a utils module.'''
 
-import os
-import time
+import collections
 import glob
+import logging
+import os
 import shlex
 import signal
+import subprocess
 import tarfile
-import logging
-import collections
+import time
 from pdb import set_trace
-from contextlib import contextmanager
-from subprocess import call, Popen, PIPE, DEVNULL
 
-from .file_utils import remove_target, workdir, mknod, chgrp
+from . import file_utils
 
 
 def basepath(fullpath, leading):
@@ -44,7 +43,7 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
             /path/to/top/ will be saved as /path/, /path/to/ and /path/to/top/
     """
     result = []
-    with workdir(start_path):   # walk relative to untar'ed FS folder.
+    with file_utils.workdir(start_path):   # walk relative to untar'ed FS folder.
         for root, dirs, files in os.walk('.'):
             for dirname in dirs:    # each directory relative path to the root
                 if dirname in ignore_dirs:
@@ -64,29 +63,29 @@ def find(start_path, ignore_files=[], ignore_dirs=[]):
 # want to start the proc and wait, set use_call.
 
 
-def piper(cmdstr, stdin=None, stdout=PIPE, stderr=PIPE,
+def piper(cmdstr, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
           use_call=False, return_process_obj=False):
     """Pipe a command, maybe retrieve stdout/stderr, hides ugly output"""
     if stdout == '/dev/null':
-        stdout = DEVNULL
+        stdout = subprocess.DEVNULL
     if stderr == '/dev/null':
-        stderr = DEVNULL
+        stderr = subprocess.DEVNULL
     try:
         cmd = shlex.split(cmdstr)
         assert not (use_call and return_process_obj), \
             'Flags are mutually exclusive'
         if return_process_obj:
-            return Popen(cmd, stdout=stdout, stderr=stderr)
+            return subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
         if use_call:
-            return call(cmd), None, None
+            return subprocess.call(cmd), None, None
 
         if stdin is None:
             stdindata = None
         else:
             stdindata = stdin
-            stdin = PIPE
+            stdin = subprocess.PIPE
 
-        p = Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr)
+        p = subprocess.Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr)
         stdout, stderr = p.communicate(stdindata)        # implicit wait()
         ret = p.returncode
         if ret is None:
@@ -111,7 +110,7 @@ def untar(destination, source):
     """
 
     try:
-        remove_target(destination)  # succeeds even if missing
+        file_utils.remove_target(destination)  # succeeds even if missing
         with tarfile.open(source) as tar_obj:
             tar_obj.extractall(path=destination)
         return destination
@@ -226,9 +225,9 @@ def create_loopback_files():
     lock the count at eight.
     """
     fname = '/dev/loop-control'
-    mknod(fname, 'char', 10, 237)
-    chgrp(fname, 'disk')
+    file_utils.mknod(fname, 'char', 10, 237)
+    file_utils.chgrp(fname, 'disk')
     for i in range(0, 8):
         fname = '/dev/loop%d' % i
-        mknod(fname, 'block', 7, i)
-        chgrp(fname, 'disk')
+        file_utils.mknod(fname, 'block', 7, i)
+        file_utils.chgrp(fname, 'disk')

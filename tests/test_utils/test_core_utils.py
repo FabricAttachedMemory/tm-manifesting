@@ -88,8 +88,12 @@ class UtilsTest(unittest.TestCase):
 
         result = TmmsUtils.basepath(test_path, '/some/path/')
         self.assertEqual(result, 'to/test')
+        try:
+            TmmsUtils.basepath(test_path, '/path/to')
+            self.assertFalse(True, 'Exception to wrong path was not thrown')
+        except Exception:
+            self.assertTrue(True);
 
-        self.assertRaises(AssertionError, TmmsUtils.basepath(test_path, '/path/to'))
 
     def touch_file(self, filename):
         """ Touch a file that will be used for testing. """
