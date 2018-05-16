@@ -1,5 +1,11 @@
 #!/usr/bin/python3 -tt
-'''Every real project needs a utils module.'''
+'''
+    Set of functions to be used across the whole project that do Not require any
+install of non-standard python3 libraries. This script is also imported by
+configs/setup_* scripts, therefore, to avoid any install conflicts, for any additional
+functions to be added here, make sure they keep using only standard python3
+libraries.
+'''
 
 import collections
 import glob
