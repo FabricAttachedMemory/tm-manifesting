@@ -13,7 +13,7 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 import json
 import os
 from pdb import set_trace
-import requests
+import requests as HTTP_REQUESTS
 
 
 def _NST(func):     # No Stack Trace
@@ -22,7 +22,7 @@ def _NST(func):     # No Stack Trace
         try:
             ret = func(*args, **kwargs)
             return ret
-        except requests.exceptions.ConnectionError as e:
+        except HTTP_REQUESTS.exceptions.ConnectionError as e:
             raise RuntimeError('No server at %s' % self.url)
         except Exception as e:
             print('%s failed: %s' % (func.__name__, str(e)))
@@ -125,10 +125,10 @@ class TmCmd():
         """
         headers = options.get('headers', self.header)
         if options.get('payload', False):
-            http_resp = requests.put(
+            http_resp = HTTP_REQUESTS.put(
                 url, options['payload'], headers=headers)
         else:
-            http_resp = requests.get(url, headers=headers)
+            http_resp = HTTP_REQUESTS.get(url, headers=headers)
         return http_resp
 
     @_NST
@@ -141,7 +141,7 @@ class TmCmd():
         :return: None
         """
         headers = options.get('headers', self.header)
-        downloaded = requests.get(url, stream=True, headers=headers)
+        downloaded = HTTP_REQUESTS.get(url, stream=True, headers=headers)
         with open(destination, "wb") as dest_file:
             # need to feedback a download bar to the screen here.
             dest_file.write(downloaded.content)
@@ -159,7 +159,7 @@ class TmCmd():
         headers = kwargs.get('headers', self.header)
         payload = kwargs.get('payload', {})
         files = payload.get('files', None)
-        upload = requests.post(
+        upload = HTTP_REQUESTS.post(
             url, headers=headers, data=json.dumps(payload) )
         return upload
 
@@ -175,7 +175,7 @@ class TmCmd():
         """
         headers = kwargs.get('headers', self.header)
         payload = kwargs.get('payload', {})
-        delete = requests.delete(url, headers=headers)
+        delete = HTTP_REQUESTS.delete(url, headers=headers)
         return delete
 
     def to_json(self, content):
@@ -183,7 +183,7 @@ class TmCmd():
             Convert content to JSON string with class parameters.
         """
         try:
-            if isinstance(content, requests.models.Response):
+            if isinstance(content, HTTP_REQUESTS.models.Response):
                 response_text = json.loads(content.text)
                 response_code = str(content.status_code)
                 return json.dumps(

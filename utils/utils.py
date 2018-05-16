@@ -7,7 +7,7 @@ import glob
 import logging
 import os
 import psutil
-import requests
+import requests as HTTP_REQUESTS
 import shlex
 import shutil
 import signal
@@ -29,7 +29,7 @@ def setDhcpClientId(node):
         return
     URL = node.nodeMp.mfwApiUri + '/MgmtService/Mgmt/Hardware'
     try:
-        resp = requests.get(URL)
+        resp = HTTP_REQUESTS.get(URL)
         assert resp.status_code == 200, \
             'Bad response code %d' % resp.status_code
         mpCoord = resp.json()['Coordinate']

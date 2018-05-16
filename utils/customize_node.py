@@ -20,7 +20,7 @@ import gzip
 import json
 import magic  # to get file type and check if gzipped
 import os
-import requests
+import requests as HTTP_REQUESTS
 import shutil   # explicit namespace differentiates from our custom FS routines
 import sys
 import time
@@ -718,7 +718,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
                     '\necho -e "\\n---------- Download/install %s\\n"\n' % pkg)
                 deb = pkg.split('/')[-1]
                 install.write('# %s\n' % deb)
-                pkgresp = requests.get(pkg, verify=False)
+                pkgresp = HTTP_REQUESTS.get(pkg, verify=False)
                 if pkgresp.status_code != 200:
                     msg = 'Status %d: could not download "%s"' % (
                         pkgresp.status_code, pkg)

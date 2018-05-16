@@ -10,14 +10,14 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 import collections
-import debian.deb822
+from debian.deb822 import Packages as debPackages
 import flask
 import gzip
 import io
 import logging
 import os
 from pdb import set_trace
-import requests
+import requests as HTTP_REQUESTS
 import sys
 
 from tmms.utils import core_utils
@@ -148,7 +148,7 @@ def _read_packages(full_source):
         for arch in ('binary-all', 'binary-arm64'):
             retrieveURL = repo % (area, arch)
             BP.logger.info('Loading/processing "%s"' % retrieveURL)
-            pkgresp = requests.get(retrieveURL)
+            pkgresp = HTTP_REQUESTS.get(retrieveURL)
             if pkgresp.status_code != 200:
                 BP.logger.error('%s not found' % arch)
                 continue
@@ -157,7 +157,7 @@ def _read_packages(full_source):
             unzipped = gzip.decompress(pkgresp.content) # bytes all around
             BP.logger.debug('Parsing %d bytes of package data' % len(unzipped))
             unzipped = io.BytesIO(unzipped)    # the next step needs read()
-            deb_packages_iter = debian.deb822.Packages.iter_paragraphs(unzipped)
+            deb_packages_iter = debPackages.iter_paragraphs(unzipped)
             tmp = [ src for src in deb_packages_iter ]
 
             _data.update(dict((pkg['Package'], pkg) for pkg in tmp))

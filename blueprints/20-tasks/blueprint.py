@@ -10,7 +10,7 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
-import debian
+from debian.deb822 import Packages as debPackages
 import flask
 import os
 from pdb import set_trace
@@ -86,7 +86,7 @@ def _load_data():
     with open(BP.tasks_file, 'r') as file_obj:
         task_content = file_obj.read()
 
-    deb_packages_iter = debian.deb822.Packages.iter_paragraphs(task_content)
+    deb_packages_iter = debPackages.iter_paragraphs(task_content)
     tmp = [ task for task in deb_packages_iter ]
     _data.update(dict((task['Task'], task) for task in tmp))
 

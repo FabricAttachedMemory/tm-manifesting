@@ -264,7 +264,7 @@ class TMgrub(object):
                 grubURL += base
 
             try:
-                r = requests.get(grubURL, timeout=5)
+                r = HTTP_REQUESTS.get(grubURL, timeout=5)
                 assert r.status_code == 200, 'Cannot retrieve "%s"' % grubURL
                 assert len(r.content) == int(r.headers['Content-Length']), \
                     'Length mismatch on "%s"' % grubURL
