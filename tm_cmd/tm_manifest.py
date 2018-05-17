@@ -10,9 +10,8 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 import argparse
-import sys
-
 from pdb import set_trace
+import sys
 
 from tmcmd import cmdlookup
 

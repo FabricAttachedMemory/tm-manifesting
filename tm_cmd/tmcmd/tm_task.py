@@ -9,9 +9,6 @@ __copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
 __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
-
-from pdb import set_trace
-
 from . import tm_base
 
 

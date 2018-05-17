@@ -9,7 +9,6 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
-from pdb import set_trace
 import json
 import os
 import time
