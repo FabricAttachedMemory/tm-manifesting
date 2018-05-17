@@ -10,17 +10,17 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
+from debian.deb822 import Packages as debPackages
+import flask
 import os
-import sys
-from debian.deb822 import Packages
 from pdb import set_trace
+import sys
 
-from flask import Blueprint, render_template, request, jsonify
 
 _ERS_element = 'task'
 
 # See the README in the main templates directory.
-BP = Blueprint(_ERS_element, __name__)
+BP = flask.Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 # HTML
@@ -31,17 +31,17 @@ BP = Blueprint(_ERS_element, __name__)
 @BP.route('/%s/<name>' % _ERS_element)  # Singular - to get one task.
 def webpage(name=None):
     if name is None:
-        return render_template(
+        return flask.render_template(
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
-            base_url=request.url)
+            base_url=flask.request.url)
 
-    return render_template(
+    return flask.render_template(
         _ERS_element + '.tpl',
         label=__doc__,
         name=name,
-        base_url=request.url,
+        base_url=flask.request.url,
         itemdict=_data[name])
 
 ###########################################################################
@@ -62,16 +62,16 @@ def api(name=None):
                 'description': task['Description']
             }
             tasks.append(tmpdict)
-        return jsonify({ 'task': tasks })
+        return flask.jsonify({ 'task': tasks })
 
     task = _data.get(name, None)
     if task is None:
-        return jsonify({ 'error': 'No such task "%s"' % name })
+        return flask.jsonify({ 'error': 'No such task "%s"' % name })
     for tag in ('Depends', 'Tags'):
         if tag in task and False:
             set_trace()
             task[tag] = task[tag].split(', ')
-    return jsonify(task)
+    return flask.jsonify(task)
 
 ###########################################################################
 
@@ -81,10 +81,14 @@ def _load_data():
     '''Parse the actual tasksel description file.'''
     global _data
 
-    _data = { }
-    with open(BP.tasks_file, 'r') as f:
-        tmp = [ task for task in Packages.iter_paragraphs(f) ]
-        _data.update(dict((task['Task'], task) for task in tmp))
+    _data = {}
+    task_content = None
+    with open(BP.tasks_file, 'r') as file_obj:
+        task_content = file_obj.read()
+
+    deb_packages_iter = debPackages.iter_paragraphs(task_content)
+    tmp = [ task for task in deb_packages_iter ]
+    _data.update(dict((task['Task'], task) for task in tmp))
 
 
 def _lookup(task_name, key=None):

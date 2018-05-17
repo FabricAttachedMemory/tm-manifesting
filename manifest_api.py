@@ -30,20 +30,19 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 import argparse
+import flask
 import glob
+import jinja2
 import netifaces as NIF
+import importlib
 import os
 import psutil
 import sys
 import time
 
 from pdb import set_trace
-from importlib import import_module
 
 assert os.geteuid() == 0, 'This program requires root permissions'
-
-from jinja2.environment import create_cache
-from flask import Flask, render_template, request, jsonify
 
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
@@ -66,7 +65,7 @@ except ImportError as e:
 
 def create_app():
     ''' Create a Flask app to be used/regestered by available blueprints. '''
-    mainapp = Flask('tm_manifesting', static_url_path='/static')
+    mainapp = flask.Flask('tm_manifesting', static_url_path='/static')
     mainapp.config.update(manconfig)
     mainapp.config['tmconfig'] = tmconfig
 
@@ -136,7 +135,7 @@ def register_blueprints(mainapp):
             modspec = p.replace('/', '.') + '.blueprint'
             mainapp.logger.info('importing %s' % modspec.split('.')[1])
             #Import relative to a "tmms" module (set in python3/dist-packages/tmms)
-            imported = import_module('tmms.' + modspec)
+            imported = importlib.import_module('tmms.' + modspec)
 
             # Set commonly used globals or convenience attributes.  Each
             # imported BP has its own BP global, used as the route decorator
@@ -174,16 +173,16 @@ def register_blueprints(mainapp):
 
 
 def _response_bad(errmsg, status_code=418):
-    response = jsonify({'error': errmsg})
+    response = flaks.jsonify({'error': errmsg})
     response.status_code = status_code
     return response
 
 
 @mainapp.before_request
 def check_version(*args, **kwargs):
-    if 'api' not in request.path:   # Ignore versioning/JSON for HTML
+    if 'api' not in flask.request.path:   # Ignore versioning/JSON for HTML
         return None
-    hdr_accept = request.headers.get('Accept','NADA')
+    hdr_accept = flask.request.headers.get('Accept','NADA')
     if 'application/json' not in hdr_accept:
         return _response_bad('I see no JSON in header/accept.', 406)
     version = -1.0
@@ -203,7 +202,7 @@ def check_version(*args, **kwargs):
 
 @mainapp.after_request
 def version(response):
-    if 'api' in request.path:   # Ignore versioning/JSON for HTML
+    if 'api' in flask.request.path:   # Ignore versioning/JSON for HTML
         response.headers['Content-Type'] = \
             'application/json;version=%s' % mainapp.config['API_VERSION']
     return response
@@ -214,14 +213,14 @@ def version(response):
 
 @mainapp.route('/manifesting/')
 def root():
-    return render_template(
+    return flask.render_template(
         'index.tpl',
         api_version=mainapp.config['API_VERSION'],
-        base_url=request.base_url,
+        base_url=flask.request.base_url,
         mirror=mainapp.config['DEBIAN_MIRROR'],
         release=mainapp.config['DEBIAN_RELEASE'],
         rules=mainapp.config['rules'],
-        url_root=request.url_root,
+        url_root=flask.request.url_root,
         coordinate=mainapp.config['tmconfig'].racks[1]['coordinate'])
 
 ###########################################################################
@@ -413,7 +412,7 @@ def main():
     # http://flask.pocoo.org/docs/0.10/api/#application-object; options at
     # http://werkzeug.pocoo.org/docs/0.11/serving/#werkzeug.serving.run_simple
     if mainapp.config['DEBUG']:
-        mainapp.jinja_env.cache = create_cache(0)
+        mainapp.jinja_env.cache = jinja2.environment.create_cache(0)
 
     core_utils.create_loopback_files() # they disappear after LXC restart FIXME utils?
     set_iptables(mainapp.config)
