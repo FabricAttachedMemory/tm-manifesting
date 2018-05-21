@@ -23,6 +23,7 @@ import werkzeug
 
 from tmms.utils import core_utils
 from tmms.utils import customize_node
+from tmms.utils import file_utils
 
 
 _ERS_element = 'node'
@@ -251,8 +252,15 @@ def delete_node_binding(nodespec):
 
     try:
         node_image_dir = node_coord2image_dir(node_coord)
-        for node_file in glob.glob(node_image_dir + '/*'):
-            os.remove(node_file)
+        node_name = os.path.basename(node_image_dir)
+        node_build_dir = BP.config['FILESYSTEM_IMAGES'] + '/' + node_name
+
+        files_to_clean = glob.glob(node_image_dir + '/*')
+        files_to_clean.extend(glob.glob(node_build_dir + '/*')) # sys-images/$NODE$/*
+
+        for to_remove in files_to_clean:
+            file_utils.remove_target(to_remove)
+
     except AssertionError as e:     # no such dir, no such binding
         pass
     except OSError as err:
@@ -260,6 +268,7 @@ def delete_node_binding(nodespec):
         response_msg = flask.jsonify({'status' : msg})
         response = flask.make_response(response_msg, 500)
     BP.logger(response)    # chooses log level based on status code
+
     return response
 
 ####################### API (PUT) ###############################

@@ -61,6 +61,7 @@ def extract_bootfiles(args, keep_kernel=False):
     vmlinuz = glob.glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
     initrd = glob.glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
 
+    is_force_keep_kernel = False
     # 'manifest' param may not exist when building golden image.
     if hasattr(args, 'manifest'):
         #override 'keep_kernel' if user used 'keep_kernel' in the manifest
@@ -1176,7 +1177,7 @@ def execute(args):
         args.new_fs_dir = core_utils.untar(args.build_dir + '/untar/', args.golden_tar)
 
         # Move kernel that comes with golden image.
-        extract_bootfiles(args, args.hostname == 'golden' or is_force_keep_kernel)
+        extract_bootfiles(args, args.hostname == 'golden')
 
         set_foreign_package(args, 'qemu-aarch64-static')
 
