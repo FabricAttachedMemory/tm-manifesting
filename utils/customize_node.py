@@ -201,7 +201,7 @@ def set_apt_proxy(args):
     # insufficient.  Either way, get the proxies from os.environ.
     path = args.new_fs_dir + '/etc/apt/apt.conf.d'
     file_utils.make_dir(path)
-    path += '/00FAMproxy.conf'  # !!! FIXME: no hardcoded custom file names !!!
+    path += '/00TMMS.conf'
     args.apt_dot_conf = path    # for post-processing
 
     # One final post-processing step is done later
