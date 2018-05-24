@@ -1,24 +1,21 @@
 #!/usr/bin/python3 -tt
 '''Every real project needs a utils module.'''
 
-from contextlib import contextmanager
 import collections
 import errno
+import glob
 import logging
 import os
-import glob
+import psutil
+import requests as HTTP_REQUESTS
 import shlex
 import shutil
 import signal
 import time
 import tarfile
 
-import psutil
-import requests as HTTP_REQUESTS
-from tmms.utils.file_utils import remove_target, workdir, mknod, chgrp
 
 from pdb import set_trace
-from subprocess import call, Popen, PIPE, DEVNULL
 
 
 ###########################################################################

@@ -23,7 +23,6 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
-from collections import namedtuple
 import inspect
 import os
 import sys

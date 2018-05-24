@@ -11,11 +11,10 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
+import argparse
+import errno
 import os
 import sys
-import errno
-import argparse
-from collections import namedtuple
 
 from pdb import set_trace
 

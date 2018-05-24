@@ -9,22 +9,18 @@ __copyright__ = "Copyright 2017 Hewlett Packard Enterprise Development LP"
 __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
-
+import flask
 import json
 import os
-from glob import glob
-import sys
-from shutil import rmtree
 from pdb import set_trace
+import sys
+import werkzeug
 
-from flask import Blueprint, render_template, request, jsonify
-from flask import g, abort, make_response
-from werkzeug import secure_filename
 
 _ERS_element = 'manifest'
 
 # See the README in the main templates directory.
-BP = Blueprint(_ERS_element, __name__)
+BP = flask.Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 
@@ -36,13 +32,13 @@ _UPFROM = 'uploaded_from'
 
 
 def render_all(okmsg='', errmsg=''):
-    return render_template(
+    return flask.render_template(
         _ERS_element + '_all.tpl',
         errmsg=errmsg,
         label=__doc__,
         keys=sorted(_data.keys()),
         okmsg=okmsg,
-        base_url=request.url)
+        base_url=flask.request.url)
 
 
 @BP.route('/%s/' % _ERS_element)
@@ -53,19 +49,19 @@ def webpage(name=None):
         return render_all()     # Is this still showing "key"?
 
     if name not in _data:
-        return render_template(
+        return flask.render_template(
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
-            base_url=request.url.split(name)[0])
+            base_url=flask.request.url.split(name)[0])
 
     this = _data[name]
-    return render_template(
+    return flask.render_template(
         _ERS_element + '.tpl',
         label=__doc__,
         name=name,
         itemdict=this.thedict,
-        base_url=request.url,
+        base_url=flask.request.url,
         data=this,
         rawtext=this.raw)
 
@@ -73,8 +69,8 @@ def webpage(name=None):
 @BP.route('/%s/' % _ERS_element, methods=('POST', ))
 def webpage_upload():
     try:
-        assert int(request.content_length) < 20000, 'Too big'
-        file = request.files['file[]']
+        assert int(flask.request.content_length) < 20000, 'Too big'
+        file = flask.request.files['file[]']
 
         # fname = secure_filename(file.filename)
         # extension = os.path.splitext(file.filename)[1]
@@ -111,7 +107,7 @@ def listall():
     status_code = 200
     if not all_manifests:
         status_code = 204
-    response = make_response(msg, status_code)
+    response = flask.make_response(msg, status_code)
     BP.logger(response)    # level based on response status code
     return response
 
@@ -135,10 +131,10 @@ def show_manifest_json(manname='/'):
 
         response = None
         if not found_manifest:
-            response = make_response(
+            response = flask.make_response(
                 'The specified manifest does not exist.', 404)
         else:
-            response = make_response(jsonify(found_manifest.thedict), 200)
+            response = flask.make_response(flask.jsonify(found_manifest.thedict), 200)
 
     BP.logger(response)    # level based on response status code
     return response
@@ -167,9 +163,9 @@ def list_manifests_by_prefix(prefix=None):
             result['manifests'].append(man_path)
 
     if not result['manifests']:
-        response = make_response('No Manifests are available.', 204)
+        response = flask.make_response('No Manifests are available.', 204)
     else:
-        response = make_response(jsonify(result), 200)
+        response = flask.make_response(jsonify(result), 200)
 
     BP.logger(response)    # level based on status code
     return response
@@ -193,10 +189,10 @@ def api_upload(prefix=''):
                     base of the server's manifest uploads location.
     """
     if prefix and not prefix.endswith('/'):    # FIXME WHY IS THIS BAD?
-        abort(404)
+        flask.abort(404)
     try:
-        assert int(request.headers['Content-Length']) < 20000, 'Too big'
-        contentstr = request.get_data().decode()
+        assert int(flask.request.headers['Content-Length']) < 20000, 'Too big'
+        contentstr = flask.request.get_data().decode()
 
         if BP.config['DRYRUN']:
             _data[prefix] = 'dry-run'
@@ -207,7 +203,7 @@ def api_upload(prefix=''):
         response = manifest.response
 
     except Exception as e:
-        response = make_response('Manifest upload failed: %s' % str(e), 422)
+        response = flask.make_response('Manifest upload failed: %s' % str(e), 422)
 
     BP.logger(response)    # level based on status code
     _load_data()
@@ -225,10 +221,10 @@ def delete_manifest(manname=None):
     :param 'manname': manifest file name
     """
     found_manifest = _lookup(manname)
-    response = make_response('The specified manifest has been deleted.', 204)
+    response = flask.make_response('The specified manifest has been deleted.', 204)
 
     if not found_manifest:
-        response = make_response('The specified manifest does not exist.', 404)
+        response = flask.make_response('The specified manifest does not exist.', 404)
     else:
         manifest_server_path = BP.config['MANIFEST_UPLOADS'] + '/' + manname
 
@@ -237,7 +233,7 @@ def delete_manifest(manname=None):
                 os.remove(manifest_server_path)
                 # TODO: remove prefix folders of the manifests if empty
         except EnvironmentError as err:
-            response = make_response('Failed to remove manifest', 500)
+            response = flask.make_response('Failed to remove manifest', 500)
 
     BP.logger(response)    # level based on status code
     _load_data()
@@ -299,20 +295,20 @@ class ManifestDestiny(object):
             assert len(elems) < 10, 'Really? %d deep? Get a life.' % len(elems)
 
             for e in elems:
-                assert e == secure_filename(e), \
+                assert e == werkzeug.secure_filename(e), \
                     'Illegal namespace component "%s"' % e
 
-            fname = secure_filename(self.thedict['name'])
+            fname = werkzeug.secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
 
             self.dirpath = os.path.join(BP.UPLOADS, dirpath)
             self.manifest_file = BP.UPLOADS + '/' + self.namespace
 
             if os.path.exists(self.manifest_file):
-                self.response = make_response(
+                self.response = flask.make_response(
                     'An existing manifest has been overwritten.', 200)
             else:
-                self.response = make_response(
+                self.response = flask.make_response(
                     'A new manifest has been created.', 201)
 
             os.makedirs(self.dirpath, exist_ok=True)
