@@ -22,11 +22,15 @@ from tmms.utils import utils
 from tmms.utils import core_utils
 from tmms.utils import file_utils
 from tmms.utils import customize_node
+from tmms.utils import logging
 from configs.build_config import ManifestingConfiguration
+
+LOGGER = None
 
 
 def customize_golden(manconfig, golden_tar, build_dir):
     '''Combine /etc/tmms settings and some hardcoded values.'''
+    #FIXME: make it a config file
     arg_values = {
         'hostname' : 'golden',
         'node_coord' : 'golden_custom',
@@ -61,6 +65,12 @@ def customize_golden(manconfig, golden_tar, build_dir):
 
     move_dir(golden_dir, golden_dir + '.raw', verbose=True)
     move_dir(build_dir, golden_dir, verbose=True)
+
+    log_errors = logging.get_log_errors(golden_dir + '/build.log')
+    if log_errors:
+        msg = '\n !!! -- Customization stage ended with ERROR(s) -- !!!\n%s' %\
+                '\n'.join(log_errors)
+        raise RuntimeError(msg)
 
     print(' -- Customization stage is finished. -- ')
 
@@ -137,7 +147,11 @@ def debootstrap_image(manconfig, vmd_path=None):
         return True
 
     errors = [ e for e in contents if 'WARN' in e or 'ERROR' in e ]
-    #logging.error(''.join(errors), file=sys.stderr)  # already have newlines
+    LOGGER = logging.tmmsLogger('golden', destdir + '/build.log')
+
+    if LOGGER is not None: #sanity
+        LOGGER.error(''.join(errors), file=sys.stderr)  # already have newlines
+
     raise RuntimeError('vmdebootstrap failed, consult %s' % vmdlog)
 
 
@@ -164,6 +178,7 @@ def main(args):
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('TMCONFIG', ))
+
 #    assert not missing, 'tmms config file is missing %s' % missing
     golden_tar = manconfig['GOLDEN_IMAGE']
     golden_dir = os.path.dirname(golden_tar)

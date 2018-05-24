@@ -88,10 +88,9 @@ def extract_bootfiles(args, keep_kernel=False):
     for source in vmlinuz + initrd + misc:            # move them all
         dest = '%s/%s' % (args.build_dir, os.path.basename(source))
         if keep_kernel:
-            msg = 'Copy of %s failed' % source
-            assert file_utils.copy_target_into(source, dest), msg
+            file_utils.copy_target_into(source, dest)
         else:
-            assert file_utils.move_target(source, dest), 'Move of %s failed' % source
+            file_utils.move_target(source, dest)
 
         if '/vmlinuz' in dest:
             args.vmlinuz_golden = dest
