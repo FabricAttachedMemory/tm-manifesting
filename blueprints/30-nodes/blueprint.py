@@ -258,8 +258,9 @@ def delete_node_binding(nodespec):
         files_to_clean = glob.glob(node_image_dir + '/*')
         files_to_clean.extend(glob.glob(node_build_dir + '/*')) # sys-images/$NODE$/*
 
-        for to_remove in files_to_clean:
-            file_utils.remove_target(to_remove)
+        if not BP.DEBUG: # keep previous build while debugging.
+            for to_remove in files_to_clean:
+                file_utils.remove_target(to_remove)
 
     except AssertionError as e:     # no such dir, no such binding
         pass

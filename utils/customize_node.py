@@ -204,7 +204,7 @@ def set_apt_proxy(args):
     args.apt_dot_conf = path    # for post-processing
 
     # One final post-processing step is done later
-    if not args.hostname == 'golden':
+    if not args.is_golden:
         return
 
     # FIXME: it's really dependent on xxx_mirror saying locahost, but this
@@ -237,9 +237,8 @@ def add_other_mirror(args):
     args.other_list = '%s/etc/apt/sources.list.d' % args.new_fs_dir
     file_utils.make_dir(args.other_list)
     args.other_list += '/other.list'        # For post-processing
-    is_golden = args.hostname == 'golden'
 
-    if not is_golden or not hasattr(args, 'other_mirrors'):
+    if not args.is_golden or not hasattr(args, 'other_mirrors'):
         return
 
     update_status(args, 'Adding other mirrors: %s' % args.other_mirrors)
@@ -253,7 +252,7 @@ def add_other_mirror(args):
 
 def localhost2torms(args):
     '''Go through apt.conf.d and sources.list.d and change localhost -> torms'''
-    if args.hostname == 'golden':
+    if args.is_golden:
         return
     update_status(args, 'Convert APT "localhost" references to "torms"')
 
@@ -301,7 +300,7 @@ def hack_LFS_autostart(args):
     :param 'node_id': [int] expanded into R:E:N.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
-    if args.hostname == 'golden':
+    if args.is_golden:
         update_status(args, ' - ! - Skipping hack_lfs_autostart')
         return
 
@@ -1125,6 +1124,8 @@ def execute(args):
         args.debug = False
     if getattr(args, 'verbose', None) is None:
         args.verbose = False
+    if getattr(args, 'is_golden', None) is None:    # set in setup_golden.py
+        args.is_golden = False
 
     logger = getattr(args, 'logger', None)
 
@@ -1176,7 +1177,7 @@ def execute(args):
         args.new_fs_dir = core_utils.untar(args.build_dir + '/untar/', args.golden_tar)
 
         # Move kernel that comes with golden image.
-        extract_bootfiles(args, args.hostname == 'golden')
+        extract_bootfiles(args, args.is_golden)
 
         set_foreign_package(args, 'qemu-aarch64-static')
 
@@ -1199,7 +1200,7 @@ def execute(args):
         install_packages(args)
 
         #Move installed "kernel" from boot/ (if any).
-        extract_bootfiles(args, args.hostname == 'golden')
+        extract_bootfiles(args, args.is_golden)
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)
@@ -1210,7 +1211,7 @@ def execute(args):
 
         #------------------------------------------------------------------
 
-        if args.hostname == 'golden':
+        if args.is_golden:
             response['message'] = 'Golden image ready for use'
             status = 'ready'
         else:
