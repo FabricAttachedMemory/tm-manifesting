@@ -18,8 +18,6 @@ import sys
 
 from pdb import set_trace
 
-#from tmms.utils import utils
-
 
 def link_into_python(args, git_repo_path):
     """
