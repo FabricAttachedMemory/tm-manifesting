@@ -153,14 +153,6 @@ class UtilsLoggerTest(unittest.TestCase):
         self.assertTrue(threwRuntimeError, 'No RuntimeError after shutdown()')
 
 
-    def test_get_log_error(self):
-        mock_log = os.path.realpath(__file__)
-        mock_log = os.path.dirname(mock_log) + '/mock/build.log'
-
-        log_errors = logging.get_log_errors(mock_log)
-        self.assertTrue(len(log_errors) > 0)
-
-
     def isEntryInLog(self, entry, level=None, logfile=None):
         log_entries = None
         if logfile is None:
