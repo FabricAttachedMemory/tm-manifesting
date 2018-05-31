@@ -26,6 +26,7 @@ from tmms.utils import logging
 from configs.build_config import ManifestingConfiguration
 
 LOGGER = None
+VERBOSE = False
 
 
 def customize_golden(manconfig, golden_tar, build_dir):
@@ -45,17 +46,17 @@ def customize_golden(manconfig, golden_tar, build_dir):
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
-        'verbose' : True,
+        'verbose' : VERBOSE,
         'debug' : True,         # prevent fork/exec
         'logger' : None
     }
 
-    try:
-        response = customize_node.execute(argparse.Namespace(**arg_values))
-    except Exception as err:
-        _, _, exc_tb = sys.exc_info()
-        raise RuntimeError('%s:%s\n %s\n' %\
-                            (os.path.basename(__file__), exc_tb.tb_lineno, err))
+    response = customize_node.execute(argparse.Namespace(**arg_values))
+
+    if response['status'] >= 400:
+        msg = '\n !!! -- Customization stage ended with ERROR(s) -- !!!\n%s' %\
+                response['message']
+        raise RuntimeError(msg)
 
     golden_dir = os.path.dirname(golden_tar)
     core_utils.make_tar(build_dir + '/golden.arm.tar', build_dir + '/untar')
@@ -66,12 +67,6 @@ def customize_golden(manconfig, golden_tar, build_dir):
 
     move_dir(golden_dir, golden_dir + '.raw', verbose=True)
     move_dir(build_dir, golden_dir, verbose=True)
-
-    #log_errors = logging.get_log_errors(golden_dir + '/build.log')
-    if if response['status'] >= 400:
-        msg = '\n !!! -- Customization stage ended with ERROR(s) -- !!!\n%s' %\
-                '\n'.join(response['message'])
-        raise RuntimeError(msg)
 
     print(' -- Customization stage is finished. -- ')
 
@@ -164,7 +159,8 @@ def download_image(img_path, destination):
     if isinstance(img_path, list):
         img_path = img_path[0]
 
-    print(' - Getting golden image from %s' % (img_path))
+    if VERBOSE:
+        print(' - Getting golden image from %s' % (img_path))
     file_utils.from_url_or_local(img_path, destination)
 
 
@@ -174,6 +170,7 @@ def main(args):
     vmdebootstrap.  Return None or raise error.
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
+    VERBOSE = args.verbose
 
     supplied_image = getattr(args, 'sysimage', None)
 
