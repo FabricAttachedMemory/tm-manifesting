@@ -286,9 +286,13 @@ def set_client_id(args):
 
 def hack_LFS_autostart(args):
     """
+    FIXME: DEPRECATED. Seems like we don't need it anymore.
+
         2016-11-10 SFW is still not supplying ACPI info for physloc but we
     have sufficient need and confidence to require it.  Work around it.
     This must be called before rewrite_rclocal().
+
+    NOTE: we need that for FAME images.
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :param 'node_id': [int] expanded into R:E:N.
