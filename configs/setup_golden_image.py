@@ -67,10 +67,10 @@ def customize_golden(manconfig, golden_tar, build_dir):
     move_dir(golden_dir, golden_dir + '.raw', verbose=True)
     move_dir(build_dir, golden_dir, verbose=True)
 
-    log_errors = logging.get_log_errors(golden_dir + '/build.log')
-    if log_errors:
+    #log_errors = logging.get_log_errors(golden_dir + '/build.log')
+    if if response['status'] >= 400:
         msg = '\n !!! -- Customization stage ended with ERROR(s) -- !!!\n%s' %\
-                '\n'.join(log_errors)
+                '\n'.join(response['message'])
         raise RuntimeError(msg)
 
     print(' -- Customization stage is finished. -- ')
@@ -180,7 +180,6 @@ def main(args):
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('TMCONFIG', ))
 
-#    assert not missing, 'tmms config file is missing %s' % missing
     golden_tar = manconfig['GOLDEN_IMAGE']
     golden_dir = os.path.dirname(golden_tar)
     golden_custom = golden_dir + '_custom'
