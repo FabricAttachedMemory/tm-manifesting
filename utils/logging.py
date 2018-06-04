@@ -11,6 +11,8 @@ import os
 from flask.wrappers import Response as flaskResponse  # type checking
 from pdb import set_trace
 
+from tmms.utils import file_utils
+
 
 class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
     """
@@ -44,6 +46,7 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
             use_stderr=False, use_file='', verbose=False):
 
         cls._configured = True
+        cls.verbose = verbose
         level = logging.DEBUG if verbose else logging.INFO
 
         # Clear out current handlers to allow re-use of basicConfig.
@@ -58,9 +61,13 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
                 level=level)
 
         if use_file:
+            if not os.path.isdir(os.path.dirname(use_file)):
+                file_utils.make_dir(os.path.dirname(use_file))
+
             h = cls._setup_filehandler(use_file, backupCount=3)
             rootlogger.addHandler(h)
             rootlogger.setLevel(level)
+
 
     def __init__(self, loggername, use_file='', verbose=False):
         # Create a logger with no handlers.   Because there is no "dot"
@@ -70,13 +77,17 @@ class tmmsLogger(object):   # FIXME: how about subclassing getLogger?
         # on its propagate flag (default True).
         # Insure there is a root logger, default to stderr and INFO.
         if not self._configured:     # locking built into logging
-            self.reconfigure_rootlogger(use_stderr=True)
+            self.reconfigure_rootlogger(use_stderr=True, use_file=use_file)
         self._logger = logging.getLogger(loggername)
-        if use_file:    # could be separate from root handler's file
-            h = self._setup_filehandler(use_file)
-            self._logger.addHandler(h)
+
+        #if use_file:    # could be separate from root handler's file
+        #    h = self._setup_filehandler(use_file)
+        #    self._logger.addHandler(h)
+
         level = logging.DEBUG if verbose else logging.INFO
         self._logger.setLevel(level)
+        self.verbose = verbose
+
 
     def _level_func(self, lvl):
         """

@@ -40,7 +40,7 @@ def setDhcpClientId(node):
 
 def _kill_pid_object(p):
     '''Utility routine for kill_pid and kill_chroot_daemon'''
-    logging.info('Killing PID %d (%s)' % (p.pid, p.cmdline()))
+    logging.debug('Killing PID %d (%s)' % (p.pid, p.cmdline()))
     try:
         os.kill(p.pid, signal.SIGTERM)
         time.sleep(0.5)
