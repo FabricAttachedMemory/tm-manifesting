@@ -62,7 +62,7 @@ def copy_target_into(target, into, verbose=False):
             if os.path.isdir(into):
                 into += '/' + os.path.basename(target)
             shutil.copyfile(target, into)   # copy single file
-        logging.info(' - Copy completed:\n * from %s\n * into %s' % (target, into))
+        logging.debug(' - Copy completed:\n * from %s\n * into %s' % (target, into))
     except (AssertionError, RuntimeError, EnvironmentError) as err:
         msg = ' - E - Couldn\'t copy "%s" into "%s"!\n - Reason:\n -- %s' % (
                 target, into, str(err))
@@ -73,7 +73,7 @@ def move_target(target, into, verbose=False):
     """
         Move target folder into new folder. NOTE: target will be removed!
     """
-    logging.info(' ---- Prepare to Move ----\n - %s into %s' % (target, into))
+    logging.debug(' ---- Prepare to Move ----\n - %s into %s' % (target, into))
 
     if target == into:
         logging.warning(' - W - Cant move... "Target" and "Into" is the same path!')
@@ -148,7 +148,7 @@ def remove_target(target, verbose=False):
             os.unlink(target)        #that os.unlink and os.remove are the same
         elif os.path.exists(target):
             os.remove(target)
-        logging.info(' - %s has been removed!' % target)
+        logging.debug(' - %s has been removed!' % target)
     except (AssertionError, EnvironmentError) as e:
         msg = ' - E - Couldn\'t remove "%s"!\n - Reason: %s' % (target, str(e))
         raise RuntimeError(msg)

@@ -1143,9 +1143,6 @@ def execute(args):
                     args.logger.debug('Closing parent PID=%s.' % (forked))
 
                 os._exit(0)  # RTFM: this is the preferred exit after fork()
-
-                if logger is not None:
-                    args.logger.debug('Rocky\'s rookie spawned a rookie')
         except OSError as err:
             if logger is not None:
                 args.logger.critical('Failed to spawn a child: %s ' % str(err))
@@ -1162,11 +1159,14 @@ def execute(args):
     fname='%s/build.log' % args.build_dir
     if logger is not None:
         args.logger.info(' --- Build details in %s ---' % fname)
+    else:
+        logger = logging.tmmsLogger(args.hostname, use_file=fname)
+        args.logger = logger
 
-    logger = logging.tmmsLogger(args.hostname, use_file=fname)
-    logger.propagate = args.verbose     # always gets forced True at end
-    args.logger = None
-    args.logger = logger
+    #args.logger.propagate = args.verbose     # always gets forced True at end
+    #logger.propagate = args.verbose     # always gets forced True at end
+    #args.logger = None
+    #args.logger = logger
 
     args.logger('--- Starting image build for %s --- ' % args.hostname)
     # It's a big try block because individual exception handling
@@ -1247,7 +1247,7 @@ def execute(args):
             (os.path.basename(__file__), sys.exc_info()[2].tb_lineno, str(err))
         status = 'error'
 
-    args.logger.propagate = True   # push final messages to root logger
+    #args.logger.propagate = True   # push final messages to root logger
     update_status(args, response, status)
     if not args.debug:  # I am the grandhild; release the wait() by init()
         args.logger.debug('Closing the build child.')
