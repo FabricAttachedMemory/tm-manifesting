@@ -22,11 +22,16 @@ from tmms.utils import utils
 from tmms.utils import core_utils
 from tmms.utils import file_utils
 from tmms.utils import customize_node
+from tmms.utils import logging
 from configs.build_config import ManifestingConfiguration
+
+LOGGER = None
+VERBOSE = False
 
 
 def customize_golden(manconfig, golden_tar, build_dir):
     '''Combine /etc/tmms settings and some hardcoded values.'''
+    #FIXME: make it a config file
     arg_values = {
         'is_golden' : True, # Modifies a lot of behavior in customize_node
         'hostname' : 'golden',
@@ -41,17 +46,17 @@ def customize_golden(manconfig, golden_tar, build_dir):
         'golden_tar' : golden_tar,
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
-        'verbose' : True,
+        'verbose' : VERBOSE,
         'debug' : True,         # prevent fork/exec
         'logger' : None
     }
 
-    try:
-        response = customize_node.execute(argparse.Namespace(**arg_values))
-    except Exception as err:
-        _, _, exc_tb = sys.exc_info()
-        raise RuntimeError('%s:%s\n %s\n' %\
-                            (os.path.basename(__file__), exc_tb.tb_lineno, err))
+    response = customize_node.execute(argparse.Namespace(**arg_values))
+
+    if response['status'] >= 400:
+        msg = '\n !!! -- Customization stage ended with ERROR(s) -- !!!\n%s' %\
+                response['message']
+        raise RuntimeError(msg)
 
     golden_dir = os.path.dirname(golden_tar)
     core_utils.make_tar(build_dir + '/golden.arm.tar', build_dir + '/untar')
@@ -138,7 +143,11 @@ def debootstrap_image(manconfig, vmd_path=None):
         return True
 
     errors = [ e for e in contents if 'WARN' in e or 'ERROR' in e ]
-    #logging.error(''.join(errors), file=sys.stderr)  # already have newlines
+    LOGGER = logging.tmmsLogger('golden', destdir + '/build.log')
+
+    if LOGGER is not None: #sanity
+        LOGGER.error(''.join(errors), file=sys.stderr)  # already have newlines
+
     raise RuntimeError('vmdebootstrap failed, consult %s' % vmdlog)
 
 
@@ -150,7 +159,8 @@ def download_image(img_path, destination):
     if isinstance(img_path, list):
         img_path = img_path[0]
 
-    print(' - Getting golden image from %s' % (img_path))
+    if VERBOSE:
+        print(' - Getting golden image from %s' % (img_path))
     file_utils.from_url_or_local(img_path, destination)
 
 
@@ -160,12 +170,13 @@ def main(args):
     vmdebootstrap.  Return None or raise error.
     """
     assert os.geteuid() == 0, 'This script requires root permissions'
+    VERBOSE = args.verbose
 
     supplied_image = getattr(args, 'sysimage', None)
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('TMCONFIG', ))
-#    assert not missing, 'tmms config file is missing %s' % missing
+
     golden_tar = manconfig['GOLDEN_IMAGE']
     golden_dir = os.path.dirname(golden_tar)
     golden_custom = golden_dir + '_custom'
