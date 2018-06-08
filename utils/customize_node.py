@@ -61,13 +61,6 @@ def extract_bootfiles(args, keep_kernel=False):
     vmlinuz = glob.glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
     initrd = glob.glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
 
-    is_force_keep_kernel = False
-    # 'manifest' param may not exist when building golden image.
-    if hasattr(args, 'manifest'):
-        #override 'keep_kernel' if user used 'keep_kernel' in the manifest
-        is_force_keep_kernel = getattr(args.manifest, 'keep_kernel', False)
-        keep_kernel = is_force_keep_kernel
-
     #Note: also extract config-* and System.map* files installed with kernel.
     misc = glob.glob('%s/config*' % boot_dir)
     misc.extend(glob.glob('%s/System.map*' % boot_dir))
@@ -292,9 +285,13 @@ def set_client_id(args):
 
 def hack_LFS_autostart(args):
     """
+    FIXME: DEPRECATED. Seems like we don't need it anymore.
+
         2016-11-10 SFW is still not supplying ACPI info for physloc but we
     have sufficient need and confidence to require it.  Work around it.
     This must be called before rewrite_rclocal().
+
+    NOTE: we need that for FAME images.
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :param 'node_id': [int] expanded into R:E:N.
@@ -533,9 +530,11 @@ def rewrite_rclocal(args):
         update_status(args, ' - ! - Skipping "rewrite_rclocal"! "rclocal" in "args" is None.')
         return
 
+    '''
     if getattr(args, 'manifest', None) is None:
         update_status(args, ' - ! - Skipping "rewrite_rclocal"! "manifest" in "args" is None.')
         return
+    '''
 
     update_status(args, 'Rewriting /etc/rc.local')
 
@@ -826,9 +825,11 @@ def customize_grub(args):
         COnfigure grub's config entry with a custom kernel command line (if
     presented in the manifest).
     """
+    '''
     if getattr(args, 'manifest', None) is None:
         update_status(args, ' - ! - Skipping "customize_grub"! "manifest" is None.')
         return
+    '''
 
     if getattr(args, 'tftp_dir', None) is None:
         update_status(args, ' - ! - Skipping "customize_grub"! "tftp_dir" is None.')
@@ -1127,6 +1128,13 @@ def execute(args):
     if getattr(args, 'is_golden', None) is None:    # set in setup_golden.py
         args.is_golden = False
 
+    # We keep kernel in boot when building golden image. Also, by default,
+    # kernel is moved from boot/ for all of the new system images. However,
+    # user may choose to keep kernel for their images, by using "keep_kernel"
+    # flag in 'manifest' json.
+    is_keep_kernel = args.is_golden
+    getattr(args.manifest, 'keep_kernel', args.is_golden)
+
     logger = getattr(args, 'logger', None)
 
     if not args.debug:
@@ -1177,7 +1185,7 @@ def execute(args):
         args.new_fs_dir = core_utils.untar(args.build_dir + '/untar/', args.golden_tar)
 
         # Move kernel that comes with golden image.
-        extract_bootfiles(args, args.is_golden)
+        extract_bootfiles(args, is_keep_kernel)
 
         set_foreign_package(args, 'qemu-aarch64-static')
 
@@ -1200,7 +1208,7 @@ def execute(args):
         install_packages(args)
 
         #Move installed "kernel" from boot/ (if any).
-        extract_bootfiles(args, args.is_golden)
+        extract_bootfiles(args, is_keep_kernel)
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)
