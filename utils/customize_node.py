@@ -48,8 +48,11 @@ def extract_bootfiles(args, keep_kernel=False):
     is an error (no way to choose programmatically).  Let the caller decide
     if zero kernels is an error.
 
-    :param 'args.build_dir': [str] where to move the unecessary files.
-    :param 'args.new_fs_dir': [str] where to find the unecessary files.
+    :param 'args' argparse.Namespace()
+        .build_dir: [str] where to move the unecessary files.
+        .new_fs_dir': [str] where to find the unecessary files.
+        .manifest.keep_kernel: user may choose for keep kernel in boot/
+
     :param 'keep_kernel': [bool] True - keep, but copy into the build dir.
                                 False - move kernel from boot/.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
@@ -57,7 +60,8 @@ def extract_bootfiles(args, keep_kernel=False):
     boot_dir = '%s/boot/' % args.new_fs_dir
     vmlinuz = glob.glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
     initrd = glob.glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
-    #also extract config-* and System.map* files installed with kernel.
+
+    #Note: also extract config-* and System.map* files installed with kernel.
     misc = glob.glob('%s/config*' % boot_dir)
     misc.extend(glob.glob('%s/System.map*' % boot_dir))
 
@@ -77,9 +81,10 @@ def extract_bootfiles(args, keep_kernel=False):
     for source in vmlinuz + initrd + misc:            # move them all
         dest = '%s/%s' % (args.build_dir, os.path.basename(source))
         if keep_kernel:
-            assert file_utils.copy_target_into(source, dest), 'Copy of %s failed' % source
+            file_utils.copy_target_into(source, dest)
         else:
-            assert file_utils.move_target(source, dest), 'Move of %s failed' % source
+            file_utils.move_target(source, dest)
+
         if '/vmlinuz' in dest:
             args.vmlinuz_golden = dest
 
@@ -188,9 +193,11 @@ def set_apt_proxy(args):
     # insufficient.  Either way, get the proxies from os.environ.
     path = args.new_fs_dir + '/etc/apt/apt.conf.d'
     file_utils.make_dir(path)
-    path += '/00FAMproxy.conf'  # !!! FIXME: no hardcoded custom file names !!!
+    path += '/00TMMS.conf'
     args.apt_dot_conf = path    # for post-processing
-    if not args.is_golden:      # One final post-processing step is done later
+
+    # One final post-processing step is done later
+    if not args.is_golden:
         return
 
     # FIXME: it's really dependent on xxx_mirror saying locahost, but this
@@ -223,6 +230,7 @@ def add_other_mirror(args):
     args.other_list = '%s/etc/apt/sources.list.d' % args.new_fs_dir
     file_utils.make_dir(args.other_list)
     args.other_list += '/other.list'        # For post-processing
+
     if not args.is_golden or not hasattr(args, 'other_mirrors'):
         return
 
@@ -277,9 +285,13 @@ def set_client_id(args):
 
 def hack_LFS_autostart(args):
     """
+    FIXME: DEPRECATED. Seems like we don't need it anymore.
+
         2016-11-10 SFW is still not supplying ACPI info for physloc but we
     have sufficient need and confidence to require it.  Work around it.
     This must be called before rewrite_rclocal().
+
+    NOTE: we need that for FAME images.
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :param 'node_id': [int] expanded into R:E:N.
@@ -518,9 +530,11 @@ def rewrite_rclocal(args):
         update_status(args, ' - ! - Skipping "rewrite_rclocal"! "rclocal" in "args" is None.')
         return
 
+    '''
     if getattr(args, 'manifest', None) is None:
         update_status(args, ' - ! - Skipping "rewrite_rclocal"! "manifest" in "args" is None.')
         return
+    '''
 
     update_status(args, 'Rewriting /etc/rc.local')
 
@@ -811,9 +825,11 @@ def customize_grub(args):
         COnfigure grub's config entry with a custom kernel command line (if
     presented in the manifest).
     """
+    '''
     if getattr(args, 'manifest', None) is None:
         update_status(args, ' - ! - Skipping "customize_grub"! "manifest" is None.')
         return
+    '''
 
     if getattr(args, 'tftp_dir', None) is None:
         update_status(args, ' - ! - Skipping "customize_grub"! "tftp_dir" is None.')
@@ -1118,8 +1134,15 @@ def execute(args):
         args.debug = False
     if getattr(args, 'verbose', None) is None:
         args.verbose = False
-    if getattr(args, 'is_golden', None) is None:    # setup_golden.py
+    if getattr(args, 'is_golden', None) is None:    # set in setup_golden.py
         args.is_golden = False
+
+    # We keep kernel in boot when building golden image. Also, by default,
+    # kernel is moved from boot/ for all of the new system images. However,
+    # user may choose to keep kernel for their images, by using "keep_kernel"
+    # flag in 'manifest' json.
+    is_keep_kernel = args.is_golden
+    getattr(args.manifest, 'keep_kernel', args.is_golden)
 
     logger = getattr(args, 'logger', None)
 
@@ -1171,13 +1194,12 @@ def execute(args):
         args.new_fs_dir = core_utils.untar(args.build_dir + '/untar/', args.golden_tar)
 
         # Move kernel that comes with golden image.
-        extract_bootfiles(args, args.hostname == 'golden')
+        extract_bootfiles(args, is_keep_kernel)
 
         set_foreign_package(args, 'qemu-aarch64-static')
 
         # Golden image contrived args has no "manifest" attribute.  Besides,
         # a manifest should not contain distro-specific data structures.
-        # set_apt_conf(apt_conf_path, args.manifest.get('apt_conf', ''), args)
         cleanup_sources_list(args)
         set_apt_proxy(args)
         add_other_mirror(args)
@@ -1195,7 +1217,7 @@ def execute(args):
         install_packages(args)
 
         #Move installed "kernel" from boot/ (if any).
-        extract_bootfiles(args, args.hostname == 'golden')
+        extract_bootfiles(args, is_keep_kernel)
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)
@@ -1205,13 +1227,8 @@ def execute(args):
         rewrite_rclocal(args)
 
         #------------------------------------------------------------------
-        # If making a new golden image, restore the kernel.  Otherwise
-        # assemble the bootable PXE images.
-        # ZACH: Why did I do this? Need to leave a "useful" comment next time...
+
         if args.is_golden:
-            #update_status(args, 'Restoring %s to golden image' % args.vmlinuz_golden)
-            #copy_target_into(
-            #    args.vmlinuz_golden, '%s/untar/boot/' % args.build_dir)
             response['message'] = 'Golden image ready for use'
             status = 'ready'
         else:
@@ -1221,7 +1238,6 @@ def execute(args):
 
             # Free up space someday, but not during active development
             # remove_target(args.build_dir)
-
             # Leave a copy of the controlling manifest for post-mortems
             if getattr(args, 'manifest', None) is not None:
                 manifest_tftp_file = args.manifest.namespace.replace('/', '.')

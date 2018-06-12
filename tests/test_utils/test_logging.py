@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from shutil import rmtree
 
-from tmms.utils.logging import tmmsLogger
+from tmms.utils import logging
 from pdb import set_trace
 
 
@@ -23,8 +23,8 @@ class UtilsLoggerTest(unittest.TestCase):
     def setUp(cls):
         if os.path.exists(cls.logfile):     # From previous run
             os.remove(cls.logfile)
-        tmmsLogger.reconfigure_rootlogger(use_file=cls.logfile)
-        cls.logger = tmmsLogger(cls.app_name)
+        logging.tmmsLogger.reconfigure_rootlogger(use_file=cls.logfile)
+        cls.logger = logging.tmmsLogger(cls.app_name)
 
     '''
     @classmethod
@@ -62,7 +62,7 @@ class UtilsLoggerTest(unittest.TestCase):
         debug_logfile = '/tmp/unittest_logging.debug'
         if os.path.isfile(debug_logfile):
             os.remove(debug_logfile)
-        self.logger = tmmsLogger(
+        self.logger = logging.tmmsLogger(
             'test_debug_log', use_file=debug_logfile, verbose=True)
         self.logger(msg, 'DEBUG')
 
@@ -151,6 +151,7 @@ class UtilsLoggerTest(unittest.TestCase):
         except RuntimeError as e:
             threwRuntimeError = True
         self.assertTrue(threwRuntimeError, 'No RuntimeError after shutdown()')
+
 
     def isEntryInLog(self, entry, level=None, logfile=None):
         log_entries = None
