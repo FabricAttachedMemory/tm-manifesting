@@ -26,7 +26,7 @@ import dns.resolver as RES
 import os
 import netaddr
 import netifaces as NIF
-import requests
+import requests as HTTP_REQUESTS
 import sys
 import time
 
