@@ -307,7 +307,9 @@ def bind_node_to_manifest(nodespec=None):
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
         assert manifest is not None, "The specified manifest does not exist."
+
         manifest.validate_packages_tasks()
+
         response = build_node(manifest, node_coord)
     except werkzeug.exceptions.BadRequest as e:
         response_msg = flask.jsonify({'status' : e.get_response()})

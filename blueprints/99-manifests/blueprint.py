@@ -80,7 +80,7 @@ def webpage_upload():
         # generic builtin open() and copies file.stream()
         # file.save(os.path.join(BP.UPLOADS, fname))
         contentstr = file.read().decode()
-        m = manifest_cfg.ManifestDestiny('', '', contentstr)
+        m = manifest_cfg.ManifestDestiny('', '', BP, contentstr)
         msg = m.response.data.decode()
         _load_data()
         return render_all(okmsg=msg + ': ' + file.filename)
@@ -200,7 +200,7 @@ def api_upload(prefix=''):
             BP.logger(response)    # level based on status cod3
             return response
         else:
-            manifest = manifest_cfg.ManifestDestiny(prefix, '', contentstr)
+            manifest = manifest_cfg.ManifestDestiny(prefix, '', BP, contentstr)
         response = manifest.response
 
     except Exception as e:
@@ -270,7 +270,7 @@ def _load_data():
     ]
     for dirpath, basename in manfiles:
         try:
-            this = manifest_cfg.ManifestDestiny(dirpath, basename)
+            this = manifest_cfg.ManifestDestiny(dirpath, basename, BP)
 
             # Start with a full path, then a relative part, then the namespace
             manname = os.path.join(dirpath, basename)   # Build a full path
