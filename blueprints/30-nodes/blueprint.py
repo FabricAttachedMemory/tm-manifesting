@@ -358,7 +358,6 @@ def build_node(manifest, node_coord):
 
     # Optional manifest fields not in the ERS but useful during bringup and
     # demos.  Look for both new and old forms for now (March 2018).
-    # FIXME: next 6 lines are redundant! Keep and access those properties from manifest.
     privkey = manifest.thedict.get('privkey', None) or \
         manifest.thedict.get('l4tm_privkey', None)
     pubkey = manifest.thedict.get('pubkey', None) or \
