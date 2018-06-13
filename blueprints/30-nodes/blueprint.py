@@ -379,10 +379,10 @@ def build_node(manifest, node_coord):
         'other_mirrors': BP.config.get('OTHER_MIRRORS', None), #NEW (08-28-17)
         'packages':      packages,
         'tasks':         tasks,
-        'privkey':       privkey, # FIXME: in manifest
-        'pubkey':        pubkey, # FIXME: in manifest
-        'postinst':      postinst, # FIXME: in manifest
-        'rclocal':       rclocal, # FIXME: in manifest
+        'privkey':       privkey,
+        'pubkey':        pubkey,
+        'postinst':      postinst,
+        'rclocal':       rclocal,
         'golden_tar':    golden_tar,
         'build_dir':     build_dir,
         'tftp_dir':      tftp_dir,
