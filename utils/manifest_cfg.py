@@ -1,4 +1,8 @@
 #!/usr/bin/python3
+import os
+import flask
+import json
+import werkzeug
 
 
 class ManifestDestiny(object):
@@ -32,20 +36,21 @@ class ManifestDestiny(object):
     def validate_packages_tasks(self):
         '''Defer until binding time'''
         man = self.thedict
-        nosuch = BP.mainapp.blueprints['package'].filter(man['packages'])
+        nosuch = self.BP.mainapp.blueprints['package'].filter(man['packages'])
         #FIXME: Validate PACKAGE exist in mirror!
         assert not nosuch, 'no such package(s): ' + ', '.join(nosuch)
 
-        nosuch = BP.mainapp.blueprints['task'].filter(man['tasks'])
+        nosuch = self.BP.mainapp.blueprints['task'].filter(man['tasks'])
         assert not nosuch, 'no such task(s): ' + ', '.join(nosuch)
 
 
-    def __init__(self, dirpath, basename, contentstr=None):
+    def __init__(self, dirpath, basename, BP, contentstr=None):
         '''If contentstr is given, it is an upload, else read a file.'''
         assert '/' not in basename, 'basename is not a leaf element'
         self.basename = basename
+        self.BP = BP
         # excludes basename, more like a namespace
-        self.prefix = dirpath.split(BP.UPLOADS)[-1].strip('/')
+        self.prefix = dirpath.split(self.BP.UPLOADS)[-1].strip('/')
         if contentstr is not None:
             # some kind of upload, basename not used
             self.thedict = self.validate_manifest(contentstr)
@@ -61,8 +66,8 @@ class ManifestDestiny(object):
             fname = werkzeug.secure_filename(self.thedict['name'])
             assert fname == self.thedict['name'], 'Illegal (file) name'
 
-            self.dirpath = os.path.join(BP.UPLOADS, dirpath)
-            self.manifest_file = BP.UPLOADS + '/' + self.namespace
+            self.dirpath = os.path.join(self.BP.UPLOADS, dirpath)
+            self.manifest_file = self.BP.UPLOADS + '/' + self.namespace
 
             if os.path.exists(self.manifest_file):
                 self.response = flask.make_response(
