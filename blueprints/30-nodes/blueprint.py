@@ -307,7 +307,9 @@ def bind_node_to_manifest(nodespec=None):
         manifest = BP.manifest_lookup(manname)
         resp_status = 404
         assert manifest is not None, "The specified manifest does not exist."
+
         manifest.validate_packages_tasks()
+
         response = build_node(manifest, node_coord)
     except werkzeug.exceptions.BadRequest as e:
         response_msg = flask.jsonify({'status' : e.get_response()})
@@ -356,6 +358,7 @@ def build_node(manifest, node_coord):
 
     # Optional manifest fields not in the ERS but useful during bringup and
     # demos.  Look for both new and old forms for now (March 2018).
+    # FIXME: next 6 lines are redundant! Keep and access those properties from manifest.
     privkey = manifest.thedict.get('privkey', None) or \
         manifest.thedict.get('l4tm_privkey', None)
     pubkey = manifest.thedict.get('pubkey', None) or \
@@ -376,10 +379,10 @@ def build_node(manifest, node_coord):
         'other_mirrors': BP.config.get('OTHER_MIRRORS', None), #NEW (08-28-17)
         'packages':      packages,
         'tasks':         tasks,
-        'privkey':       privkey,
-        'pubkey':        pubkey,
-        'postinst':      postinst,
-        'rclocal':       rclocal,
+        'privkey':       privkey, # FIXME: in manifest
+        'pubkey':        pubkey, # FIXME: in manifest
+        'postinst':      postinst, # FIXME: in manifest
+        'rclocal':       rclocal, # FIXME: in manifest
         'golden_tar':    golden_tar,
         'build_dir':     build_dir,
         'tftp_dir':      tftp_dir,

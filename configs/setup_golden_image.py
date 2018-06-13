@@ -33,6 +33,7 @@ def customize_golden(manconfig, golden_tar, build_dir):
     '''Combine /etc/tmms settings and some hardcoded values.'''
     #FIXME: make it a config file
     arg_values = {
+        'manifest' : None,
         'is_golden' : True, # Modifies a lot of behavior in customize_node
         'hostname' : 'golden',
         'node_coord' : 'golden_custom',
