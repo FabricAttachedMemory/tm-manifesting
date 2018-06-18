@@ -237,3 +237,31 @@ def create_loopback_files():
         fname = '/dev/loop%d' % i
         file_utils.mknod(fname, 'block', 7, i)
         file_utils.chgrp(fname, 'disk')
+
+
+def parse_vmd(path):
+    """
+        Parse a VMD-like config (format: "variable_name=vlaue" per line) into a
+    dictionary: <variable_name> : <value>.
+
+    @param path: <str> path to a VMD-like config file to be parsed.
+    @return: dictionary of config file's properties.
+    """
+    if not os.path.exists(path):
+        return {}
+
+    vmd_data = {}
+    file_content = ''
+    # Reading VMD(debootstrap) config file and getting Raw data.
+    with open(path, 'r') as file_obj:
+        file_content = file_obj.read()
+
+    # Parsing VMD's "variable=value" format into dictionary
+    for line in file_content.split('\n'):
+        vmd_param = line.split('=')
+        if len(vmd_param) != 2:
+            continue
+
+        vmd_data[vmd_param[0].strip()] = vmd_param[1].strip()
+
+    return vmd_data

@@ -23,6 +23,7 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
+import glob
 import inspect
 import os
 import sys
@@ -154,6 +155,20 @@ class ManifestingConfiguration(object):
     @property
     def tftp_keys(self):
         return frozenset(self._tftp_env)
+
+    @property
+    def golden_image(self):
+        path = self._settings['FILESYSTEM_IMAGES'] + '/golden/golden.*.tar'
+        found_tar = glob.glob(path)
+
+        if len(found_tar) == 0:
+            return None
+
+        if len(found_tar) > 1:
+            raise RuntimeError('More than one golden .tar found: %s' % found_tar)
+
+        return found_tar[0]
+
 
     def ratify(self, dontcare=None):
         '''Insure all keys and their associated data exist.'''
