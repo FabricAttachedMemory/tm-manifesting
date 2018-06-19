@@ -168,6 +168,14 @@ def download_image(img_path, destination):
 
     if VERBOSE:
         print(' - Getting golden image from %s' % (img_path))
+
+    #make sure downloaded golden has the right name format: "golden.ARCH.tar"
+    file_name = os.path.basename(img_path)
+    file_name_splitted = file_name.split('.')
+    if len(file_name_splitted) < 3:
+        raise RuntimeError('Wrong name format: %s expected "golden.ARCH.tar"' %\
+                            (file_name))
+
     file_utils.from_url_or_local(img_path, destination)
 
 
@@ -201,9 +209,8 @@ def main(args):
         debootstrap_image(manconfig, vmd_path=vmd_path)
     else:
         print(' - Skipping bootstrap stage...')
-        download_image(supplied_image, golden_dir)
+        download_image(supplied_image, manconfig.golden_dir)
 
-    #customize_golden(manconfig, golden_tar, golden_custom)
     customize_golden(manconfig)
 
 

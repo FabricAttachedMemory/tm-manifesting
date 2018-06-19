@@ -59,7 +59,6 @@ class ManifestingConfiguration(object):
     _manifest_env = (           # New directories are keyed from here
         'FILESYSTEM_IMAGES',
         'MANIFEST_UPLOADS',
-        #'GOLDEN_IMAGE'
     )
 
     _tftp_env = (
@@ -98,7 +97,6 @@ class ManifestingConfiguration(object):
         self._settings.update({
             'MANIFESTING_ROOT':     mroot,
             'FILESYSTEM_IMAGES':    fsimages,
-            #'GOLDEN_IMAGE':         self.golden_image,
             'MANIFEST_UPLOADS':     mroot + '/manifests',
             'DNSMASQ_CONFIGS':      mroot + '/dnsmasq',
 

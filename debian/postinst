@@ -85,7 +85,7 @@ if [ "$IsConfigure" == true ]; then
         fi
     fi
 
-    if [ -f /etc/tmconfig ] && [ -f /var/lib/tmms/sys-images/golden/golden.tar ]; then
+    if [ -f /etc/tmconfig ] && [ -f /var/lib/tmms/sys-images/golden/*.tar ]; then
         echo " --- Trying to start 'tm-manifest-server' systemctl service.... --- "
         bin/systemctl start tm-manifest-server || :
     else

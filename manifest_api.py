@@ -66,8 +66,9 @@ except ImportError as e:
 def create_app():
     ''' Create a Flask app to be used/regestered by available blueprints. '''
     mainapp = flask.Flask('tm_manifesting', static_url_path='/static')
+    #Need to have our custom config object from build_config.py, but want to keep
+    #flask's parameters as well.
     flask_cfg = mainapp.config
-    #mainapp.config.update(manconfig)
     mainapp.config = manconfig
     mainapp.config.update(flask_cfg)
 
