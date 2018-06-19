@@ -140,12 +140,11 @@ def _read_packages(full_source):
         msg += '  - Expected "deb http://mirror.url release ares"\n'
         msg += '  - Mirror provided: %s' % (full_source)
         raise RuntimeError(msg)
-
     # Reference:
     # https://github.com/raumkraut/python-debian/blob/master/README.deb822
     repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (components.url, components.release)
     for area in components.areas:
-        for arch in ('binary-all', 'binary-arm64'):
+        for arch in ('binary-all', 'binary-' + BP.config.arch):
             retrieveURL = repo % (area, arch)
             BP.logger.info('Loading/processing "%s"' % retrieveURL)
             pkgresp = HTTP_REQUESTS.get(retrieveURL)

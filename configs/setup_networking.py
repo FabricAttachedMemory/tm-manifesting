@@ -329,10 +329,10 @@ class TMgrub(object):
                 assert len(answer) == 1
                 self.dnsmasq_defaultroute = 'dhcp-option=option:router,%s' % (
                     str(next(iter(answer)).address))
-            except (RES.NXDOMAIN, AssertionError) as e:
+            except (RES.NXDOMAIN, AssertionError) as err:
                 # Not fatal
-                print('Cannot DNS resolve "%s", manually fix dnsmasq config' %
-                    FQDN, file=sys.stderr)
+                print('Cannot DNS resolve "%s", manually fix dnsmasq config:\n - %s' %
+                    (FQDN, err), file=sys.stderr)
 
             if noDNS:
                 raise SystemExit(

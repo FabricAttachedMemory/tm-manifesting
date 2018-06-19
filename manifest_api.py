@@ -66,7 +66,11 @@ except ImportError as e:
 def create_app():
     ''' Create a Flask app to be used/regestered by available blueprints. '''
     mainapp = flask.Flask('tm_manifesting', static_url_path='/static')
-    mainapp.config.update(manconfig)
+    flask_cfg = mainapp.config
+    #mainapp.config.update(manconfig)
+    mainapp.config = manconfig
+    mainapp.config.update(flask_cfg)
+
     mainapp.config['tmconfig'] = tmconfig
 
     mainapp.config['API_VERSION'] = 1.0

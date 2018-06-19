@@ -31,7 +31,7 @@ VERBOSE = False
 
 def customize_golden(manconfig):
     '''Combine /etc/tmms settings and some hardcoded values.'''
-    build_dir = os.path.dirname(manconfig.golden_image)
+    build_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
     #FIXME: make it a config file
     arg_values = {
         'manifest' : None,
@@ -45,7 +45,7 @@ def customize_golden(manconfig):
         'repo_areas' : manconfig['DEBIAN_AREAS'],
         'other_mirrors' : manconfig['OTHER_MIRRORS'],
         'packages' : 'linux-image-4.14.0-l4fame-72708-ge6511d981425,l4fame-node',
-        'golden_tar' : manconfig.golden_image,
+        'golden_tar' : manconfig['GOLDEN_IMAGE'],
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
         'verbose' : VERBOSE,
@@ -60,8 +60,8 @@ def customize_golden(manconfig):
                 response['message']
         raise RuntimeError(msg)
 
-    golden_dir = os.path.dirname(manconfig.golden_image)
-    core_utils.make_tar(manconfig.golden_image, build_dir + '/untar')
+    golden_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
+    core_utils.make_tar(manconfig['GOLDEN_IMAGE'], build_dir + '/untar')
     file_utils.remove_target(build_dir + '/untar')
 
     if os.path.exists(golden_dir + '.raw'):
@@ -98,14 +98,11 @@ def debootstrap_image(manconfig, vmd_path=None):
         msg = 'Cannot find %s! Must be a filename or an absolute path!' % (vmdconfig)
         raise RuntimeError(msg)
 
-    #destfile = manconfig['GOLDEN_IMAGE']    # now I can have a KeyError
-    destfile = manconfig.golden_image    # now I can have a KeyError
+    destfile = manconfig['GOLDEN_IMAGE']    # now I can have a KeyError
     if destfile is None:
         vmd_data = core_utils.parse_vmd(vmdconfig)
         vmd_arch = vmd_data['arch'] #vmd config must have had "arch" property
         destfile = '%s/golden/golden.%s.tar' % (manconfig['FILESYSTEM_IMAGES'], vmd_arch)
-
-    return #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     #get directory of the golden image dest file to save build artifacts to
     destdir = os.path.realpath(os.path.dirname(destfile))
@@ -174,6 +171,13 @@ def download_image(img_path, destination):
     file_utils.from_url_or_local(img_path, destination)
 
 
+def clean_golden_dir(manconfig):
+    if os.path.exists(manconfig.golden_dir):
+        file_utils.remove_target(manconfig.golden_dir)
+
+    file_utils.make_dir(manconfig.golden_dir)
+
+
 def main(args):
     """
         Generate golden image into the manifesting work directory using
@@ -186,11 +190,7 @@ def main(args):
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('TMCONFIG', ))
-
-    #golden_tar = manconfig['GOLDEN_IMAGE']
-    #golden_dir = manconfig['FILESYSTEM_IMAGES'] + '/golden'
-    #golden_dir = os.path.dirname(golden_tar)
-    #golden_custom = golden_dir + '_custom'
+    clean_golden_dir(manconfig)
 
     # -- Maybe build 'raw' golden image using vmdebootstrap --
     if supplied_image is None:

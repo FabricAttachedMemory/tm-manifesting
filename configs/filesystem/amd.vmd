@@ -5,7 +5,7 @@
 # Features: variant
 
 [config]
-variant = buildd
+#variant = buildd
 verbose = True
 output =
 log-level = debug
