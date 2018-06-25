@@ -498,7 +498,7 @@ def main(args):
         Configure TFTP environment.
     """
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
-    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
+    missing = manconfig.ratify(dontcare=('GOLDEN_TAR', ))
     if missing:
         raise RuntimeError('\n'.join(missing))
 

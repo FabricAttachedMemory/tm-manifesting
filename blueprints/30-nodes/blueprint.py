@@ -331,8 +331,7 @@ def build_node(manifest, node_coord):
     :param 'node_coord': [int\str] node number or name.
     :return: flask's response data.
     """
-    #golden_tar = BP.config['GOLDEN_IMAGE']
-    golden_tar = BP.config.golden_image
+    golden_tar = BP.config['GOLDEN_TAR']
     if not os.path.exists(golden_tar):
         response_msg = flask.jsonify({'status' : 'Missing "Golden Image"!' })
         return flask.make_response(response_msg, 505)

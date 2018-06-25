@@ -129,8 +129,8 @@ class ManifestingConfiguration(object):
     def get(self, key, default_value=None):
         ''' Same functionality as of dict.get(). Return a key if in the settings,
         or default_value instead. '''
-        if key == 'GOLDEN_IMAGE': #golden name is dynamically calculated
-            return self.golden_image
+        if key == 'GOLDEN_TAR': #golden name is dynamically calculated
+            return self.golden_tar
 
         return self._settings.get(key, default_value)
 
@@ -140,8 +140,8 @@ class ManifestingConfiguration(object):
     # Duck-type a dict.  It's empty before extract_flask_config().  The
     # flask routines turn the string value 'None' into Python None.
     def __getitem__(self, key):
-        if key == 'GOLDEN_IMAGE': #golden name is dynamically calculated
-            return self.golden_image
+        if key == 'GOLDEN_TAR': #golden name is dynamically calculated
+            return self.golden_tar
 
         return self._settings.get(key)
 
@@ -163,7 +163,7 @@ class ManifestingConfiguration(object):
         return frozenset(self._tftp_env)
 
     @property
-    def golden_image(self):
+    def golden_tar(self):
         path = self.golden_dir + '/golden.*.tar'
         found_tar = glob.glob(path)
 
@@ -185,7 +185,7 @@ class ManifestingConfiguration(object):
             Get golden image architecture from its file name.
         Golden image file name format: golden.ARCH_NAME.tar
         '''
-        golden_file = self.get('GOLDEN_IMAGE')
+        golden_file = self.get('GOLDEN_TAR')
         if golden_file is None:
             return None
 

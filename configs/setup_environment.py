@@ -34,7 +34,7 @@ def _create_env(manconfig, fields, ignore=None):
 
     :param 'fields': [list] variable names that determines path values of the
                     manifesting entities.
-    :param 'ignore': (tuple) of fields to ignore, e.g. ('GOLDEN_IMAGE', )
+    :param 'ignore': (tuple) of fields to ignore, e.g. ('GOLDEN_TAR', )
     """
 
     if ignore is None:
@@ -123,8 +123,8 @@ def main(args):
 
     print(' ---- Creating manifest environment ---- ')
     fields = manconfig.manifesting_keys
-    _create_env(manconfig, fields, ignore=('GOLDEN_IMAGE',))   # It's a file
-    golden_img_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
+    _create_env(manconfig, fields, ignore=('GOLDEN_TAR',))   # It's a file
+    golden_img_dir = os.path.dirname(manconfig['GOLDEN_TAR'])
     file_utils.make_dir(golden_img_dir)
 
     print(' ---- Creating TFTP environment ---- ')
