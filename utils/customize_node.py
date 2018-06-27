@@ -1098,6 +1098,15 @@ def compress_bootfiles(args, cpio_file):
 
     return vmlinuz_gzip, cpio_gzip
 
+
+def get_foreign_from_vmd(args):
+    vmd_file = args.build_dir + '/vmd' #placed by configs/setup_golden.py
+    if not os.path.exists(vmd_file):
+        msg = 'No VMD file used to build golden image found at:\n - %s ' % vmd_file
+        update_status(args, msg)
+        return
+
+
 #==============================================================================
 
 

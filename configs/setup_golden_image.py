@@ -29,8 +29,9 @@ LOGGER = None
 VERBOSE = False
 
 
-def customize_golden(manconfig, golden_tar, build_dir):
+def customize_golden(manconfig):
     '''Combine /etc/tmms settings and some hardcoded values.'''
+    build_dir = os.path.dirname(manconfig['GOLDEN_TAR'])
     #FIXME: make it a config file
     arg_values = {
         'manifest' : None,
@@ -44,7 +45,7 @@ def customize_golden(manconfig, golden_tar, build_dir):
         'repo_areas' : manconfig['DEBIAN_AREAS'],
         'other_mirrors' : manconfig['OTHER_MIRRORS'],
         'packages' : 'linux-image-4.14.0-l4fame-72708-ge6511d981425,l4fame-node',
-        'golden_tar' : golden_tar,
+        'golden_tar' : manconfig['GOLDEN_TAR'],
         'build_dir' : build_dir,
         'status_file' : build_dir + '/status.json',
         'verbose' : VERBOSE,
@@ -59,15 +60,15 @@ def customize_golden(manconfig, golden_tar, build_dir):
                 response['message']
         raise RuntimeError(msg)
 
-    golden_dir = os.path.dirname(golden_tar)
-    core_utils.make_tar(build_dir + '/golden.arm.tar', build_dir + '/untar')
+    golden_dir = os.path.dirname(manconfig['GOLDEN_TAR'])
+    core_utils.make_tar(manconfig['GOLDEN_TAR'], build_dir + '/untar')
     file_utils.remove_target(build_dir + '/untar')
 
     if os.path.exists(golden_dir + '.raw'):
         file_utils.remove_target(golden_dir +'.raw')
 
-    move_dir(golden_dir, golden_dir + '.raw', verbose=True)
-    move_dir(build_dir, golden_dir, verbose=True)
+    #move_dir(golden_dir, golden_dir + '.raw', verbose=True)
+    #move_dir(build_dir, golden_dir, verbose=True)
 
     print(' -- Customization stage is finished. -- ')
 
@@ -97,7 +98,12 @@ def debootstrap_image(manconfig, vmd_path=None):
         msg = 'Cannot find %s! Must be a filename or an absolute path!' % (vmdconfig)
         raise RuntimeError(msg)
 
-    destfile = manconfig['GOLDEN_IMAGE']    # now I can have a KeyError
+    destfile = manconfig['GOLDEN_TAR']    # now I can have a KeyError
+    if destfile is None:
+        vmd_data = core_utils.parse_vmd(vmdconfig)
+        vmd_arch = vmd_data['arch'] #vmd config must have had "arch" property
+        destfile = '%s/golden/golden.%s.tar' % (manconfig['FILESYSTEM_IMAGES'], vmd_arch)
+
     #get directory of the golden image dest file to save build artifacts to
     destdir = os.path.realpath(os.path.dirname(destfile))
     statvfs = os.statvfs(destdir)
@@ -106,7 +112,7 @@ def debootstrap_image(manconfig, vmd_path=None):
         raise RuntimeError('Need at least 10G on "%s"' % (destdir))
 
     vmdlog = destdir + '/vmdebootstrap.log'
-    vmdimage = destdir + '/golden.arm.img'
+    vmdimage = destdir + '/golden.img'
 
     cmd = '''{vmdebootstrap} --no-default-configs
              --config={vmd_cfg}
@@ -162,7 +168,22 @@ def download_image(img_path, destination):
 
     if VERBOSE:
         print(' - Getting golden image from %s' % (img_path))
+
+    #make sure downloaded golden has the right name format: "golden.ARCH.tar"
+    file_name = os.path.basename(img_path)
+    file_name_splitted = file_name.split('.')
+    if len(file_name_splitted) < 3:
+        raise RuntimeError('Wrong name format: %s expected "golden.ARCH.tar"' %\
+                            (file_name))
+
     file_utils.from_url_or_local(img_path, destination)
+
+
+def clean_golden_dir(manconfig):
+    if os.path.exists(manconfig.golden_dir):
+        file_utils.remove_target(manconfig.golden_dir)
+
+    file_utils.make_dir(manconfig.golden_dir)
 
 
 def main(args):
@@ -177,10 +198,7 @@ def main(args):
 
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
     missing = manconfig.ratify(dontcare=('TMCONFIG', ))
-
-    golden_tar = manconfig['GOLDEN_IMAGE']
-    golden_dir = os.path.dirname(golden_tar)
-    golden_custom = golden_dir + '_custom'
+    clean_golden_dir(manconfig)
 
     # -- Maybe build 'raw' golden image using vmdebootstrap --
     if supplied_image is None:
@@ -191,9 +209,9 @@ def main(args):
         debootstrap_image(manconfig, vmd_path=vmd_path)
     else:
         print(' - Skipping bootstrap stage...')
-        download_image(supplied_image, golden_tar)
+        download_image(supplied_image, manconfig.golden_dir)
 
-    customize_golden(manconfig, golden_tar, golden_custom)
+    customize_golden(manconfig)
 
 
 if __name__ == '__main__':

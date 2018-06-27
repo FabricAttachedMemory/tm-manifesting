@@ -113,7 +113,7 @@ def parse_cmdline_args(extra_args_msg):
     parser.add_argument('--sysimage', nargs=1, default=None,
                         help='Path to golden image to be coppied from either '\
                             ' local path or url. This will skip debootstrap stage!')
-    parser.add_argument('--vmd-cfg', default='golden.arm.vmd',
+    parser.add_argument('--vmd-cfg', default='arm.vmd',
                         help='VMD Config name to be used by golden image. ' +\
                             'It is either an absolute path or a file name in ' +\
                             'tm-manifesting/config/filesystem/.')
