@@ -124,8 +124,7 @@ def main(args):
     print(' ---- Creating manifest environment ---- ')
     fields = manconfig.manifesting_keys
     _create_env(manconfig, fields, ignore=('GOLDEN_TAR',))   # It's a file
-    golden_img_dir = os.path.dirname(manconfig['GOLDEN_TAR'])
-    file_utils.make_dir(golden_img_dir)
+    file_utils.make_dir(manconfig.golden_dir)
 
     print(' ---- Creating TFTP environment ---- ')
     # Need to remove the TFTP_IMAGES directory first.   We don't want
