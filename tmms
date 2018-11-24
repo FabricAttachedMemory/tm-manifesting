@@ -70,5 +70,3 @@ PXE_SUBNET = 'None'     # 'None' falls back to external DNS
 # Two EFI files live here
 
 GRUB_EFI_BASE_URI = 'http://rocky42.americas.hpqcorp.net/MFT/grub/'
-
-IMAGE_INTERFACE = 'enp27s0f0np0'

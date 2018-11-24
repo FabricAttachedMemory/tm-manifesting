@@ -23,7 +23,7 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
-from collections import namedtuple
+import glob
 import inspect
 import os
 import sys
@@ -59,7 +59,6 @@ class ManifestingConfiguration(object):
     _manifest_env = (           # New directories are keyed from here
         'FILESYSTEM_IMAGES',
         'MANIFEST_UPLOADS',
-        'GOLDEN_IMAGE'
     )
 
     _tftp_env = (
@@ -98,7 +97,6 @@ class ManifestingConfiguration(object):
         self._settings.update({
             'MANIFESTING_ROOT':     mroot,
             'FILESYSTEM_IMAGES':    fsimages,
-            'GOLDEN_IMAGE':         fsimages + '/golden/golden.arm.tar',
             'MANIFEST_UPLOADS':     mroot + '/manifests',
             'DNSMASQ_CONFIGS':      mroot + '/dnsmasq',
 
@@ -128,15 +126,23 @@ class ManifestingConfiguration(object):
                 raise ValueError('\n'.join(errors))
 
 
-    def get(self, key, default_value):
+    def get(self, key, default_value=None):
         ''' Same functionality as of dict.get(). Return a key if in the settings,
         or default_value instead. '''
+        if key == 'GOLDEN_TAR': #golden name is dynamically calculated
+            return self.golden_tar
+
         return self._settings.get(key, default_value)
 
+    def update(self, new_dict):
+        self._settings.update(new_dict)
 
     # Duck-type a dict.  It's empty before extract_flask_config().  The
     # flask routines turn the string value 'None' into Python None.
     def __getitem__(self, key):
+        if key == 'GOLDEN_TAR': #golden name is dynamically calculated
+            return self.golden_tar
+
         return self._settings.get(key)
 
     def __setitem__(self, key, value):
@@ -155,6 +161,40 @@ class ManifestingConfiguration(object):
     @property
     def tftp_keys(self):
         return frozenset(self._tftp_env)
+
+    @property
+    def golden_tar(self):
+        path = self.golden_dir + '/golden.*.tar'
+        found_tar = glob.glob(path)
+
+        if len(found_tar) == 0:
+            return None
+
+        if len(found_tar) > 1:
+            raise RuntimeError('More than one golden .tar found: %s' % found_tar)
+
+        return found_tar[0]
+
+    @property
+    def golden_dir(self):
+        return self.get('FILESYSTEM_IMAGES') + '/golden'
+
+    @property
+    def arch(self):
+        '''
+            Get golden image architecture from its file name.
+        Golden image file name format: golden.ARCH_NAME.tar
+        '''
+        golden_file = self.get('GOLDEN_TAR')
+        if golden_file is None:
+            return None
+
+        name_split = golden_file.split('.')
+        if len(name_split) < 3:
+            #This should never happened! setup_golden_image must check formats
+            raise RuntimeError('Golden image name format error! %s' % name_split)
+
+        return name_split[1] # ['golden', 'ARCH_NAME', 'tar']
 
     def ratify(self, dontcare=None):
         '''Insure all keys and their associated data exist.'''

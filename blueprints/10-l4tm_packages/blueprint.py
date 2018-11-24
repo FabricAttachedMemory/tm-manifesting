@@ -9,24 +9,24 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
-from collections import defaultdict
-from flask import Blueprint, render_template, request, jsonify, make_response
+import collections
+from debian.deb822 import Packages as debPackages
+import flask
 import gzip
+import io
 import logging
 import os
+from pdb import set_trace
 import requests as HTTP_REQUESTS
 import sys
 
-from debian.deb822 import Packages
-from io import BytesIO, StringIO
-from pdb import set_trace
+from tmms.utils import core_utils
 
-from tmms.utils import utils
 
 _ERS_element = 'package'
 
 # See the README in the main templates directory.
-BP = Blueprint(_ERS_element, __name__)
+BP = flask.Blueprint(_ERS_element, __name__)
 
 ###########################################################################
 # HTML
@@ -40,23 +40,23 @@ def _webpage(name=None):
         _load_data()
 
     if name is None:    # overloaded detection of singular rule
-        return render_template(
+        return flask.render_template(
             _ERS_element + '_all.tpl',
             label=__doc__,
             keys=sorted(_data.keys()),
             alphabetic_sets=alphabetic_sets(_data.keys()),
-            base_url=request.url)
+            base_url=flask.request.url)
 
-    return render_template(
+    return flask.render_template(
         _ERS_element + '.tpl',
         label=__doc__,
         name=name,
-        base_url=request.url,
+        base_url=flask.request.url,
         itemdict=_data[name])
 
 
 def alphabetic_sets(data):
-    result = defaultdict(list)
+    result = collections.defaultdict(list)
     for val in data:
         if val[0].isalpha():
             result[val[0]].append(val)
@@ -89,12 +89,12 @@ def _api(name=None):
         if not packages:
             status_code = 204
 
-        return make_response(jsonify({ 'package': packages }), status_code)
+        return flask.make_response(flask.jsonify({ 'package': packages }), status_code)
 
     pkg = _data.get(name, None)
     if pkg is None:
         status_code = 404
-        return make_response(jsonify({ 'error': 'No such package "%s"' % name }), status_code)
+        return flask.make_response(flask.jsonify({ 'error': 'No such package "%s"' % name }), status_code)
 
     for tag in ('Depends', 'Tags'):
         if tag in pkg and False:
@@ -103,7 +103,7 @@ def _api(name=None):
     #at this point, pkg is of type debian.deb822.Packages, instead of dict.
     #that would make jsonify flip out as a TypeError. Therefore - make it dict.
     pkg = dict(pkg)
-    return make_response(jsonify(pkg), status_code)
+    return flask.make_response(flask.jsonify(pkg), status_code)
 
 ###########################################################################
 
@@ -133,19 +133,18 @@ def _read_packages(full_source):
 
     return: None. Content is saved into _data directly.
     """
-    components = utils.deb_components(full_source)  # it leaves blanks...
+    components = core_utils.deb_components(full_source)  # it leaves blanks...
     components.areas = [ a for a in components.areas if a.strip() ]
     if not components.url:
         msg = ' - Wrong mirror format!\n'
         msg += '  - Expected "deb http://mirror.url release ares"\n'
         msg += '  - Mirror provided: %s' % (full_source)
         raise RuntimeError(msg)
-
     # Reference:
     # https://github.com/raumkraut/python-debian/blob/master/README.deb822
     repo = '%s/dists/%s/%%s/%%s/Packages.gz' % (components.url, components.release)
     for area in components.areas:
-        for arch in ('binary-all', 'binary-arm64'):
+        for arch in ('binary-all', 'binary-' + BP.config.arch):
             retrieveURL = repo % (area, arch)
             BP.logger.info('Loading/processing "%s"' % retrieveURL)
             pkgresp = HTTP_REQUESTS.get(retrieveURL)
@@ -156,11 +155,11 @@ def _read_packages(full_source):
 
             unzipped = gzip.decompress(pkgresp.content) # bytes all around
             BP.logger.debug('Parsing %d bytes of package data' % len(unzipped))
-            unzipped = BytesIO(unzipped)    # the next step needs read()
-            tmp = [ src for src in Packages.iter_paragraphs(unzipped) ]
+            unzipped = io.BytesIO(unzipped)    # the next step needs read()
+            deb_packages_iter = debPackages.iter_paragraphs(unzipped)
+            tmp = [ src for src in deb_packages_iter ]
 
             _data.update(dict((pkg['Package'], pkg) for pkg in tmp))
-
 
 def get_all_mirrors():
     """

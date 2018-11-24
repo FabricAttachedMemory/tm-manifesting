@@ -30,20 +30,19 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 import argparse
+import flask
 import glob
+import jinja2
 import netifaces as NIF
+import importlib
 import os
 import psutil
 import sys
 import time
 
-from importlib import import_module
 from pdb import set_trace
 
 assert os.geteuid() == 0, 'This program requires root permissions'
-
-from flask import Flask, render_template, request, jsonify
-from jinja2.environment import create_cache
 
 # Assumes tm_librarian.deb installs in normal sys.path place
 from tm_librarian.tmconfig import TMConfig
@@ -51,14 +50,13 @@ from tm_librarian.tmconfig import TMConfig
 # For running from git repo, setup.py does the right thing.  True .deb
 # installation will also do the right thing.
 try:
-    from tmms.setup import parse_cmdline_args
-    from tmms.utils.utils import piper, create_loopback_files, setDhcpClientId
-    from tmms.utils.utils import kill_pid
-    from tmms.utils import utils #FIXME: this should replace above imports!
+    from tmms.utils import utils
+    from tmms.utils import core_utils
+    from tmms.utils.daemonize3 import Daemon
     from tmms.utils.logging import tmmsLogger
+    from tmms.setup import parse_cmdline_args
     from tmms.utils.file_utils import make_dir
     from tmms.configs.build_config import ManifestingConfiguration
-    from tmms.utils.daemonize3 import Daemon
 except ImportError as e:
     raise SystemExit('Processing submodules in tmms: %s' % str(e))
 
@@ -67,8 +65,13 @@ except ImportError as e:
 
 def create_app():
     ''' Create a Flask app to be used/regestered by available blueprints. '''
-    mainapp = Flask('tm_manifesting', static_url_path='/static')
-    mainapp.config.update(manconfig)
+    mainapp = flask.Flask('tm_manifesting', static_url_path='/static')
+    #Need to have our custom config object from build_config.py, but want to keep
+    #flask's parameters as well.
+    flask_cfg = mainapp.config
+    mainapp.config = manconfig
+    mainapp.config.update(flask_cfg)
+
     mainapp.config['tmconfig'] = tmconfig
 
     mainapp.config['API_VERSION'] = 1.0
@@ -94,7 +97,7 @@ except Exception as e:
     raise SystemExit('Bad config file(s): %s' % str(e))
 
 for node in tmconfig.allNodes:  # Hack around broken BU scripts
-    setDhcpClientId(node)
+    utils.setDhcpClientId(node)
 
 
 # mainapp is needed as decorator base so it comes early.
@@ -137,7 +140,7 @@ def register_blueprints(mainapp):
             modspec = p.replace('/', '.') + '.blueprint'
             mainapp.logger.info('importing %s' % modspec.split('.')[1])
             #Import relative to a "tmms" module (set in python3/dist-packages/tmms)
-            imported = import_module('tmms.' + modspec)
+            imported = importlib.import_module('tmms.' + modspec)
 
             # Set commonly used globals or convenience attributes.  Each
             # imported BP has its own BP global, used as the route decorator
@@ -175,16 +178,16 @@ def register_blueprints(mainapp):
 
 
 def _response_bad(errmsg, status_code=418):
-    response = jsonify({'error': errmsg})
+    response = flaks.jsonify({'error': errmsg})
     response.status_code = status_code
     return response
 
 
 @mainapp.before_request
 def check_version(*args, **kwargs):
-    if 'api' not in request.path:   # Ignore versioning/JSON for HTML
+    if 'api' not in flask.request.path:   # Ignore versioning/JSON for HTML
         return None
-    hdr_accept = request.headers.get('Accept','NADA')
+    hdr_accept = flask.request.headers.get('Accept','NADA')
     if 'application/json' not in hdr_accept:
         return _response_bad('I see no JSON in header/accept.', 406)
     version = -1.0
@@ -204,7 +207,7 @@ def check_version(*args, **kwargs):
 
 @mainapp.after_request
 def version(response):
-    if 'api' in request.path:   # Ignore versioning/JSON for HTML
+    if 'api' in flask.request.path:   # Ignore versioning/JSON for HTML
         response.headers['Content-Type'] = \
             'application/json;version=%s' % mainapp.config['API_VERSION']
     return response
@@ -215,14 +218,14 @@ def version(response):
 
 @mainapp.route('/manifesting/')
 def root():
-    return render_template(
+    return flask.render_template(
         'index.tpl',
         api_version=mainapp.config['API_VERSION'],
-        base_url=request.base_url,
+        base_url=flask.request.base_url,
         mirror=mainapp.config['DEBIAN_MIRROR'],
         release=mainapp.config['DEBIAN_RELEASE'],
         rules=mainapp.config['rules'],
-        url_root=request.url_root,
+        url_root=flask.request.url_root,
         coordinate=mainapp.config['tmconfig'].racks[1]['coordinate'])
 
 ###########################################################################
@@ -254,7 +257,7 @@ def clear_iptables(config):
         cmd = 'iptables ' + d
         ret = 0
         while not ret:
-            ret, stdout, stderr = piper(cmd)
+            ret, stdout, stderr = core_utils.piper(cmd)
     return action_format
 
 
@@ -268,7 +271,7 @@ def set_iptables(config):
         if not a or a.startswith('#'):
             continue
         cmd = 'iptables ' + a
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         if ret:
             raise RuntimeError('%s failed: %s' % (cmd, stderr))
     return action_format
@@ -282,7 +285,7 @@ def kill_dnsmasq(config):
     try:
         with open(config['DNSMASQ_PIDFILE'], 'r') as f:
             pid = int(f.read())
-        kill_pid(pid, 'dnsmasq')
+        utils.kill_pid(pid, 'dnsmasq')
     except Exception:   # a valiant effort in vain
         pass
 
@@ -312,7 +315,7 @@ def kill_dnsmasq(config):
         mainapp.logger.info('Killing %d copies of dnsmasq' % len(pids))
     while len(pids):
         pid = pids.pop()
-        kill_pid(pid, 'dnsmasq')    # Until someone starts using bind9...
+        utils.kill_pid(pid, 'dnsmasq')    # Until someone starts using bind9...
 
 
 def start_dnsmasq(config):
@@ -328,8 +331,7 @@ def start_dnsmasq(config):
 
     # This is configured to daemonize so a p.poll() should be zero (RTFM
     # dnsmasq, section EXIT CODES).
-    p = piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
-        # stdout='/dev/null', stderr='/dev/null')
+    p = core_utils.piper('dnsmasq --conf-file=%s' % conf_file, return_process_obj=True)
     while True:
         time.sleep(1.0)     # Chance to daemonize on busy system
         tmp = p.poll()      # Exit code if it finished.
@@ -380,7 +382,7 @@ def daemonize(mainapp, cmdline_args):
 
 
 def main():
-    utils.set_proxy_environment()
+    core_utils.set_proxy_environment()
 
     if cmdline_args.start_dnsmasq:
         kill_dnsmasq(mainapp.config)
@@ -415,9 +417,9 @@ def main():
     # http://flask.pocoo.org/docs/0.10/api/#application-object; options at
     # http://werkzeug.pocoo.org/docs/0.11/serving/#werkzeug.serving.run_simple
     if mainapp.config['DEBUG']:
-        mainapp.jinja_env.cache = create_cache(0)
+        mainapp.jinja_env.cache = jinja2.environment.create_cache(0)
 
-    create_loopback_files() # they disappear after LXC restart FIXME utils?
+    core_utils.create_loopback_files() # they disappear after LXC restart FIXME utils?
     set_iptables(mainapp.config)
     kill_dnsmasq(mainapp.config)
     start_dnsmasq(mainapp.config)

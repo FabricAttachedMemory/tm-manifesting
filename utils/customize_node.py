@@ -15,24 +15,22 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 import argparse
 import contextlib
+import glob
 import gzip
 import json
+import magic  # to get file type and check if gzipped
 import os
 import requests as HTTP_REQUESTS
 import shutil   # explicit namespace differentiates from our custom FS routines
-import magic  # to get file type and check if gzipped
 import sys
 import time
 
-from glob import glob
 from pdb import set_trace
 
-from tmms.utils.logging import tmmsLogger
-from tmms.utils.file_utils import copy_target_into, remove_target
-from tmms.utils.file_utils import make_symlink, move_target
-from tmms.utils.file_utils import write_to_file, workdir, make_dir
-from tmms.utils.utils import find, piper, untar, kill_chroot_daemons
-from tmms.utils import utils # FIXME: this line should replace above imports!
+from tmms.utils import core_utils
+from tmms.utils import file_utils
+from tmms.utils import logging
+from tmms.utils import utils
 
 #==============================================================================
 # A (custom) kernel will probably only boot itself and not load any modules.
@@ -42,7 +40,7 @@ from tmms.utils import utils # FIXME: this line should replace above imports!
 # actually tracked it down.   Hasn't been seen in a while....
 
 
-def extract_bootfiles(args, phase_msg):
+def extract_bootfiles(args, keep_kernel=False):
     """
         Remove boot/vmlinuz* and boot/initrd.img/ files from new file system.
     These files are not needed in the rootfs for diskless boot.  Move them
@@ -50,32 +48,47 @@ def extract_bootfiles(args, phase_msg):
     is an error (no way to choose programmatically).  Let the caller decide
     if zero kernels is an error.
 
-    :param 'args.build_dir': [str] where to move the unecessary files.
-    :param 'args.new_fs_dir': [str] where to find the unecessary files.
-    :param 'phase_msg': [str] Additional debug message string.
+    :param 'args' argparse.Namespace()
+        .build_dir: [str] where to move the unecessary files.
+        .new_fs_dir': [str] where to find the unecessary files.
+        .manifest.keep_kernel: user may choose for keep kernel in boot/
+
+    :param 'keep_kernel': [bool] True - keep, but copy into the build dir.
+                                False - move kernel from boot/.
     :return: 'None' on success. Raise 'RuntimeError' on problems.
     """
     boot_dir = '%s/boot/' % args.new_fs_dir
-    vmlinuz = glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
-    initrd = glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
-    #also extract config-* and System.map* files installed with kernel.
-    misc = glob('%s/config*' % boot_dir)
-    misc.extend(glob('%s/System.map*' % boot_dir))
+    vmlinuz = glob.glob('%s/vmlinuz*' % (boot_dir))      # Move and keep
+    initrd = glob.glob('%s/initrd.img*' % (boot_dir))    # Move and ignore
+
+    #Note: also extract config-* and System.map* files installed with kernel.
+    misc = glob.glob('%s/config*' % boot_dir)
+    misc.extend(glob.glob('%s/System.map*' % boot_dir))
 
     if len(vmlinuz) > 1:
         if args.debug and sys.stdin.isatty():       # Not forked
             set_trace()
-        raise RuntimeError('Multiple (%d) %s kernels exist' % (
-            len(vmlinuz), phase_msg))
+        raise RuntimeError('Multiple (%d) kernels exist! Hostname: %s' % (
+            len(vmlinuz), args.hostname))
+
     if not hasattr(args, 'vmlinuz_golden'):         # singleton
         args.vmlinuz_golden = ''
-    update_status(args, 'Extract %d %s /boot/[vmlinuz,initrd]' % (
-        len(vmlinuz), phase_msg))
+
+    extract_type = 'Extract' if not keep_kernel else 'Copy and keep'
+    update_status(args, '%s %d /boot/[vmlinuz,initrd]' % (
+        extract_type, len(vmlinuz)))
+
     for source in vmlinuz + initrd + misc:            # move them all
         dest = '%s/%s' % (args.build_dir, os.path.basename(source))
-        assert move_target(source, dest), 'Move of %s failed' % source
+        if keep_kernel:
+            file_utils.copy_target_into(source, dest)
+        else:
+            file_utils.move_target(source, dest)
+
         if '/vmlinuz' in dest:
             args.vmlinuz_golden = dest
+
+    return vmlinuz + initrd + misc
 
 
 #=============================================================================
@@ -94,10 +107,10 @@ def persist_initrd(args):
     """
     update_status(args, 'Make initrd persistent as rootfs')
     try:
-        with workdir(args.new_fs_dir):  # At the root
+        with file_utils.workdir(args.new_fs_dir):  # At the root
             if os.path.exists('init'):  # no leading slash!!!
                 os.unlink('init')
-            make_symlink('sbin/init', 'init')
+            file_utils.make_symlink('sbin/init', 'init')
             with open('etc/fstab', 'w') as f:   # no leading slash!!!
                 f.write('proc /proc proc defaults 0 0\n')
     except RuntimeError as err:         # Expecting this from make_symlink...
@@ -126,7 +139,7 @@ def cleanup_sources_list(args):
     #    return
 
     try:
-        remove_target(sources_base)
+        file_utils.remove_target(sources_base)
 
         content = [
             '# Created by TMMS for %s on %s' % (args.hostname, time.ctime()),
@@ -136,7 +149,7 @@ def cleanup_sources_list(args):
                                 ' '.join(args.repo_areas))
         ]
 
-        write_to_file(sources_list, '\n'.join(content))
+        file_utils.write_to_file(sources_list, '\n'.join(content))
     except RuntimeError as err:
         raise RuntimeError('clean_sources_list() failed: %s' % str(err))
 
@@ -163,22 +176,28 @@ def set_apt_conf(path, apt_cfg_content, args=None):
     #manifest, a singe ' will be used. Replace it with " and life should be good.
     apt_cfg_content = apt_cfg_content.replace('\'', '"')
     try:
-        write_to_file(path, apt_cfg_content)
+        file_utils.write_to_file(path, apt_cfg_content)
     except RuntimeError as err:
         raise RuntimeError('Could not set_apt_conf content at "%s"! [%s]' % (
                             path, err))
 
 
 def set_apt_proxy(args):
-    """ """
+    """
+        @param args: namespace obj.
+                --new_fs_dir: dir with untar/ fs dir
+                --is_golden: True to skip appending to newly created .conf.
+    """
     # FIXME: while called from both tm-manifest setup and tm-manifest-server,
     # runtime environment is quite different and this one set of rules is
     # insufficient.  Either way, get the proxies from os.environ.
     path = args.new_fs_dir + '/etc/apt/apt.conf.d'
-    make_dir(path)
-    path += '/00FAMproxy.conf'
+    file_utils.make_dir(path)
+    path += '/00TMMS.conf'
     args.apt_dot_conf = path    # for post-processing
-    if not args.is_golden:      # One final post-processing step is done later
+
+    # One final post-processing step is done later
+    if not args.is_golden:
         return
 
     # FIXME: it's really dependent on xxx_mirror saying locahost, but this
@@ -198,7 +217,7 @@ def set_apt_proxy(args):
         return
 
     try:
-        write_to_file(path, content)    # Yes, overwrite
+        file_utils.write_to_file(path, content)    # Yes, overwrite
     except RuntimeError as err:
         raise RuntimeError('Failed writing proxy settings to %s! Reason:\n- %s' %\
                             (path, err))
@@ -209,8 +228,9 @@ def add_other_mirror(args):
     @param other_mirrors:
     """
     args.other_list = '%s/etc/apt/sources.list.d' % args.new_fs_dir
-    make_dir(args.other_list)
+    file_utils.make_dir(args.other_list)
     args.other_list += '/other.list'        # For post-processing
+
     if not args.is_golden or not hasattr(args, 'other_mirrors'):
         return
 
@@ -219,7 +239,7 @@ def add_other_mirror(args):
         other_mirrors = args.other_mirrors.split(',')
     else:
         other_mirrors = args.other_mirrors
-    write_to_file(args.other_list, '\n'.join(other_mirrors))
+    file_utils.write_to_file(args.other_list, '\n'.join(other_mirrors))
     return
 
 
@@ -234,7 +254,7 @@ def localhost2torms(args):
         if os.path.isfile(fname):
             with open(fname, 'r') as f:             # Has newlines...
                 lines = ''.join(f.readlines())      # ...so keep them
-            write_to_file(fname, lines.replace('localhost', 'torms'))
+            file_utils.write_to_file(fname, lines.replace('localhost', 'torms'))
 
 #===========================================================================
 
@@ -265,9 +285,13 @@ def set_client_id(args):
 
 def hack_LFS_autostart(args):
     """
+    FIXME: DEPRECATED. Seems like we don't need it anymore.
+
         2016-11-10 SFW is still not supplying ACPI info for physloc but we
     have sufficient need and confidence to require it.  Work around it.
     This must be called before rewrite_rclocal().
+
+    NOTE: we need that for FAME images.
 
     :param 'new_fs_dir': [str] path to the file system location to customize.
     :param 'node_id': [int] expanded into R:E:N.
@@ -313,7 +337,7 @@ def set_foreign_package(args, foreign_package):
     """
     foreign_in_build = args.build_dir + '/untar/usr/bin/' + foreign_package
     if not os.path.exists(foreign_in_build):
-        copy_target_into('/usr/bin/' + foreign_package, foreign_in_build)
+        file_utils.copy_target_into('/usr/bin/' + foreign_package, foreign_in_build)
         os.chmod(foreign_in_build, 0o755)
 
 
@@ -328,7 +352,7 @@ def set_environment(args):
     fname = '%s/etc/environment' % args.new_fs_dir
     try:
         if os.path.exists(fname):
-            remove_target(fname)
+            file_utils.remove_target(fname)
 
         content = [ '# Created by TMMS for %s on %s' %
             (args.hostname, time.ctime()) ]
@@ -338,7 +362,7 @@ def set_environment(args):
                 content.append('%s=%s' % (var, val))
 
         content = '\n'.join(content)
-        write_to_file(fname, content)
+        file_utils.write_to_file(fname, content)
     except RuntimeError as err:
         raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
@@ -355,8 +379,8 @@ def set_hostname(args):
     hostname_file = '%s/etc/hostname' % args.new_fs_dir
     try:
         if os.path.exists(hostname_file):
-            remove_target(hostname_file)
-        write_to_file(hostname_file, args.hostname)
+            file_utils.remove_target(hostname_file)
+        file_utils.write_to_file(hostname_file, args.hostname)
     except RuntimeError as err:
         raise RuntimeError('Cannot set /etc/hostname: %s' % str(err))
 
@@ -373,7 +397,7 @@ def set_hosts(args):
     fname = '%s/etc/hosts' % args.new_fs_dir
     try:
         if os.path.exists(fname):
-            remove_target(fname)
+            file_utils.remove_target(fname)
 
         content = [
             '127.0.0.1   localhost',
@@ -381,7 +405,7 @@ def set_hosts(args):
         ]
         content = '\n'.join(content)
 
-        write_to_file(fname, content)
+        file_utils.write_to_file(fname, content)
     except RuntimeError as err:
         raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
@@ -394,9 +418,9 @@ def set_resolv_conf(args):
     resolv_path = '%s/etc/resolv.conf' % (args.new_fs_dir)
 
     if os.path.islink(resolv_path):
-        remove_target(resolv_path)
+        file_utils.remove_target(resolv_path)
 
-    copy_target_into('/etc/resolv.conf', resolv_path)
+    file_utils.copy_target_into('/etc/resolv.conf', resolv_path)
 
 
 def set_sudo(args):
@@ -413,7 +437,7 @@ def set_sudo(args):
     fname = '%s/etc/sudoers.d/l4mdc' % args.new_fs_dir
     try:
         if os.path.exists(fname):
-            remove_target(fname)
+            file_utils.remove_target(fname)
 
         content = [                             # Speed up subsequent sudos
             'l4mdc\t ALL = NOPASSWD: ALL',      # No passwd
@@ -421,7 +445,7 @@ def set_sudo(args):
             'Defaults timestamp_timeout=120',   # Don't ask again for 2 hours..
             'Defaults !tty_tickets',            # On any terminal
         ]
-        write_to_file(fname, '\n'.join(content))
+        file_utils.write_to_file(fname, '\n'.join(content))
     except RuntimeError as err:
         raise RuntimeError('Cannot set %s: %s' % (fname, str(err)))
 
@@ -432,7 +456,7 @@ def set_sudo(args):
 
 
 def _get_userstuff(args, user):
-    with workdir(args.new_fs_dir):
+    with file_utils.workdir(args.new_fs_dir):
         file_content = ''
         with open('etc/passwd', 'r') as file_obj:
             file_content = file_obj.read()
@@ -506,9 +530,11 @@ def rewrite_rclocal(args):
         update_status(args, ' - ! - Skipping "rewrite_rclocal"! "rclocal" in "args" is None.')
         return
 
+    '''
     if getattr(args, 'manifest', None) is None:
         update_status(args, ' - ! - Skipping "rewrite_rclocal"! "manifest" in "args" is None.')
         return
+    '''
 
     update_status(args, 'Rewriting /etc/rc.local')
 
@@ -535,7 +561,7 @@ def create_cpio(args):
     update_status(args, 'Create %s from %s' % (cpio_file, args.new_fs_dir))
     try:
         # Skip things even though they may have been moved
-        found_data = find(
+        found_data = core_utils.find(
             args.new_fs_dir,
             ignore_files=['vmlinuz', 'initrd.img'],
             ignore_dirs=['boot'])
@@ -549,8 +575,8 @@ def create_cpio(args):
             # "full path" string (e.g. whatever/untar/boot...., instead
             # ./boot...). This causes Kernel Panic when trying to boot with
             # such a cpio file.
-            with workdir(args.new_fs_dir):
-                ret, cpio_out, cpio_err = piper(
+            with file_utils.workdir(args.new_fs_dir):
+                ret, cpio_out, cpio_err = core_utils.piper(
                     cmd, stdin=cpio_stdin, stdout=dest_obj)
                 assert not ret, 'cpio failed: %s' % cpio_err
 
@@ -751,14 +777,14 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
     try:
         procmount = args.new_fs_dir + '/proc'
         os.makedirs(procmount, exist_ok=True)
-        ret, stdout, sterr = piper('mount -obind /proc ' + procmount)
+        ret, stdout, sterr = core_utils.piper('mount -obind /proc ' + procmount)
         assert not ret, 'Cannot bind mount /proc'
 
         umount = 'umount -fl %s' % procmount
 
         ptsmount = args.new_fs_dir + '/dev/pts'
         os.makedirs(ptsmount, exist_ok=True)
-        ret, stdout, sterr = piper('mount -obind /dev/pts ' + ptsmount)
+        ret, stdout, sterr = core_utils.piper('mount -obind /dev/pts ' + ptsmount)
         assert not ret, 'Cannot bind mount /dev/pts'
 
         umount = 'umount -fl %s %s' % (procmount, ptsmount)
@@ -773,7 +799,7 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
         # This can take MINUTES, ie, "album" pulls in about 80 more packages.
         # While running, sys-images/nodeXX/untar/root/install.log is updated.
         # Hopefully install.sh catches its own errors
-        ret, stdout, stderr = piper(cmd, use_call=True)
+        ret, stdout, stderr = core_utils.piper(cmd, use_call=True)
         if ret:
             stdouterr = ''
             if stdout is not None:
@@ -789,8 +815,8 @@ echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
             args.logger.debug(' - D - %s' % log.read())
         raise RuntimeError(str(err))
     finally:
-        umountret, _, _ = piper(umount)
-        kill_chroot_daemons(args.build_dir)
+        umountret, _, _ = core_utils.piper(umount)
+        utils.kill_chroot_daemons(args.build_dir)
     return False
 
 
@@ -799,9 +825,11 @@ def customize_grub(args):
         COnfigure grub's config entry with a custom kernel command line (if
     presented in the manifest).
     """
+    '''
     if getattr(args, 'manifest', None) is None:
         update_status(args, ' - ! - Skipping "customize_grub"! "manifest" is None.')
         return
+    '''
 
     if getattr(args, 'tftp_dir', None) is None:
         update_status(args, ' - ! - Skipping "customize_grub"! "tftp_dir" is None.')
@@ -857,7 +885,7 @@ def update_status(args, message, status='building'):
 
     # Rally DE118: make it an atomic update
     newstatus = args.status_file + '.new'
-    write_to_file(newstatus, json.dumps(response, indent=4))
+    file_utils.write_to_file(newstatus, json.dumps(response, indent=4))
     os.replace(newstatus, args.status_file)
 
 #=============================================================================
@@ -867,7 +895,7 @@ def update_status(args, message, status='building'):
 def create_ESP(args, blockdev, vmlinuz, cpio):
     update_status(args, 'Creating and filling ESP')
     ESP_mnt = '%s/mnt' % (args.build_dir)   # Going to be a VFAT FS image
-    remove_target(ESP_mnt)
+    file_utils.remove_target(ESP_mnt)
     os.makedirs(ESP_mnt)
 
     # tftp_dir has "images/nodeZZ" tacked onto it from caller.
@@ -893,14 +921,14 @@ def create_ESP(args, blockdev, vmlinuz, cpio):
             'Cannot find mapper file %s' % blockdev
 
         cmd = 'mkfs.vfat ' + blockdev
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         assert not ret, cmd
 
         # Step 3: Make, mount, and fill the VFAT FS.  The EFI default startup
         # script goes at /, but the grub stuff lives under "prefix".
 
         cmd = 'mount %s %s' % (blockdev, ESP_mnt)
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         assert not ret, cmd
         undo_mount = True
         update_status(args, 'SDHC GRUB DIR established at %s' % grubdir)
@@ -926,7 +954,7 @@ def create_ESP(args, blockdev, vmlinuz, cpio):
 
     if undo_mount:
         cmd = 'umount ' + ESP_mnt
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         assert not ret, cmd
 
     return undo_mount   # suppress final copy if this didn't work
@@ -967,14 +995,14 @@ def create_SNBU_image(args, vmlinuz, cpio):
         cmd += 'unit MiB mkpart primary fat32 %d 100%% ' % ESP_offset
         cmd += 'set 1 boot on set 1 esp on '
         cmd += 'name 1 %s ' % args.hostname
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         assert not ret, cmd
 
         # Step 2: located the partition and create a block device.
         # Ass-u-me enough loopback devics to go around.
 
         cmd = 'kpartx -asv %s' % ESP_img
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         assert not ret, cmd
         undo_kpartx = True
         stdout = stdout.decode()
@@ -1003,7 +1031,7 @@ def create_SNBU_image(args, vmlinuz, cpio):
         # server and "setnodes all".   Early in diagnosis, not sure what
         # to do about it.   Just move along for now and see what happens
         cmd = 'kpartx -d %s' % ESP_img
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         # assert not ret, cmd
         if ret or stderr:
             args.logger.warning('kpartx -d returned %d:\n - %s' % (ret, stderr))
@@ -1070,6 +1098,15 @@ def compress_bootfiles(args, cpio_file):
 
     return vmlinuz_gzip, cpio_gzip
 
+
+def get_foreign_from_vmd(args):
+    vmd_file = args.build_dir + '/vmd' #placed by configs/setup_golden.py
+    if not os.path.exists(vmd_file):
+        msg = 'No VMD file used to build golden image found at:\n - %s ' % vmd_file
+        update_status(args, msg)
+        return
+
+
 #==============================================================================
 
 
@@ -1090,15 +1127,22 @@ def execute(args):
     #   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     #   level=logging.INFO)
     if not os.path.exists(args.build_dir):
-        make_dir(args.build_dir)
+        file_utils.make_dir(args.build_dir)
 
     #set defaults
     if getattr(args, 'debug', None) is None:
         args.debug = False
     if getattr(args, 'verbose', None) is None:
         args.verbose = False
-    if getattr(args, 'is_golden', None) is None:    # setup_golden.py
+    if getattr(args, 'is_golden', None) is None:    # set in setup_golden.py
         args.is_golden = False
+
+    # We keep kernel in boot when building golden image. Also, by default,
+    # kernel is moved from boot/ for all of the new system images. However,
+    # user may choose to keep kernel for their images, by using "keep_kernel"
+    # flag in 'manifest' json.
+    is_keep_kernel = args.is_golden
+    getattr(args.manifest, 'keep_kernel', args.is_golden)
 
     logger = getattr(args, 'logger', None)
 
@@ -1136,7 +1180,7 @@ def execute(args):
     if logger is not None:
         args.logger.info(' --- Build details in %s ---' % fname)
 
-    logger = tmmsLogger(args.hostname, use_file=fname)
+    logger = logging.tmmsLogger(args.hostname, use_file=fname)
     logger.propagate = args.verbose     # always gets forced True at end
     args.logger = None
     args.logger = logger
@@ -1147,13 +1191,15 @@ def execute(args):
     # When some of them fail they'll handle last update_status themselves.
     try:
         update_status(args, 'Untar golden image')
-        args.new_fs_dir = untar(args.build_dir + '/untar/', args.golden_tar)
+        args.new_fs_dir = core_utils.untar(args.build_dir + '/untar/', args.golden_tar)
+
+        # Move kernel that comes with golden image.
+        extract_bootfiles(args, is_keep_kernel)
 
         set_foreign_package(args, 'qemu-aarch64-static')
 
         # Golden image contrived args has no "manifest" attribute.  Besides,
         # a manifest should not contain distro-specific data structures.
-        # set_apt_conf(apt_conf_path, args.manifest.get('apt_conf', ''), args)
         cleanup_sources_list(args)
         set_apt_proxy(args)
         add_other_mirror(args)
@@ -1170,8 +1216,8 @@ def execute(args):
 
         install_packages(args)
 
-        extract_bootfiles(args, 'golden')       # What does it come with
-        #extract_bootfiles(args, 'add-on')       # There MAY have been a new one
+        #Move installed "kernel" from boot/ (if any).
+        extract_bootfiles(args, is_keep_kernel)
         assert args.vmlinuz_golden, 'No golden/add-on kernel can be found'
 
         persist_initrd(args)
@@ -1181,13 +1227,8 @@ def execute(args):
         rewrite_rclocal(args)
 
         #------------------------------------------------------------------
-        # If making a new golden image, restore the kernel.  Otherwise
-        # assemble the bootable PXE images.
-        # ZACH: Why did I do this? Need to leave a "useful" comment next time...
+
         if args.is_golden:
-            #update_status(args, 'Restoring %s to golden image' % args.vmlinuz_golden)
-            #copy_target_into(
-            #    args.vmlinuz_golden, '%s/untar/boot/' % args.build_dir)
             response['message'] = 'Golden image ready for use'
             status = 'ready'
         else:
@@ -1197,11 +1238,10 @@ def execute(args):
 
             # Free up space someday, but not during active development
             # remove_target(args.build_dir)
-
             # Leave a copy of the controlling manifest for post-mortems
             if getattr(args, 'manifest', None) is not None:
                 manifest_tftp_file = args.manifest.namespace.replace('/', '.')
-                copy_target_into(args.manifest.fullpath,
+                file_utils.copy_target_into(args.manifest.fullpath,
                                 args.tftp_dir + '/' + manifest_tftp_file)
 
             update_status(args, 'Updating grub menu for the node.')

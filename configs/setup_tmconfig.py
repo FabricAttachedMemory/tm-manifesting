@@ -12,14 +12,14 @@ __maintainer__ = "Rocky Craig, Zakhar Volchak"
 __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
+import dns.resolver as RES
 import requests as HTTP_REQUESTS
 import sys
 import time
-from types import SimpleNamespace as GenericObject
+import types
 
 from pdb import set_trace
 
-import dns.resolver as RES
 
 _MAX_ENCLOSURES = 4
 _MAX_NODES_PER_ENCLOSURE = 10
@@ -90,7 +90,7 @@ def trace(msg, EOL=True):
 
 def getHeader():
     '''Fill an object with global values gleaned from DNS.'''
-    hdr = GenericObject(
+    hdr = types.SimpleNamespace(
         needsReview=False,     # Or did all fields get calculated?
         timestamp='auto-generated on %s' % (time.ctime())
     )
@@ -175,7 +175,7 @@ def emitINI(hdr):
     for enc in hdr.enclosures:
         for node, nbooks in hdr.enc2nodeFAM[enc]:     # It's a tuple
             node_id = ((enc -1 ) * 10) + node
-            outdata = GenericObject(
+            outdata = types.SimpleNamespace(
                 hostname='node%02d' % node_id,
                 node_id=node_id,
                 nbooks=nbooks)

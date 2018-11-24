@@ -22,14 +22,13 @@ __email__ = "rocky.craig@hpe.com, zakhar.volchak@hpe.com"
 
 
 import argparse
+import dns.resolver as RES
 import os
+import netaddr
+import netifaces as NIF
 import requests as HTTP_REQUESTS
 import sys
 import time
-
-import dns.resolver as RES
-from netaddr import IPNetwork, iter_iprange, IPAddress
-import netifaces as NIF
 
 from pdb import set_trace
 
@@ -37,10 +36,10 @@ from tm_librarian.tmconfig import TMConfig
 
 # Imports are relative to parent directory with setup.py because implicit
 # Python path "tmms" may not exist yet.
-
+from utils import core_utils
+from utils import file_utils
+from utils import utils
 from configs.build_config import ManifestingConfiguration
-from utils.utils import basepath, piper, setDhcpClientId
-from utils.file_utils import make_symlink, make_dir
 
 ###########################################################################
 # Templates for config files
@@ -205,7 +204,7 @@ class TMgrub(object):
                 manconfig['TMCONFIG'], '\n'.join(self.tmconfig.FTFY)))
 
         for node in self.tmconfig.allNodes:
-            setDhcpClientId(node)
+            utils.setDhcpClientId(node)
 
         # Begin movement of /etc/tmms values to /etc/tmconfig.
         TMDOMAIN = None
@@ -221,8 +220,8 @@ class TMgrub(object):
         self.tftp_images_dir = manconfig['TFTP_IMAGES']
         self.tftp_grub_dir = manconfig['TFTP_GRUB']
         self.tftp_grub_menus_dir = self.tftp_grub_dir + '/menus'
-        make_dir(self.tftp_grub_menus_dir)
-        make_symlink(   # Present all EFI modules to grub for "insmod"
+        file_utils.make_dir(self.tftp_grub_menus_dir)
+        file_utils.make_symlink(   # Present all EFI modules to grub for "insmod"
             '/usr/lib/grub/arm64-efi', self.tftp_grub_dir + '/arm64-efi')
 
         self.tftp_grub_cfg = self.tftp_grub_dir + '/grub.cfg'
@@ -246,9 +245,9 @@ class TMgrub(object):
 
         # Relative to TFTP, these supply content to the files.
         self.tftp_root = manconfig['TFTP_ROOT']
-        self.chroot_images_dir = basepath(self.tftp_images_dir, self.tftp_root)
-        self.chroot_grub_dir = basepath(self.tftp_grub_dir, self.tftp_root)
-        self.chroot_grub_menus_dir = basepath(
+        self.chroot_images_dir = core_utils.basepath(self.tftp_images_dir, self.tftp_root)
+        self.chroot_grub_dir = core_utils.basepath(self.tftp_grub_dir, self.tftp_root)
+        self.chroot_grub_menus_dir = core_utils.basepath(
             self.tftp_grub_menus_dir, self.tftp_root)
 
         # These files are also in the Debian package "grub-efi-arm64-signed"
@@ -330,10 +329,10 @@ class TMgrub(object):
                 assert len(answer) == 1
                 self.dnsmasq_defaultroute = 'dhcp-option=option:router,%s' % (
                     str(next(iter(answer)).address))
-            except (RES.NXDOMAIN, AssertionError) as e:
+            except (RES.NXDOMAIN, AssertionError) as err:
                 # Not fatal
-                print('Cannot DNS resolve "%s", manually fix dnsmasq config' %
-                    FQDN, file=sys.stderr)
+                print('Cannot DNS resolve "%s", manually fix dnsmasq config:\n - %s' %
+                    (FQDN, err), file=sys.stderr)
 
             if noDNS:
                 raise SystemExit(
@@ -346,12 +345,12 @@ class TMgrub(object):
         else:   # Synthesize host names and IP addresses
             try:
                 assert '/' in self.pxe_subnet, 'CIDR address missing slash'
-                kludge_network = IPNetwork(self.pxe_subnet).cidr
+                kludge_network = netaddr.IPNetwork(self.pxe_subnet).cidr
                 tmp = self.pxe_subnet.split('/')[0]
-                if tmp != str(IPAddress(kludge_network.first)):
-                    first_addr = IPAddress(tmp)
+                if tmp != str(netaddr.IPAddress(kludge_network.first)):
+                    first_addr = netaddr.IPAddress(tmp)
                 else:
-                    first_addr = IPAddress(kludge_network.first + 1)
+                    first_addr = netaddr.IPAddress(kludge_network.first + 1)
             except Exception as e:
                 raise RuntimeError(
                     'PXE_SUBNET: bad CIDR notation: %s' % str(e))
@@ -363,7 +362,7 @@ class TMgrub(object):
                 'Mismatch between PXE_INTERFACE (%s) and PXE_SUBNET (%s)' % \
                     (str(kludge_network), str(self.network))
         if not self.hostIPs:    # enumerator properly skips Sun broadcast
-            self.hostIPs = [IPAddress(first_addr.value + (node.node_id - 1))
+            self.hostIPs = [netaddr.IPAddress(first_addr.value + (node.node_id - 1))
                                 for node in self.tmconfig.allNodes]
             assert all(map(lambda a: a in self.network, self.hostIPs)), \
                 'Auto-generated IP address extend beyond network'
@@ -393,9 +392,9 @@ class TMgrub(object):
                 # Check the __doc__ string for this class.  It's AWESOME!
                 # Derive the network from the actual interface.  While it
                 # worked without the reduction to "first", this feels better.
-                self.network = IPNetwork(self.addr + '/' + self.netmask)
-                self.network = IPNetwork(
-                    str(IPAddress(self.network.first)) + '/' + self.netmask)
+                self.network = netaddr.IPNetwork(self.addr + '/' + self.netmask)
+                self.network = netaddr.IPNetwork(
+                    str(netaddr.IPAddress(self.network.first)) + '/' + self.netmask)
         except Exception as e:
             print(str(e))
 
@@ -465,7 +464,7 @@ class TMgrub(object):
 
         for hostname in self.hostnames:
             tftp_node_fs = self.tftp_images_dir + '/' + hostname
-            make_dir(tftp_node_fs)
+            file_utils.make_dir(tftp_node_fs)
             grub_menu_content = self.compose_grub_menu(hostname)
             menu_fname = '%s/%s.menu' % (self.tftp_grub_menus_dir, hostname)
             with open(menu_fname, 'w') as file_obj:
@@ -499,7 +498,7 @@ def main(args):
         Configure TFTP environment.
     """
     manconfig = ManifestingConfiguration(args.config, autoratify=False)
-    missing = manconfig.ratify(dontcare=('GOLDEN_IMAGE', ))
+    missing = manconfig.ratify(dontcare=('GOLDEN_TAR', ))
     if missing:
         raise RuntimeError('\n'.join(missing))
 

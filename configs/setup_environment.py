@@ -20,10 +20,10 @@ from pdb import set_trace
 
 # Imports are relative to parent directory with setup.py because implicit
 # Python path "tmms" may not exist yet.
-
 from configs.build_config import ManifestingConfiguration
-from utils.utils import piper, create_loopback_files
-from utils.file_utils import make_dir, remove_target
+from utils import core_utils
+from utils import file_utils
+
 
 
 def _create_env(manconfig, fields, ignore=None):
@@ -34,7 +34,7 @@ def _create_env(manconfig, fields, ignore=None):
 
     :param 'fields': [list] variable names that determines path values of the
                     manifesting entities.
-    :param 'ignore': (tuple) of fields to ignore, e.g. ('GOLDEN_IMAGE', )
+    :param 'ignore': (tuple) of fields to ignore, e.g. ('GOLDEN_TAR', )
     """
 
     if ignore is None:
@@ -45,7 +45,7 @@ def _create_env(manconfig, fields, ignore=None):
         path = manconfig[field]
 
         print(' - ' + path)
-        make_dir(path)
+        file_utils.make_dir(path)
 
 
 def install_base_packages():
@@ -53,14 +53,14 @@ def install_base_packages():
         Install packages required by manifesting service.  It only needs
         files from tm-librarian, it won't actually get run from here.
     """
-    ret, stdout, stderr = piper('dpkg --print-foreign-architectures')
+    ret, stdout, stderr = core_utils.piper('dpkg --print-foreign-architectures')
     if 'arm64' not in stdout.decode():
         print(' ---- Adding ARM64 architecture via apt-get ---- ')
         for cmd in (
             'dpkg --add-architecture arm64',
             'apt-get -y update',
         ):
-            ret, stdout, stderr = piper(cmd)
+            ret, stdout, stderr = core_utils.piper(cmd)
             assert not (bool(ret) or bool(stderr)), \
                 '"%s" failed: %s' % (cmd, stderr)
 
@@ -75,7 +75,7 @@ def install_base_packages():
             continue
         print( '- Attempting to install package: %s ' % (pkg))
         cmd = 'apt-get install -y -qq %s' % (pkg)
-        ret, stdout, stderr = piper(cmd)
+        ret, stdout, stderr = core_utils.piper(cmd)
         if ret or stderr:
             if pkg == 'tm-librarian':       # might be on plain-old Debian
                 try:
@@ -87,7 +87,12 @@ def install_base_packages():
             elif pkg in ('qemu-efi', ):     # might be on plain-old Debian
                 print('Need manual installation of %s' % pkg)
             else:
-                errors.append('[%s] %s' % (pkg, stderr))
+                error_msg_str = '[%s] %s' % (pkg, stderr)
+                # Vmdebootstrap logs this message to stderr for some reason,
+                # even though it is not an error...
+                if 'Extracting templates from packages' in error_msg_str:
+                    continue
+                errors.append(error_msg_str)
     if errors:
         raise RuntimeError('\n'.join(errors))
 
@@ -118,20 +123,19 @@ def main(args):
 
     print(' ---- Creating manifest environment ---- ')
     fields = manconfig.manifesting_keys
-    _create_env(manconfig, fields, ignore=('GOLDEN_IMAGE',))   # It's a file
-    golden_img_dir = os.path.dirname(manconfig['GOLDEN_IMAGE'])
-    make_dir(golden_img_dir)
+    _create_env(manconfig, fields, ignore=('GOLDEN_TAR',))   # It's a file
+    file_utils.make_dir(manconfig.golden_dir)
 
     print(' ---- Creating TFTP environment ---- ')
     # Need to remove the TFTP_IMAGES directory first.   We don't want
     # leftover, stale bound nodes confusing commands if this is a re-run
     # after a change to /etc/tmconfig with a different node list.
-    remove_target(manconfig['TFTP_IMAGES'])
+    file_utils.remove_target(manconfig['TFTP_IMAGES'])
     fields = manconfig.tftp_keys
     _create_env(manconfig, fields)
     print()
 
-    create_loopback_files()
+    core_utils.create_loopback_files()
 
 
 if __name__ == '__main__':

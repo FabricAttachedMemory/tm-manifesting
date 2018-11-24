@@ -18,8 +18,6 @@ import sys
 
 from pdb import set_trace
 
-#from tmms.utils import utils
-
 
 def link_into_python(args, git_repo_path):
     """
@@ -115,7 +113,7 @@ def parse_cmdline_args(extra_args_msg):
     parser.add_argument('--sysimage', nargs=1, default=None,
                         help='Path to golden image to be coppied from either '\
                             ' local path or url. This will skip debootstrap stage!')
-    parser.add_argument('--vmd-cfg', default='golden.arm.vmd',
+    parser.add_argument('--vmd-cfg', default='arm.vmd',
                         help='VMD Config name to be used by golden image. ' +\
                             'It is either an absolute path or a file name in ' +\
                             'tm-manifesting/config/filesystem/.')
@@ -170,13 +168,9 @@ if __name__ == '__main__':
         # scripts will do.
         try:
             from utils.file_utils import make_symlink
-            from utils.utils import set_proxy_environment
+            from utils.core_utils import set_proxy_environment
         except ImportError as err:
-            from configs import setup_environment
-            setup_environment.main(args)
-            from utils.file_utils import make_symlink
-            from utils.utils import set_proxy_environment
-            #raise SystemExit('Failed to import: %s' % err)
+            raise SystemExit('Failed to import: %s' % err)
 
         set_proxy_environment()
 

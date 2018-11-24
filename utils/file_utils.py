@@ -14,7 +14,8 @@ from pdb import set_trace
 _allowed_dirs = [
             ['var', 'lib'],
             ['var', 'lib', 'tmp'],
-            ['tmp']
+            ['tmp'],
+            ['home']
                 ]
 
 def _fs_sanity_check(target):

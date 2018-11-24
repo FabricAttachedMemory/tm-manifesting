@@ -1,170 +1,233 @@
 #!/bin/bash
 
-# Start a FAME ARM64 "node" that will PXE boot against the given interface.
-# Reduced from manifesting/PoC/diskless.sh
+# Start a ARM64 "node" that will PXE boot against the given interface.
+# It's a RAM-based rootfs whose (initrd) image was built by the
+# Manifesting suite for The Machine.  Get that running first, then this
+# script can fire off the nodes.
+
+TMMS_FAM=${TMMS_FAM:-}			# If empty, FAM stanzas not used
+TMMS_FAMEZ=${TMMS_FAMEZ:-}		# Socket from the server (or empty)
+TMMS_NETNAME=${TMMS_NETNAME:-brtmms}	# Libvirt bridge from manifesting
 
 ###########################################################################
+# Since I'm using function output redirection in the stanza functions,
+# this could get called from a subshell.
+
+MYPID=$$
 
 function die() {
         echo -e "\n$*\n" >&2
+	kill $MYPID
 	exit 1
 }
 
 ###########################################################################
-# Command line and environment processing
+# Some setup, mostly idiot checks.
 
-[ $# -ne 1 -o "$1" = "-h" -o "$1" = "-?" ] && die "usage: $0 nodenum"
-NODE=$1
-set -u
+function verify_environment() {
+	[ `whoami` != root ] && SUDO='sudo -E'
+	$SUDO echo	# establish hysteresis
 
-[ -z "$NETNAME" ] && die "export NETNAME=something"
-[ -z "$FAM" ] && die "export FAM=/some/where or NONE"
+	[ $NODE -lt 1 -o $NODE -gt 40 ] && die "nodenum must be 1-40"
 
-[ `whoami` != root ] && SUDO=sudo || SUDO=
-$SUDO echo	# establish hysteresis
+	[ "$TMMS_NETNAME" ] || die "TMMS_NETNAME is required"
+	ip link show $TMMS_NETNAME >/dev/null 2>&1
+	[ $? -ne 0 ] && die "$TMMS_NETNAME does not exist" >&2
 
-# Idiot checks.  The qemu maintainers dropped a space in the version string.
-
-QEMU=qemu-system-aarch64
-set -- `$QEMU --version | tr '(' ' '`
-THISVER=${4:0:5}	# Three significant digits
-echo "QEMU version '$THISVER' available"
-VERIFIED_QEMU_VERSIONS="2.6.0 2.8.0 2.8.1"                              
-# Use regex to check the current version against VERIFIED_QEMU_VERSIONS.
-# See man page for bash, 3.2.4.2 Conditional Constructs.  No quotes.    
-[[ $VERIFIED_QEMU_VERSIONS =~ $THISVER ]] || \
-    die "qemu is not version" ${VERIFIED_QEMU_VERSIONS[*]}
-
-[ $NODE -lt 1 -o $NODE -gt 40 ] && die "nodenum must be 1-40"
-
-ip link show $NETNAME >/dev/null 2>&1
-[ $? -ne 0 ] && die "$NETNAME does not exist" >&2
-
-if [ "$FAM" = NONE ]; then
-    FAM=
-    FAMSIZE=
-else
-    [ ! -f "$FAM" ] && die "$FAM not found"
-    T=`stat -c %s "$FAM"`
-    let TMP=$T/1024/1024/1024
-    FAMSIZE=${TMP}G
-    echo "$FAM = $FAMSIZE"
-    [ $TMP -lt 1 ] && die "$FAM is less than 1G"
-    [ $TMP -gt 256 ] && die "$FAM is greater than 256G"
-fi
-
-###########################################################################
-# Network prep
-
-ip link show $NETNAME >/dev/null || die "No such interface $NETNAME"
-DECIMAL=`printf "%02d" $NODE`
-
-# netdev helper defaults to /usr/lib/qemu/qemu-bridge-helper.                   
-# It needs file /etc/qemu/bridge.conf, root:root, mode 640, with the line       
-# allow <NETNAME>                                                               
-NETACCESS=/etc/qemu/bridge.conf                                                 
-grep -Eq "^allow\s+$NETNAME" $NETACCESS                                         
-[ $? -ne 0 ] && die "Missing 'allow' in $NETACCESS"
-
-# This pattern triggers lfs_fuse to pick up its node ID from the MAC address.
-MAC="52:54:42:$DECIMAL:$DECIMAL:$DECIMAL"
-ps -ef | grep $QEMU | grep -q $MAC | grep -q $NETNAME
-[ $? -eq 0 ] && die "Node $NODE MAC $MAC already running"
-
-NETDEV="-netdev bridge,br=$NETNAME,id=thisbridge"
-NIC="-device virtio-net-device,mac=$MAC,netdev=thisbridge"                      
-
-###########################################################################
-# EFI ROM/NV prep
-# BOOTROM=/usr/share/qemu/OVMF.fd	# Don't know what's up with this
-
-BOOTTYPE='QEMU_EFI'	# maybe a cmdline arg some day
-
-MACHTYPE="-M virt"
-CPU="-cpu cortex-a57 -smp 4"
-case "$BOOTTYPE" in
-    SFW)
-    	BOOTROM=$HOME/rom.bin.1.13		# Needs Vulcan model for reset
-	# MACHTYPE="-M virt,gic_version=3"	# Only native with kvm not tcg
-	;;
-
-    QEMU_EFI)
-	BOOTROM=/usr/share/qemu-efi/QEMU_EFI.fd	# Package qemu-efi, PoC too old
-	;;
-
-    *)
-	echo 'Bad bootrom' >&2 && exit 1
-	;;
-esac
-
-# echo "$BOOTTYPE: Boot ROM is $BOOTROM"
-
-# Always make a boot ROM, don't overwrite an existing data ROM
-ROMDIR="$HOME/.romdir"
-mkdir -p $ROMDIR
-echo "Support files for $0" > $ROMDIR/1stREADME
-EFIROM=$ROMDIR/pflash.$DECIMAL.efirom
-EFIVARS=$ROMDIR/pflash.$DECIMAL.efivars
-rm -f $EFIROM
-cat $BOOTROM /dev/zero | dd iflag=fullblock bs=1M count=64 of=$EFIROM 2>/dev/null
-chmod -w $EFIROM
-[ ! -f $EFIVARS ] && dd iflag=fullblock if=/dev/zero bs=1M count=64 of=$EFIVARS 2>/dev/null
-
-PFLASH="-drive if=pflash,format=raw,file=$EFIROM,readonly \
-	-drive if=pflash,format=raw,file=$EFIVARS"
-
-###########################################################################
-# Construct remaining arguments.  File system will take up to half of RAM
-# by default.  Once inside, "mount -oremount,size=10000M rootfs /" would
-# bump it.  If I want to reach 40 nodes I should keep this sane.
-
-CONSOLE="-serial stdio -nographic"
-CONSOLE="-serial stdio"
-CONSOLE="-nographic"
-
-QEMU="$QEMU -m 16384 $MACHTYPE $CPU"
-
-# -d in_asm
-
-function memparms2stanza() {
-    MEMPATH=$1
-    MEMSIZE=$2
-    SHARE=$3
-    MEMID=`basename $MEMPATH`
-    echo "-object memory-backend-file,mem-path=$MEMPATH,size=$MEMSIZE,id=$MEMID,share=$SHARE -device ivshmem-plain,memdev=$MEMID"
+	# The qemu maintainers dropped a space in the version string.
+	set -- `$QEMU --version | tr '(' ' '`
+	THISVER=${4:0:5}	# Three significant digits
+	echo "QEMU version '$THISVER' available"
+	# Use regex to check current version against VERIFIED_QEMU_VERSIONS.
+	# See man page for bash, 3.2.4.2 Conditional Constructs.  No quotes.    
+	[[ $VERIFIED_QEMU_VERSIONS =~ $THISVER ]] || \
+    		die "qemu is not version" ${VERIFIED_QEMU_VERSIONS[*]}
+	return 0
 }
 
-FAME=
-ZBRIDGE=
-if [ "$FAM" ]; then
+###########################################################################
+# Assist creation of IVSHMEM files for MFT FAME and the Zbridge driver.
 
-    FAME="-object \
-          memory-backend-file,size=$FAMSIZE,mem-path=$FAM,id=FAM,share=on \
-          -device ivshmem-plain,memdev=FAM"
+function memparms2stanza() {
+	MEMPATH=$1
+	MEMSIZE=$2
+	SHARE=$3
+	MEMID=`basename $MEMPATH`
+	echo "-object memory-backend-file,mem-path=$MEMPATH,size=$MEMSIZE,id=$MEMID,share=$SHARE \
+	      -device ivshmem-plain,memdev=$MEMID"
+	return 0
+}
 
-    FAME=`memparms2stanza $FAM $FAMSIZE on`
+###########################################################################
+# The librarian/zbridge driver count on this order when enumerating
+# IVSHMEM devices.
 
-    # Preserve this order as librarian/zbridge driver count on it when
-    # enumerating IVSHMEM devices.
-    ZREGS=("z${DECIMAL}csr 1M"
-	   "z${DECIMAL}desbk 1M"
-	   "z${DECIMAL}desbl 1M"
-	   "z${DECIMAL}frwl 32M"
-	   "z${DECIMAL}inlv 1M"
-	   "z${DECIMAL}commit 8M")
-    ZBRIDGE=
-    for Z in "${ZREGS[@]}"; do
-	set -- $Z
-    	STANZA=`memparms2stanza /dev/shm/$1 $2 on`
-	ZBRIDGE="$ZBRIDGE $STANZA"	# Order matters!
-    done
+function ZBRIDGE_stanza() {
+	STANZA=
+	if [ "$TMMS_FAM" ]; then
+		ZREGS=(
+			"z${D2}csr	1M"
+			"z${D2}desbk	1M"
+			"z${D2}desbl	1M"
+			"z${D2}frwl	32M"
+			"z${D2}inlv	1M"
+			"z${D2}commit	8M"
+		)
+		for Z in "${ZREGS[@]}"; do
+			set -- $Z
+    			SUBSTANZA=`memparms2stanza /dev/shm/$1 $2 off`
+			STANZA="$STANZA $SUBSTANZA"
+		done
+	fi
+	echo $STANZA
+	return 0
+}
+
+###########################################################################
+
+function FAME_stanza() {
+	STANZA=
+	if [ "$TMMS_FAM" ]; then
+		[ ! -f "$TMMS_FAM" ] && die "$TMMS_FAM not found"
+		T=`stat -c %s "$TMMS_FAM"`
+		let TMP=$T/1024/1024/1024
+		FAMSIZE=${TMP}G
+		[ $TMP -lt 1 ] && die "$TMMS_FAM is less than 1G"
+		[ $TMP -gt 256 ] && die "$TMMS_FAM is greater than 256G"
+    		STANZA=`memparms2stanza $TMMS_FAM $FAMSIZE on`
+	fi
+	echo $STANZA
+	return 0
+}
+
+###########################################################################
+
+function FAMEZ_stanza() {
+	STANZA=
+	if [ "$TMMS_FAMEZ" ]; then
+		[ -S $TMMS_FAMEZ ] || die "$TMMS_FAMEZ is not a socket"
+		STANZA="-chardev socket,id=FAMEZ,path=$TMMS_FAMEZ \
+			-device ivshmem-doorbell,chardev=FAMEZ,vectors=64"
+	fi
+	echo $STANZA
+	return 0
+}
+
+############################################################################
+# ARM64 needs two ROM images to boot from.  One is the EFI bootloader and
+# the other is EFI variables.  Store them in one place by node number.
+
+function PFLASH_stanza() {
+	local BOOTROM=/usr/share/qemu-efi/QEMU_EFI.fd	# Package qemu-efi
+	local EFIROM=$ROMDIR/pflash.$D2.efirom
+	local EFIVARS=$ROMDIR/pflash.$D2.efivars
+
+	mkdir -p $ROMDIR || die "Cannot create $ROMDIR"
+	echo "`date`: support files for $0" > $ROMDIR/1stREADME
+
+	# Always make a new read-only boot ROM.
+	rm -f $EFIROM
+	cat $BOOTROM /dev/zero | \
+		dd iflag=fullblock bs=1M count=64 of=$EFIROM 2>&-
+	chmod 444 $EFIROM
+
+	# Don't overwrite an existing data ROM (provide reboot persistence).
+	[ ! -f $EFIVARS ] && \
+		dd iflag=fullblock if=/dev/zero bs=1M count=64 of=$EFIVARS 2>&-
+
+	echo "-drive if=pflash,format=raw,file=$EFIROM,readonly \
+	      -drive if=pflash,format=raw,file=$EFIVARS"
+	return 0
+}
+
+###########################################################################
+# Network prep.  The netdev helper defaults to /usr/lib/qemu/qemu-bridge-helper
+# which needs /etc/qemu/bridge.conf, root:root, mode 640, with the line
+# allow <TMMS_NETNAME>
+
+function NETDEVNIC_stanza() {
+	ip link show $TMMS_NETNAME >/dev/null || \
+		die "No such interface $TMMS_NETNAME"
+
+	local NETACCESS=/etc/qemu/bridge.conf                                                 
+	grep -Eq "^allow\s+$TMMS_NETNAME" $NETACCESS
+	[ $? -ne 0 ] && die "Please add 'allow $TMMS_NETNAME' to $NETACCESS"
+
+	# When using FAME, this pattern triggers lfs_fuse to pick up its
+	# node ID from the MAC address.
+	local MAC="52:54:42:$D2:$D2:$D2"
+	ps -ef | grep $QEMU | grep -q $MAC | grep -q $TMMS_NETNAME
+	[ $? -eq 0 ] && die "Node $NODE MAC $MAC already running"
+
+	NETDEV="-netdev bridge,br=$TMMS_NETNAME,id=thisbridge"
+	NIC="-device virtio-net-device,mac=$MAC,netdev=thisbridge"                      
+	echo "$NETDEV $NIC"
+}
+
+###########################################################################
+# MAIN - do a few things before set -u
+
+if [ $# -ne 1 -o "$1" = "-h" -o "$1" = "-?" ]; then
+	echo "TMMS_FAM=$TMMS_FAM"
+	echo "TMMS_FAMEZ=$TMMS_FAMEZ"
+	echo "TMMS_NETNAME=$TMMS_NETNAME"
+	echo "usage: `basename $0` nodenum"
+	exit 0
 fi
+[ $1 -lt 1 -o $1 -gt 40 ] && die "Node number must be 1-40"
 
-STDERR=$ROMDIR/qemu.$DECIMAL.stderr
-stty intr ''	# So this running shell will ingore ctrl-C, passing it to qemu
-$SUDO $QEMU $PFLASH $NETDEV $NIC $CONSOLE $FAME $ZBRIDGE 2>$STDERR
+# A few globals
+typeset -r NODE=$1
+typeset -r D2=`printf "%02d" $NODE`
+typeset -r QEMU=qemu-system-aarch64
+typeset -r VERIFIED_QEMU_VERSIONS="2.6.0 2.8.0 2.8.1"
+typeset -r ROMDIR="$HOME/.romdir"		# Per-node boot ROM images...
+typeset -r STDERR=$ROMDIR/qemu.$D2.stderr	# ...also used for this
+SUDO=
+
+set -u
+
+verify_environment
+
+# Construct stanzas for the QEMU invocation.  Order probably matters
+# so understand the dependencies.  This PXE boot results in a RAM-based 
+# permanent initrd that goes into the RAM of the VM.  The file system will
+# take up to half of that RAM by default.  Once booted and logged inside,
+# "mount -oremount,size=6000M rootfs /" would bump it to 3/4 use
+# (if you start with 8G VRAM).
+
+VRAM="-m 8192"				# for RAM + FS, FS default max is 1/2
+CPU="-cpu cortex-a57 -smp 4"		# Don't get carried away, cowboy
+MACHTYPE="-M virt"			# Chosen because it works on MFT
+QEMUBASE="$QEMU $VRAM $MACHTYPE $CPU"	# And we're off
+
+CONSOLE="-nographic"			# Takes over termulator session
+
+PFLASH=`PFLASH_stanza`			# Boot ROMs
+NETDEVNIC=`NETDEVNIC_stanza`		# eth0 in the VM
+
+FAME=`FAME_stanza`			# Can be used independently...
+ZBRIDGE=`ZBRIDGE_stanza`
+
+FAMEZ=`FAMEZ_stanza`			# ...from this.
+
+###########################################################################
+# FINALLY.  Clear "intr" in THIS shell so ctrl-C is ignored and passed to
+# qemu (ie, the actual VM).  Hang on QEMU, so this is best run inside a
+# "screen -S nodeXX", then <ctrl-A><d> to detach, "screen -r nodeXX" to
+# re-attach later.
+
+CMD="$QEMUBASE $PFLASH $NETDEVNIC $CONSOLE $FAME $ZBRIDGE $FAMEZ"
+echo $CMD
+
+sleep 5				# Some messages to grok before...
+stty intr ''
+$SUDO $CMD 2>$STDERR		# That's QEMU stderr, not the VM
 RET=$?
+
+# First restore intr, then kick the termulator harder.
 stty sane && stty intr 
-[ $RET -eq 0 ] && reset
+[ $RET -eq 0 ] && reset		# Solved some problem which I can't remember
 echo qemu exited $RET
+[ $RET -ne 0 ] && cat $STDERR
 exit 0

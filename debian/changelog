@@ -1,3 +1,20 @@
+tm-manifesting (3.3-2) testing; urgency=low
+
+    * Groundwork for multiarch support
+    * Compilation of other recent refactorings
+
+ -- Rocky Craig <rocky.craig@hpe.com>  Mon, 9 Jul 2018 9:42:42 -0600
+
+
+tm-manifesting (3.3-1) unstable; urgency=low
+
+    * Compilation of recent refactorings
+    * Full manifest support for golden images
+    * Tasks have been removed
+
+ -- Rocky Craig <rocky.craig@hpe.com>  Tue, 12 Jun 2018 9:42:42 -0700
+
+
 tm-manifesting (3.2-1) unstable; urgency=low
 
     * Take http[s]_proxy from environment, then from /etc/environment

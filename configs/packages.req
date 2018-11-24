@@ -4,7 +4,8 @@ dnsmasq
 dosfstools
 grub-efi-arm64-bin
 qemu-efi
-#vmdebootstrap
+vmdebootstrap
+tm-librarian
 python3-debian
 python3-dnspython
 python3-flask
